@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Cormorant Garamond", serif;
+  --font-sans: "Montserrat", sans-serif;
+  --font-script: "Caveat", cursive;
+
+  --color-gold-50: #faf9f6;
+  --color-gold-100: #f5f2ed;
+  --color-gold-200: #ece6d9;
+  --color-gold-300: #dfd3c3;
+  --color-gold-400: #c9b49a;
+  --color-gold-500: #b89a74;
+  --color-gold-600: #a6865d;
+  --color-gold-700: #8c6f4f;
+  --color-gold-800: #725a41;
+  --color-gold-900: #5d4a36;
+  --color-gold-950: #31271d;
+
+  --color-moody-50: #fcfcfc;
+  --color-moody-100: #f7f7f7;
+  --color-moody-200: #eeeeee;
+  --color-moody-300: #dddddd;
+  --color-moody-400: #bbbbbb;
+  --color-moody-500: #999999;
+  --color-moody-600: #777777;
+  --color-moody-700: #555555;
+  --color-moody-800: #333333;
+  --color-moody-900: #1a1a1a;
+  --color-moody-950: #0d0d0d;
+
+  --color-sage-50: #f4f7f4;
+  --color-sage-100: #e8eee8;
+  --color-sage-200: #d1ddd1;
+  --color-sage-300: #b9ccb9;
+  --color-sage-400: #a2bba2;
+  --color-sage-500: #8ba98b;
+  --color-sage-600: #749874;
+  --color-sage-700: #5d865d;
+  --color-sage-800: #467546;
+  --color-sage-900: #2f632f;
+}
+
+@layer base {
+  html {
+    scroll-behavior: auto;
+  }
+  body {
+    @apply bg-gold-50 text-moody-900 font-sans antialiased selection:bg-gold-200 selection:text-moody-900;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif font-light tracking-tight;
+  }
+
+  /* Keyboard navigation focus styles */
+  :focus-visible {
+    outline: 2px solid theme('colors.gold.500');
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  /* Remove focus outline for mouse users */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
+@layer components {
+  .grain {
+    @apply fixed inset-0 pointer-events-none z-[9999] opacity-[0.03];
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .editorial-grid {
+    @apply grid grid-cols-12 gap-4 lg:gap-8;
+  }
+
+  .premium-border {
+    @apply border border-gold-600/10;
+  }
+
+  .luxury-text-sm {
+    @apply text-[10px] tracking-[0.5em] uppercase font-bold text-gold-600;
+  }
+
+  .luxury-text-base {
+    @apply text-[14px] md:text-[16px] tracking-[0.28em] font-medium;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@keyframes scrollBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(10px); }
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-white;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gold-200 rounded-full hover:bg-gold-300 transition-colors;
+}
