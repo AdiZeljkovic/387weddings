@@ -1,0 +1,46 @@
+# 387 Cinematic Weddings — full stack (app + its own Postgres).
+# Deployed on the Luminor/FuturaOS server via Dokploy (compose from Git).
+# Secrets (DB_PASSWORD, JWT_SECRET, ADMIN_*, ALLOW_SETUP) are injected by
+# Dokploy's compose environment, not committed here.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: art_studio
+      POSTGRES_USER: art_studio
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      # Seeds gallery/packages/content ONCE, on first init of an empty volume.
+      - ./art_studio_backup.sql:/docker-entrypoint-initdb.d/10-content.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U art_studio -d art_studio"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build:
+      context: .
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://art_studio:${DB_PASSWORD}@db:5432/art_studio
+      JWT_SECRET: ${JWT_SECRET}
+      NODE_ENV: production
+      SITE_URL: https://387weddings.ba
+      PORT: "3000"
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ALLOW_SETUP: ${ALLOW_SETUP:-false}
+    volumes:
+      # Named volume seeds from the image's /app/uploads (the committed gallery)
+      # on first run, then persists admin uploads across redeploys.
+      - uploads_data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db_data:
+  uploads_data:
