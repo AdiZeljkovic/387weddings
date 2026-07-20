@@ -13,7 +13,9 @@ services:
       POSTGRES_USER: art_studio
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - db_data:/var/lib/postgresql/data
+      # PG18 stores data in a version subdir, so the mount goes on the parent
+      # /var/lib/postgresql (not /data) — per the official image guidance.
+      - db_data:/var/lib/postgresql
       # Seeds gallery/packages/content ONCE, on first init of an empty volume.
       - ./art_studio_backup.sql:/docker-entrypoint-initdb.d/10-content.sql:ro
     healthcheck:
