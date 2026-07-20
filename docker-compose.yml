@@ -4,7 +4,9 @@
 # Dokploy's compose environment, not committed here.
 services:
   db:
-    image: postgres:16-alpine
+    # Postgres 18 — matches the version the sql backup was dumped from
+    # (the dump sets `transaction_timeout`, which only exists on PG18+).
+    image: postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: art_studio
