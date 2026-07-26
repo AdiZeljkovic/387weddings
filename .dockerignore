@@ -2,6 +2,8 @@ node_modules
 dist
 .git
 .env
+# Generated image variants — rebuilt on demand at runtime, never baked in
+uploads/.cache
 *.log
 npm-debug.log*
 .DS_Store
