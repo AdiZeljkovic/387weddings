@@ -27,6 +27,8 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Home
     'home.scroll': 'Scroll to explore',
+    'home.collections.tag': 'Browse by',
+    'home.collections.title': 'Collection',
     'home.intro.tag': 'The Art of Storytelling',
     'home.intro.title.part1': 'Fine-art,',
     'home.intro.title.part2': 'Editorial',
@@ -220,6 +222,8 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Home
     'home.scroll': 'Skrolujte za istraživanje',
+    'home.collections.tag': 'Pregledajte po',
+    'home.collections.title': 'Kolekcijama',
     'home.intro.tag': 'Umjetnost pripovijedanja',
     'home.intro.title.part1': 'Fine-art,',
     'home.intro.title.part2': 'Editorijalna',
@@ -423,7 +427,7 @@ type DbContent = Record<string, { en: string; bs: string }>;
 type DbStyles = Record<string, { fontSize?: string; fontFamily?: string; color?: string }>;
 
 const FONT_FAMILIES: Record<string, string> = {
-  serif:  '"Cormorant Garamond", serif',
+  serif:  '"Playfair Display", serif',
   sans:   '"Montserrat", sans-serif',
   script: '"Caveat", cursive',
 };

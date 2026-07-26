@@ -53,10 +53,10 @@ const Navbar = () => {
     <>
       <nav
         className={cn(
-          "fixed top-0 left-0 right-0 z-[1000] transition-all duration-700 px-6 md:px-8 lg:px-16",
+          "sticky top-0 z-[1000] transition-all duration-500 px-6 md:px-8 lg:px-16 bg-white/95 backdrop-blur-md",
           scrolled
-            ? "bg-gold-50/95 backdrop-blur-md py-4 md:py-5 border-b border-gold-600/10 shadow-sm"
-            : "bg-transparent py-6 md:py-8"
+            ? "py-4 md:py-5 border-b border-gold-600/10 shadow-sm"
+            : "py-5 md:py-7 border-b border-gold-600/5"
         )}
       >
         <div className="max-w-[1800px] mx-auto flex items-center justify-between">
@@ -67,7 +67,7 @@ const Navbar = () => {
                 <Link key={link.path} to={link.path} onClick={() => handleLinkClick(link.path)}
                   className={cn("luxury-text-base transition-all duration-500 relative pb-1",
                     location.pathname === link.path ? "text-gold-600"
-                      : scrolled ? "text-moody-900/60 hover:text-moody-900" : "text-white/60 hover:text-white"
+                      : "text-moody-900/60 hover:text-moody-900"
                   )}>
                   {link.label}
                 </Link>
@@ -79,14 +79,14 @@ const Navbar = () => {
           <div className="flex-none flex justify-center">
             <Link to="/" className="flex flex-col items-center group relative z-10">
               <span className={cn(
-                "text-[2rem] md:text-[2.5rem] xl:text-[3rem] font-script tracking-normal transition-colors duration-500 leading-none",
-                isMobileMenuOpen ? "text-moody-900" : scrolled ? "text-moody-900" : "text-white"
+                "text-[2rem] md:text-[2.25rem] xl:text-[2.5rem] font-script tracking-normal transition-colors duration-500 leading-none",
+                "text-moody-900"
               )}>
                 3<span className="inline-block relative -top-[4px]">8</span>7 Cinematic
               </span>
               <span className={cn(
                 "text-[9px] md:text-[11px] xl:text-[12px] tracking-[0.75em] uppercase font-bold mt-0.5 transition-colors duration-500",
-                scrolled || isMobileMenuOpen ? "text-gold-600" : "text-gold-500"
+                "text-gold-600"
               )}>
                 Weddings
               </span>
@@ -101,7 +101,7 @@ const Navbar = () => {
                 <Link key={link.path} to={link.path} onClick={() => handleLinkClick(link.path)}
                   className={cn("luxury-text-base transition-all duration-500 relative pb-1",
                     location.pathname === link.path ? "text-gold-600"
-                      : scrolled ? "text-moody-900/60 hover:text-moody-900" : "text-white/60 hover:text-white"
+                      : "text-moody-900/60 hover:text-moody-900"
                   )}>
                   {link.label}
                 </Link>
@@ -109,10 +109,10 @@ const Navbar = () => {
               <div className="flex items-center gap-3">
                 {(['ENG', 'BOS'] as const).map((lang, i) => (
                   <React.Fragment key={lang}>
-                    {i > 0 && <span className={cn("w-[1px] h-3", scrolled ? "bg-moody-900/10" : "bg-white/10")} />}
+                    {i > 0 && <span className="w-[1px] h-3 bg-moody-900/10" />}
                     <button type="button" onClick={() => setLanguage(lang)}
                       className={cn("luxury-text-base transition-all duration-500 cursor-pointer",
-                        language === lang ? "text-gold-600" : scrolled ? "text-moody-900/60 hover:text-moody-900" : "text-white/60 hover:text-white"
+                        language === lang ? "text-gold-600" : "text-moody-900/60 hover:text-moody-900"
                       )}>
                       {lang}
                     </button>
@@ -126,7 +126,7 @@ const Navbar = () => {
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className={cn("p-2 -mr-2 transition-colors duration-500",
-                  isMobileMenuOpen ? "text-moody-900" : scrolled ? "text-moody-900" : "text-white"
+                  "text-moody-900"
                 )}
                 aria-label="Toggle menu"
               >

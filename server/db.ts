@@ -353,7 +353,9 @@ export async function initDB() {
         ('nav.work',         'Navigacija: Link "Radovi"',      'footer', 'nav',   'text',     'Work',                'Radovi',               1),
         ('nav.experience',   'Navigacija: Link "Iskustvo"',    'footer', 'nav',   'text',     'Experience',          'Iskustvo',             2),
         ('nav.stories',      'Navigacija: Link "O nama"',      'footer', 'nav',   'text',     'About Us',            'O nama',               3),
-        ('nav.inquire',      'Navigacija: Link "Upit"',        'footer', 'nav',   'text',     'Inquire',             'Upit',                 4)
+        ('nav.inquire',      'Navigacija: Link "Upit"',        'footer', 'nav',   'text',     'Inquire',             'Upit',                 4),
+        ('home.collections.tag',   'Kolekcije: Tag iznad naslova', 'home', 'collections', 'text', 'Browse by',  'Pregledajte po', 0),
+        ('home.collections.title', 'Kolekcije: Veliki naslov',     'home', 'collections', 'text', 'Collection', 'Kolekcijama',    1)
       ON CONFLICT (key) DO NOTHING
     `);
 

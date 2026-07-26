@@ -6,7 +6,6 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import BackToTop from './components/BackToTop';
-import InstagramFeed from './components/InstagramFeed';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/admin/ProtectedRoute';
@@ -322,7 +321,6 @@ function App() {
                       </Routes>
                     </Suspense>
                   </main>
-                  <InstagramFeed />
                   <Footer />
                   <BackToTop />
                 </div>

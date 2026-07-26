@@ -1,6 +1,7 @@
 node_modules/
 build/
 dist/
+uploads/.cache/
 coverage/
 .DS_Store
 *.log

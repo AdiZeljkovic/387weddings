@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { motion, AnimatePresence, useScroll, useTransform, useReducedMotion } from 'motion/react';
+import { useSearchParams } from 'react-router-dom';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
+import { respImg } from '../lib/img';
+import { EASE, SectionTag, WordReveal, GoldPill } from '../components/anim';
 
 const categories = ['ALL', 'WEDDINGS', 'STUDIO', 'PORTRAITS'] as const;
 type Category = typeof categories[number];
@@ -25,18 +26,49 @@ interface GalleryImage {
   location: string | null;
 }
 
-const layoutClass: Record<string, string> = {
-  WIDE:   'col-span-12 md:col-span-8 aspect-[3/2]',
-  TALL:   'col-span-12 md:col-span-4 aspect-[3/4]',
-  SQUARE: 'col-span-12 md:col-span-6 aspect-square',
+// In a masonry column every tile shares the column width — only height varies.
+// The admin's layout choice therefore maps to an aspect ratio, not a span.
+const ASPECT: Record<string, string> = {
+  TALL:   'aspect-[3/4]',
+  SQUARE: 'aspect-square',
+  WIDE:   'aspect-[4/3]',
+};
+// Relative height per aspect, used to balance the columns while packing
+const WEIGHT: Record<string, number> = { TALL: 1.333, SQUARE: 1, WIDE: 0.75 };
+
+const useColumnCount = () => {
+  const [cols, setCols] = useState(() =>
+    typeof window === 'undefined' ? 3 : window.innerWidth < 640 ? 1 : window.innerWidth < 1024 ? 2 : 3
+  );
+  useEffect(() => {
+    const onResize = () =>
+      setCols(window.innerWidth < 640 ? 1 : window.innerWidth < 1024 ? 2 : 3);
+    window.addEventListener('resize', onResize, { passive: true });
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return cols;
 };
 
 const Portfolio = () => {
   const { t, getContentStyle } = useLanguage();
-  const [activeFilter, setActiveFilter] = useState<Category>('ALL');
+  const reduced = useReducedMotion();
+  // Home collection cards link here as /portfolio?cat=WEDDINGS|STUDIO|PORTRAITS
+  const [searchParams] = useSearchParams();
+  const initialCat = (searchParams.get('cat') || '').toUpperCase();
+  const [activeFilter, setActiveFilter] = useState<Category>(
+    (categories as readonly string[]).includes(initialCat) ? initialCat as Category : 'ALL'
+  );
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<Record<string, string>>({});
+  const cols = useColumnCount();
+
+  // Hero parallax
+  const heroRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress: heroProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
+  const heroY     = useTransform(heroProgress, [0, 1], ['0%', '22%']);
+  const heroScale = useTransform(heroProgress, [0, 1], [1, 1.12]);
+  const heroFade  = useTransform(heroProgress, [0, 0.8], [1, 0]);
 
   useEffect(() => {
     fetch('/api/gallery')
@@ -46,166 +78,266 @@ const Portfolio = () => {
     loadSettings().then(setSettings).catch(err => console.warn('Portfolio: settings load failed', err));
   }, []);
 
-  const filteredItems = activeFilter === 'ALL'
-    ? images
-    : images.filter(item => item.category === activeFilter);
+  const filteredItems = useMemo(
+    () => (activeFilter === 'ALL' ? images : images.filter(i => i.category === activeFilter)),
+    [images, activeFilter]
+  );
+
+  // Greedy masonry packing — each tile joins the currently shortest column,
+  // so columns end up near-equal height and tiles stagger naturally.
+  const columns = useMemo(() => {
+    const buckets: GalleryImage[][] = Array.from({ length: cols }, () => []);
+    const heights = new Array(cols).fill(0);
+    for (const item of filteredItems) {
+      let shortest = 0;
+      for (let c = 1; c < cols; c++) if (heights[c] < heights[shortest]) shortest = c;
+      buckets[shortest].push(item);
+      heights[shortest] += WEIGHT[item.layout] ?? WEIGHT.TALL;
+    }
+    return buckets;
+  }, [filteredItems, cols]);
+
+  const heroImg = settings['img.portfolio.hero'] || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1600';
+  const heroR = respImg(heroImg, [960, 1280, 1920]);
 
   return (
-    <div className="bg-gold-50 overflow-hidden">
-      {/* Hero Section */}
-      <section className="relative h-[90vh] flex items-center justify-center overflow-hidden bg-moody-950">
-        <div className="grain opacity-[0.05]" />
-        <div className="absolute inset-0 z-0">
+    <div className="bg-white overflow-hidden">
+      {/* ── Hero ──────────────────────────────────────────────────────────── */}
+      <section ref={heroRef} className="relative h-[82vh] md:h-[88vh] flex items-center justify-center overflow-hidden bg-moody-950">
+        <motion.div style={reduced ? undefined : { y: heroY, scale: heroScale }} className="absolute inset-0 z-0">
           <motion.img
-            initial={{ scale: 1.1, opacity: 0 }}
-            animate={{ scale: 1, opacity: 0.7 }}
-            transition={{ duration: 2.5, ease: [0.16, 1, 0.3, 1] }}
-            src={settings['img.portfolio.hero'] || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1200'}
-            alt="Portfolio Hero"
-            className="w-full h-full object-cover grayscale brightness-75"
+            initial={{ scale: 1.15, opacity: 0 }}
+            animate={{ scale: 1, opacity: 0.75 }}
+            transition={{ duration: 2.2, ease: EASE }}
+            src={heroR.src}
+            srcSet={heroR.srcSet}
+            sizes="100vw"
+            alt={t('portfolio.hero.title')}
+            className="w-full h-full object-cover brightness-[0.62]"
             loading="eager"
             fetchPriority="high"
+            draggable={false}
             referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
-        </div>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/15 to-black/70" aria-hidden="true" />
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: 'radial-gradient(ellipse 70% 60% at 50% 45%, rgba(166,134,93,0.14) 0%, transparent 70%)' }}
+            aria-hidden="true"
+          />
+        </motion.div>
+        <div className="grain opacity-[0.05]" />
 
-        <div className="relative z-10 text-center px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1.5, delay: 0.5 }}
-            className="space-y-6"
+        <motion.div style={reduced ? undefined : { opacity: heroFade }} className="relative z-10 text-center px-6">
+          <h1
+            style={getContentStyle('portfolio.hero.title')}
+            aria-label={t('portfolio.hero.title')}
+            className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-serif font-light text-white leading-[0.95] tracking-tight uppercase mb-7"
           >
-            <h1 style={getContentStyle('portfolio.hero.title')} className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-serif font-light text-white leading-none tracking-tighter uppercase">
-              {t('portfolio.hero.title')}
-            </h1>
-            <p style={getContentStyle('portfolio.hero.subtitle')} className="text-white/60 text-[10px] md:text-xs tracking-[0.5em] uppercase font-bold">
-              {t('portfolio.hero.subtitle')}
-            </p>
-          </motion.div>
-        </div>
-      </section>
+            <WordReveal
+              words={t('portfolio.hero.title').split(' ').filter(Boolean).map(w => ({ w }))}
+              delay={0.35}
+            />
+          </h1>
 
-      <div className="grain opacity-[0.02]" />
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 1.1, delay: 1, ease: EASE }}
+            className="w-20 h-[1px] bg-gold-500/70 mx-auto mb-6"
+            aria-hidden="true"
+          />
 
-      {/* Approach Section */}
-      <section className="py-20 md:py-32 px-6 sm:px-8 lg:px-16 max-w-5xl mx-auto text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1.2 }}
-          className="space-y-10"
-        >
-          <span style={getContentStyle('portfolio.approach.title')} className="luxury-text-sm block">{t('portfolio.approach.title')}</span>
-          <h2 className="text-4xl md:text-7xl font-serif font-light text-moody-900 leading-tight">
-            <span style={getContentStyle('portfolio.approach.heading')}>{t('portfolio.approach.heading')}</span> <br />
-            <span style={getContentStyle('portfolio.approach.subheading')} className="italic opacity-40">{t('portfolio.approach.subheading')}</span>
-          </h2>
-          <p style={getContentStyle('portfolio.approach.desc')} className="text-moody-900/60 font-light text-base md:text-xl leading-relaxed max-w-3xl mx-auto italic">
-            {t('portfolio.approach.desc')}
-          </p>
+          <motion.p
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 1.15, ease: EASE }}
+            style={getContentStyle('portfolio.hero.subtitle')}
+            className="text-white/70 text-[10px] md:text-xs tracking-[0.5em] uppercase font-bold"
+          >
+            {t('portfolio.hero.subtitle')}
+          </motion.p>
         </motion.div>
       </section>
 
-      {/* Filter Section */}
-      <section className="px-6 sm:px-8 lg:px-16 max-w-[1600px] mx-auto mb-12 md:mb-16">
-        <div className="flex flex-wrap justify-center gap-8 md:gap-16 border-b border-gold-600/10 pb-8">
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setActiveFilter(category)}
-              className={`text-[10px] md:text-xs tracking-[0.4em] uppercase font-bold transition-all duration-500 relative py-2 ${
-                activeFilter === category ? 'text-gold-600' : 'text-moody-900/40 hover:text-moody-900'
-              }`}
-            >
-              {t(CATEGORY_KEYS[category]) || category}
-              {activeFilter === category && (
-                <motion.div 
-                  layoutId="activeFilter"
-                  className="absolute bottom-0 left-0 right-0 h-[1px] bg-gold-600"
-                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                />
-              )}
-            </button>
-          ))}
+      {/* ── Approach ──────────────────────────────────────────────────────── */}
+      <section className="bg-white py-20 md:py-32 px-6 sm:px-8 lg:px-16">
+        <div className="max-w-4xl mx-auto text-center">
+          <SectionTag style={getContentStyle('portfolio.approach.title')} className="mb-8">
+            {t('portfolio.approach.title')}
+          </SectionTag>
+
+          <h2 className="text-4xl sm:text-5xl md:text-6xl font-serif font-light text-moody-900 leading-[1.1] mb-8">
+            <WordReveal
+              words={[
+                ...t('portfolio.approach.heading').split(' ').filter(Boolean).map(w => ({ w, style: getContentStyle('portfolio.approach.heading') })),
+                ...t('portfolio.approach.subheading').split(' ').filter(Boolean).map(w => ({ w, style: getContentStyle('portfolio.approach.subheading'), italic: true })),
+              ]}
+            />
+          </h2>
+
+          <motion.div
+            initial={{ scaleX: 0 }}
+            whileInView={{ scaleX: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1, delay: 0.3, ease: EASE }}
+            className="w-16 h-[1px] bg-gold-600/50 mx-auto mb-8"
+            aria-hidden="true"
+          />
+
+          <motion.p
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1, delay: 0.35, ease: EASE }}
+            style={getContentStyle('portfolio.approach.desc')}
+            className="text-moody-900/65 font-light text-base md:text-lg leading-relaxed max-w-2xl mx-auto"
+          >
+            {t('portfolio.approach.desc')}
+          </motion.p>
         </div>
       </section>
 
-      {/* Portfolio Grid */}
-      <section className="px-6 sm:px-8 lg:px-16 max-w-[1600px] mx-auto mb-24 md:mb-32">
-        {loading ? (
-          <div className="grid grid-cols-12 gap-2 md:gap-4">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className={`${['col-span-12 md:col-span-4 aspect-[3/4]','col-span-12 md:col-span-8 aspect-[3/2]','col-span-12 md:col-span-6 aspect-square'][i % 3]} bg-moody-200/40 rounded-sm animate-pulse`} />
+      {/* ── Filter + masonry gallery ──────────────────────────────────────── */}
+      <section className="bg-gold-50/60 pt-4 pb-24 md:pb-32">
+        <div className="px-6 sm:px-8 lg:px-16 max-w-[1700px] mx-auto">
+          {/* Filters */}
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 md:gap-x-14 border-b border-gold-600/15 pb-6 mb-12 md:mb-16">
+            {categories.map(category => (
+              <button
+                key={category}
+                onClick={() => setActiveFilter(category)}
+                aria-pressed={activeFilter === category}
+                className={`relative py-2 text-[10px] md:text-xs tracking-[0.4em] uppercase font-bold transition-colors duration-500 ${
+                  activeFilter === category ? 'text-gold-600' : 'text-moody-900/40 hover:text-moody-900'
+                }`}
+              >
+                {t(CATEGORY_KEYS[category])}
+                {activeFilter === category && (
+                  <motion.span
+                    layoutId="activeFilter"
+                    className="absolute -bottom-[25px] left-0 right-0 h-[2px] bg-gold-600"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+              </button>
             ))}
           </div>
-        ) : filteredItems.length === 0 ? (
-          <div className="text-center py-24 text-moody-900/30">
-            <p className="text-lg font-serif font-light">{t('portfolio.empty')}</p>
-          </div>
-        ) : (
-          <motion.div layout className="grid grid-cols-12 gap-2 md:gap-4 grid-flow-dense">
-            <AnimatePresence mode="popLayout">
-              {filteredItems.map((item) => (
-                <motion.div
-                  key={item.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                  className={`${layoutClass[item.layout] ?? layoutClass['TALL']} overflow-hidden rounded-sm group relative`}
-                >
-                  <img
-                    src={item.url}
-                    alt={item.title || item.category}
-                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-                    loading="lazy"
-                    decoding="async"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-6 md:p-10">
-                    <div>
-                      <span className="text-white text-[10px] tracking-[0.3em] uppercase font-bold block">
-                        {item.category}
-                      </span>
-                      {item.title && <span className="text-white/70 text-xs mt-1 block">{item.title}</span>}
-                      {item.location && <span className="text-white/40 text-[10px] block">{item.location}</span>}
-                    </div>
-                  </div>
-                </motion.div>
+
+          {/* Gallery */}
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className={`${['aspect-[3/4]', 'aspect-square', 'aspect-[4/3]'][i % 3]} bg-moody-900/[0.06] animate-pulse`}
+                />
               ))}
-            </AnimatePresence>
-          </motion.div>
-        )}
+            </div>
+          ) : filteredItems.length === 0 ? (
+            <div className="text-center py-28 text-moody-900/35">
+              <p style={getContentStyle('portfolio.empty')} className="text-lg font-serif font-light">
+                {t('portfolio.empty')}
+              </p>
+            </div>
+          ) : (
+            <div className="flex gap-4 md:gap-6 items-start">
+              {columns.map((col, ci) => (
+                <div
+                  key={ci}
+                  // Middle column drops half a tile — the "one up, one down" rhythm
+                  className={`flex-1 flex flex-col gap-4 md:gap-6 ${ci % 2 === 1 ? 'sm:mt-12 lg:mt-20' : ''}`}
+                >
+                  <AnimatePresence mode="popLayout">
+                    {col.map((item, ii) => {
+                      const r = respImg(item.url, [480, 640, 960]);
+                      return (
+                        <motion.figure
+                          key={item.id}
+                          layout
+                          initial={{ opacity: 0, y: 34, scale: 0.97 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.35 } }}
+                          transition={{ duration: 0.85, delay: Math.min(ii * 0.06, 0.35), ease: EASE }}
+                          className={`${ASPECT[item.layout] ?? ASPECT.TALL} relative overflow-hidden group m-0 bg-moody-900/5`}
+                        >
+                          <img
+                            src={r.src}
+                            srcSet={r.srcSet}
+                            sizes="(min-width: 1024px) 32vw, (min-width: 640px) 48vw, 100vw"
+                            alt={item.title || t(CATEGORY_KEYS[item.category as Category] ?? 'portfolio.filter.all')}
+                            className="w-full h-full object-cover transition-transform duration-[1400ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.07]"
+                            loading="lazy"
+                            decoding="async"
+                            draggable={false}
+                            referrerPolicy="no-referrer"
+                          />
+                          {/* Caption veil */}
+                          <div
+                            className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                            aria-hidden="true"
+                          />
+                          <figcaption className="absolute inset-x-0 bottom-0 p-6 md:p-7 translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700">
+                            <span className="text-gold-300 text-[9px] tracking-[0.4em] uppercase font-bold block mb-1.5">
+                              {t(CATEGORY_KEYS[item.category as Category] ?? 'portfolio.filter.all')}
+                            </span>
+                            {item.title && (
+                              <span className="text-white font-serif text-xl md:text-2xl font-light block leading-tight">
+                                {item.title}
+                              </span>
+                            )}
+                            {item.location && (
+                              <span className="text-white/60 text-[10px] tracking-[0.2em] uppercase block mt-1">
+                                {item.location}
+                              </span>
+                            )}
+                          </figcaption>
+                          {/* Thin inner frame on hover */}
+                          <div
+                            className="absolute inset-3 border border-white/0 group-hover:border-white/20 transition-colors duration-700 pointer-events-none"
+                            aria-hidden="true"
+                          />
+                        </motion.figure>
+                      );
+                    })}
+                  </AnimatePresence>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
-      {/* Inquire Section */}
-      <section className="py-24 md:py-40 px-6 sm:px-8 lg:px-16 bg-gold-100/30 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1.2 }}
-          className="space-y-12"
+      {/* ── Inquire CTA ───────────────────────────────────────────────────── */}
+      <section className="relative bg-gold-100/40 py-24 md:py-36 px-6 sm:px-8 lg:px-16 text-center overflow-hidden">
+        <div
+          className="absolute -right-10 top-1/2 -translate-y-1/2 text-[16rem] lg:text-[22rem] font-script text-gold-600/[0.06] leading-none select-none pointer-events-none hidden md:block"
+          aria-hidden="true"
         >
-          <h2 className="text-5xl md:text-8xl font-serif font-light text-moody-900 leading-tight">
-            <span style={getContentStyle('portfolio.ready')}>{t('portfolio.ready')}</span> <br />
-            <span style={getContentStyle('portfolio.dialogue')} className="italic opacity-30">{t('portfolio.dialogue')}</span>
+          387
+        </div>
+
+        <div className="relative max-w-4xl mx-auto">
+          <h2 className="text-4xl sm:text-5xl md:text-7xl font-serif font-light text-moody-900 leading-[1.05] mb-10">
+            <WordReveal
+              words={[
+                ...t('portfolio.ready').split(' ').filter(Boolean).map(w => ({ w, style: getContentStyle('portfolio.ready') })),
+                ...t('portfolio.dialogue').split(' ').filter(Boolean).map(w => ({ w, style: getContentStyle('portfolio.dialogue'), italic: true })),
+              ]}
+            />
           </h2>
-          <Link 
-            to="/contact"
-            className="inline-flex items-center gap-4 md:gap-8 group"
+
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1, delay: 0.45, ease: EASE }}
           >
-            <span className="text-[10px] md:text-[12px] tracking-[0.5em] md:tracking-[0.7em] uppercase text-gold-600 font-medium group-hover:text-moody-900 transition-colors duration-500">
-              {t('portfolio.cta.button') || t('hero.inquire')}
-            </span>
-            <div className="w-12 md:w-20 h-[1px] bg-gold-600/30 group-hover:bg-gold-600/60 lg:group-hover:w-40 transition-all duration-1000" />
-            <ArrowRight size={20} strokeWidth={1} className="text-gold-600 group-hover:text-moody-900 lg:group-hover:translate-x-4 transition-all duration-1000" />
-          </Link>
-        </motion.div>
+            <GoldPill to="/contact" style={getContentStyle('portfolio.cta.button')}>
+              {t('portfolio.cta.button')}
+            </GoldPill>
+          </motion.div>
+        </div>
       </section>
     </div>
   );

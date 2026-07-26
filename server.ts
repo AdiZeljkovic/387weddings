@@ -17,6 +17,7 @@ import contactRoutes from './server/routes/contactRoutes.js';
 import settingsRoutes from './server/routes/settingsRoutes.js';
 import contentRoutes from './server/routes/contentRoutes.js';
 import seoRoutes from './server/routes/seoRoutes.js';
+import imageRoutes from './server/routes/imageRoutes.js';
 
 dotenv.config();
 
@@ -91,6 +92,9 @@ async function startServer() {
 
   app.use(express.json({ limit: '2mb' }));
   app.use(cookieParser());
+
+  // On-demand resized image variants (/img/:file?w=640) — must come before static
+  app.use(imageRoutes);
 
   // Serve uploaded files — immutable because every upload gets a unique timestamp filename
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads'), {

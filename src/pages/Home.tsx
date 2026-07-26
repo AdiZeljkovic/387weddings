@@ -1,54 +1,147 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, useScroll, useTransform, useSpring, useReducedMotion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Camera, MapPin, Heart, Sparkles, Star, Film, Users, MessageSquare } from 'lucide-react';
 
-const InteractiveImage = ({ src, alt, delay = 0, aspect = "aspect-[3/4]", grayscale = false, title, location }: { src: string, alt: string, delay?: number, aspect?: string, grayscale?: boolean, title?: string, location?: string }) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      whileInView={{ opacity: 1 }}
-      viewport={{ once: true, margin: "0px" }}
-      transition={{ duration: 0.7, delay: delay * 0.3, ease: "easeOut" }}
-      whileHover="hover"
-      whileTap="tap"
-      className={`${aspect} rounded-sm group cursor-pointer relative z-0 mb-4`}
-    >
-      <motion.div
-        variants={{
-          hover: { scale: 1.02, transition: { duration: 0.9, ease: [0.16, 1, 0.3, 1] } },
-          tap:   { scale: 0.98, transition: { duration: 0.3 } }
-        }}
-        className="w-full h-full relative overflow-hidden rounded-sm"
-      >
-        <img
-          src={src}
-          alt={alt}
-          className={`w-full h-full object-cover ${grayscale ? 'grayscale' : ''}`}
-          loading="lazy"
-          decoding="async"
-          referrerPolicy="no-referrer"
-        />
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-700 pointer-events-none" />
+import { useLanguage } from '../contexts/LanguageContext';
+import { ParallaxY } from '../components/anim';
+import { loadSettings } from '../lib/settingsCache';
+import { respImg } from '../lib/img';
 
-        {(title || location) && (
+// ── Scroll-scrubbed process step ─────────────────────────────────────────────
+// The entire scene is DRIVEN by scroll position (scrub, not trigger): the image
+// sweeps in from its side through a 3D turn + curtain wipe, the gold frame
+// arrives at its own speed, text cascades from the opposite side, and the ghost
+// number floats in behind. Scrolling back rewinds the choreography.
+const ProcessStep = ({ num, img, fallbackIcon, reversed, hasCta, t, getContentStyle }: {
+  num: string;
+  img: string;
+  fallbackIcon: string;
+  reversed: boolean;
+  hasCta: boolean;
+  t: (key: string) => string;
+  getContentStyle: (key: string) => React.CSSProperties;
+}) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start 0.95', 'start 0.35'] });
+  // Spring smoothing → buttery scrub instead of raw scroll jitter
+  const p = useSpring(scrollYProgress, { stiffness: 90, damping: 22, mass: 0.6 });
+
+  const imgDir = reversed ? 1 : -1;  // image enters from its own side
+  const textDir = -imgDir;           // text enters from the opposite side
+
+  const imgX     = useTransform(p, [0, 1], [imgDir * 140, 0]);
+  const imgRot   = useTransform(p, [0, 1], [imgDir * 10, 0]);
+  const imgClip  = useTransform(p, [0, 0.85], reversed
+    ? ['inset(0% 0% 0% 100%)', 'inset(0% 0% 0% 0%)']
+    : ['inset(0% 100% 0% 0%)', 'inset(0% 0% 0% 0%)']);
+  const imgScale = useTransform(p, [0, 1], [1.25, 1]);
+  const frameX   = useTransform(p, [0, 1], [imgDir * 90, 0]);
+  const numX     = useTransform(p, [0, 1], [imgDir * 80, 0]);
+  const numO     = useTransform(p, [0, 1], [0, 1]);
+
+  const tX1 = useTransform(p, [0.10, 1], [textDir * 80, 0]);
+  const tX2 = useTransform(p, [0.20, 1], [textDir * 110, 0]);
+  const tX3 = useTransform(p, [0.30, 1], [textDir * 140, 0]);
+  const tO1 = useTransform(p, [0.10, 0.70], [0, 1]);
+  const tO2 = useTransform(p, [0.20, 0.80], [0, 1]);
+  const tO3 = useTransform(p, [0.30, 0.90], [0, 1]);
+
+  // Respect prefers-reduced-motion — render the scene static
+  const st = (styles: Record<string, unknown>) => (reduced ? undefined : styles);
+
+  return (
+    <div
+      ref={ref}
+      className={`relative flex flex-col ${reversed ? 'md:flex-row-reverse' : 'md:flex-row'} items-center gap-12 lg:gap-24`}
+    >
+      {/* Ghost number floating in behind the step */}
+      <motion.span
+        style={st({ x: numX, opacity: numO })}
+        aria-hidden="true"
+        className={`absolute -top-16 md:-top-28 ${reversed ? 'right-0 md:-right-4' : 'left-0 md:-left-4'} text-[9rem] md:text-[16rem] font-serif leading-none text-gold-600/[0.08] select-none pointer-events-none`}
+      >
+        {num}
+      </motion.span>
+
+      {/* Image column — 3D sweep + curtain wipe, gold frame trails behind */}
+      <div className="w-full md:w-1/2 relative z-10" style={{ perspective: '1200px' }}>
+        <motion.div
+          style={st({ x: frameX })}
+          aria-hidden="true"
+          className={`absolute -top-4 md:-top-6 ${reversed ? '-right-4 md:-right-6' : '-left-4 md:-left-6'} w-full aspect-[4/5] border border-gold-600/40 pointer-events-none`}
+        />
+        <ParallaxY from={28} to={-28}>
           <motion.div
-            variants={{ hover: { opacity: 1, y: 0 } }}
-            initial={{ opacity: 0, y: 10 }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/40 to-transparent text-white pointer-events-none"
+            style={st({ x: imgX, rotateY: imgRot, clipPath: imgClip })}
+            className="aspect-[4/5] overflow-hidden shadow-2xl shadow-moody-900/20"
           >
-            {title && <p className="text-[10px] tracking-[0.4em] uppercase font-bold mb-1">{title}</p>}
-            {location && <p className="text-[8px] tracking-[0.3em] uppercase opacity-70 italic">{location}</p>}
+            <motion.img
+              src={respImg(img, [640, 960, 1280]).src}
+              srcSet={respImg(img, [640, 960, 1280]).srcSet}
+              sizes="(min-width: 768px) 50vw, 100vw"
+              alt={t(`home.process.${num}.title`)}
+              style={st({ scale: imgScale })}
+              className="w-full h-full object-cover"
+              loading="lazy"
+              decoding="async"
+              draggable={false}
+              referrerPolicy="no-referrer"
+            />
+          </motion.div>
+        </ParallaxY>
+      </div>
+
+      {/* Text column — cascading scrub from the opposite side */}
+      <div className="w-full md:w-1/2 space-y-6 md:space-y-7 relative z-10">
+        <motion.div style={st({ x: tX1, opacity: tO1 })} className="flex items-center gap-5">
+          <span style={getContentStyle(`home.process.${num}.num`)} className="text-5xl md:text-7xl font-serif font-light text-gold-600/35 block">
+            {t(`home.process.${num}.num`)}
+          </span>
+          {ICON_MAP[t(`home.process.${num}.icon`)] ?? ICON_MAP[fallbackIcon]}
+        </motion.div>
+
+        <motion.h3
+          style={{ ...st({ x: tX2, opacity: tO2 }), ...getContentStyle(`home.process.${num}.title`) }}
+          className="text-3xl sm:text-4xl md:text-5xl font-serif font-light text-moody-900 leading-tight"
+        >
+          {t(`home.process.${num}.title`)}
+        </motion.h3>
+
+        <motion.div style={st({ x: tX2, opacity: tO2 })} className="w-12 h-[1px] bg-gold-600/50" aria-hidden="true" />
+
+        <motion.span
+          style={{ ...st({ x: tX3, opacity: tO3 }), ...getContentStyle(`home.process.${num}.tag`) }}
+          className="text-[10px] md:text-[11px] tracking-[0.4em] uppercase text-gold-600 font-bold block"
+        >
+          {t(`home.process.${num}.tag`)}
+        </motion.span>
+
+        <motion.p
+          style={{ ...st({ x: tX3, opacity: tO3 }), ...getContentStyle(`home.process.${num}.desc`) }}
+          className="text-moody-900/70 font-light text-base md:text-lg leading-relaxed max-w-md"
+        >
+          {t(`home.process.${num}.desc`)}
+        </motion.p>
+
+        {hasCta && (
+          <motion.div style={st({ x: tX3, opacity: tO3 })} className="pt-8">
+            <Link to="/contact" className="group flex items-center gap-3 md:gap-6 py-4">
+              <span className="text-[10px] md:text-[11px] tracking-[0.3em] md:tracking-[0.5em] lg:group-hover:tracking-[0.7em] uppercase text-moody-900 font-black whitespace-nowrap group-hover:text-gold-600 transition-all duration-700">
+                {t('home.process.03.cta')}
+              </span>
+              <div className="relative flex items-center justify-center">
+                <div className="w-8 md:w-12 h-[1px] bg-moody-900/20 group-hover:bg-gold-600/40 lg:group-hover:w-20 transition-all duration-700" />
+                <ArrowRight size={16} className="text-moody-900 group-hover:text-gold-600 lg:group-hover:translate-x-4 transition-all duration-700 flex-shrink-0" />
+              </div>
+            </Link>
           </motion.div>
         )}
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 };
-
-import { useLanguage } from '../contexts/LanguageContext';
-import { loadSettings } from '../lib/settingsCache';
 
 const ICON_MAP: Record<string, React.ReactElement> = {
   sparkles:    <Sparkles    size={32} strokeWidth={1} className="text-gold-600/40" />,
@@ -61,6 +154,13 @@ const ICON_MAP: Record<string, React.ReactElement> = {
   chat:        <MessageSquare size={32} strokeWidth={1} className="text-gold-600/40" />,
 };
 
+// Collection cards — cover image comes from the first gallery image of each category
+const COLLECTIONS = [
+  { cat: 'WEDDINGS',  labelKey: 'portfolio.filter.weddings',  fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=900' },
+  { cat: 'STUDIO',    labelKey: 'portfolio.filter.studio',    fallback: 'https://images.unsplash.com/photo-1544078751-58fee2d8a03b?auto=format&fit=crop&q=80&w=900' },
+  { cat: 'PORTRAITS', labelKey: 'portfolio.filter.portraits', fallback: 'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=900' },
+] as const;
+
 const FALLBACK_SLIDES = [
   'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1200',
   'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=1200',
@@ -68,9 +168,11 @@ const FALLBACK_SLIDES = [
 ];
 
 const Home = () => {
-  const { t, getContentStyle } = useLanguage();
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const { t, getContentStyle, language } = useLanguage();
   const [settings, setSettings] = useState<Record<string, string>>({});
+  const [stripImages, setStripImages] = useState<string[]>([]);
+  const [covers, setCovers] = useState<Record<string, string>>({});
+  const [counts, setCounts] = useState<Record<string, number>>({});
   const [heroSlides, setHeroSlides] = useState<{ desktop: string[]; mobile: string[] } | null>(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1024);
 
@@ -99,294 +201,367 @@ const Home = () => {
       });
   }, []);
 
-  // null = still loading (show dark bg); pick set based on screen width
+  // Hero marquee sources portfolio gallery images; falls back to hero slots
+  useEffect(() => {
+    fetch('/api/gallery')
+      .then(r => (r.ok ? r.json() : []))
+      .then((rows: { url?: string; category?: string }[]) => {
+        if (!Array.isArray(rows)) return;
+        // Dedupe — the same photo uploaded twice must not repeat in the strip
+        const urls = Array.from(new Set(
+          rows.map(r => r.url).filter((u): u is string => Boolean(u && u.trim()))
+        )).slice(0, 20);
+        setStripImages(urls);
+        // First image per category = collection card cover; also count per category
+        const c: Record<string, string> = {};
+        const n: Record<string, number> = {};
+        for (const row of rows) {
+          if (row.url && row.category) {
+            if (!c[row.category]) c[row.category] = row.url;
+            n[row.category] = (n[row.category] || 0) + 1;
+          }
+        }
+        setCovers(c);
+        setCounts(n);
+      })
+      .catch(() => {});
+  }, []);
+
+  // null = still loading; pick set based on screen width
   const slides = heroSlides ? (isMobile ? heroSlides.mobile : heroSlides.desktop) : [];
 
-  useEffect(() => {
-    setCurrentSlide(0);
-  }, [isMobile]);
+  // Marquee needs two identical halves (translateX -50% loops seamlessly);
+  // with few images duplicate 4× so the track is wider than the viewport.
+  const stripBase = stripImages.length > 0 ? stripImages : slides;
+  const stripCopies = stripBase.length >= 8 ? 2 : 4;
+  const loopImages = stripBase.length > 0
+    ? Array.from({ length: stripCopies }).flatMap(() => stripBase)
+    : [];
 
-  useEffect(() => {
-    if (slides.length === 0) return;
-    setCurrentSlide(prev => Math.min(prev, slides.length - 1));
-  }, [slides.length]);
+  // Hero title split into words for the per-word mask reveal
+  const titleWords = [
+    ...t('hero.title.part1').split(' ').filter(Boolean).map(w => ({ w, styleKey: 'hero.title.part1', italic: false })),
+    ...t('hero.title.part2').split(' ').filter(Boolean).map(w => ({ w, styleKey: 'hero.title.part2', italic: true })),
+  ];
 
-  useEffect(() => {
-    if (slides.length === 0) return;
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 6000);
-    return () => clearInterval(timer);
-  }, [slides.length]);
+  // Collections — scroll-scrubbed "deck spread": side cards sweep in rotated,
+  // the middle one rises from below; scrolling back rewinds the spread.
+  const reducedMotion = useReducedMotion();
+  const collRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress: collProgress } = useScroll({ target: collRef, offset: ['start 0.95', 'start 0.4'] });
+  const collP = useSpring(collProgress, { stiffness: 90, damping: 22, mass: 0.6 });
+  const collOpacity = useTransform(collP, [0, 0.65], [0, 1]);
+  const collFx = [
+    { x: useTransform(collP, [0, 1], [-110, 0]), y: useTransform(collP, [0, 1], [36, 0]),  rotate: useTransform(collP, [0, 1], [-7, 0]), scale: useTransform(collP, [0, 1], [1, 1]) },
+    { x: useTransform(collP, [0, 1], [0, 0]),    y: useTransform(collP, [0, 1], [130, 0]), rotate: useTransform(collP, [0, 1], [0, 0]),  scale: useTransform(collP, [0, 1], [0.9, 1]) },
+    { x: useTransform(collP, [0, 1], [110, 0]),  y: useTransform(collP, [0, 1], [36, 0]),  rotate: useTransform(collP, [0, 1], [7, 0]),  scale: useTransform(collP, [0, 1], [1, 1]) },
+  ];
+  const collTitle = t('home.collections.title');
 
   return (
     <div className="bg-gold-50 overflow-hidden">
-      {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center px-4 sm:px-8 lg:px-16 overflow-hidden bg-moody-950">
-        <div className="grain opacity-[0.05]" />
-        
-        {/* Cinematic Background Slider */}
-        <div className="absolute inset-0 z-0">
-          <AnimatePresence>
-            <motion.div
-              key={currentSlide}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, transition: { duration: 0.8 } }}
-              transition={{ duration: 1.2, ease: "easeInOut" }}
-              className="absolute inset-0 w-full h-full"
-            >
-              <img
-                src={slides[currentSlide]}
-                alt={`Wedding Hero ${currentSlide + 1}`}
-                className="w-full h-full object-cover object-center brightness-90"
-                loading="eager"
-                fetchPriority="high"
-                referrerPolicy="no-referrer"
-              />
-            </motion.div>
-          </AnimatePresence>
-          {/* Preload only the next slide to avoid saturating bandwidth on first load */}
-          {slides[(currentSlide + 1) % slides.length] && (
-            <img
-              key={slides[(currentSlide + 1) % slides.length]}
-              src={slides[(currentSlide + 1) % slides.length]}
-              alt=""
-              aria-hidden="true"
-              className="hidden"
-              fetchPriority="low"
-            />
-          )}
-          {/* Left gradient — makes text readable on any background */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/25 to-transparent" />
-          {/* Top/bottom vignette */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/70" />
-          
-          {/* Subtle Light Leak Effect */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{ background: 'radial-gradient(ellipse 80% 60% at 20% 30%, rgba(166,134,93,0.07) 0%, transparent 65%)' }}
-          />
-        </div>
-
-        <div className="relative z-10 w-full max-w-[1800px] mx-auto h-full flex flex-col justify-center pt-28 sm:pt-32 lg:pt-0">
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={{
-              hidden: { opacity: 0 },
-              visible: {
-                opacity: 1,
-                transition: {
-                  staggerChildren: 0.4,
-                  delayChildren: 1
-                }
-              }
-            }}
-            className="grid grid-cols-12 gap-4 md:gap-8 items-center"
-          >
-            {/* Left Content - Asymmetric Layout */}
-            <div className="col-span-12 lg:col-span-8 xl:col-span-7">
-              <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
-                <motion.h1
-                  variants={{
-                    hidden: { opacity: 0, y: 60 },
-                    visible: { opacity: 1, y: 0, transition: { duration: 2.5, ease: [0.16, 1, 0.3, 1] } }
-                  }}
-                  className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl xl:text-[10rem] font-serif font-light text-white leading-[0.9] lg:leading-[0.85] tracking-tighter mb-10 md:mb-14 lg:mb-16 [text-shadow:0_2px_40px_rgba(0,0,0,0.9),0_0_80px_rgba(0,0,0,0.7)]"
-                >
-                  <span style={getContentStyle('hero.title.part1')}>{t('hero.title.part1')}</span> <br />
-                  <span style={getContentStyle('hero.title.part2')} className="italic font-light text-gold-600 [text-shadow:0_2px_30px_rgba(0,0,0,0.8)] contrast-125">{t('hero.title.part2')}</span>
-                </motion.h1>
-
-                <motion.div
-                  variants={{
-                    hidden: { opacity: 0, y: 20 },
-                    visible: { opacity: 1, y: 0, transition: { duration: 1.5, ease: [0.16, 1, 0.3, 1] } }
-                  }}
-                  className="w-full flex flex-col items-center lg:items-start"
-                >
-                  <p style={getContentStyle('hero.location')} className="text-white/80 text-[9px] md:text-xs font-sans leading-relaxed tracking-[0.35em] md:tracking-[0.45em] uppercase font-bold mb-10 md:mb-14 lg:mb-16 whitespace-normal lg:whitespace-nowrap [text-shadow:0_1px_12px_rgba(0,0,0,0.8)] max-w-xs md:max-w-md lg:max-w-none">
-                    {t('hero.location')}
-                  </p>
-
-                  <div className="flex flex-col sm:flex-row items-center lg:items-center gap-5 sm:gap-8 md:gap-12">
-                    <motion.div className="w-full sm:w-auto">
-                      <Link
-                        to="/contact"
-                        className="group relative px-12 md:px-16 py-5 md:py-6 overflow-hidden whitespace-nowrap block border border-white/60 md:border-gold-500/60 hover:border-gold-400 transition-all duration-700 rounded-full text-center backdrop-blur-[2px]"
-                      >
-                        <div className="absolute inset-0 bg-white/10 md:bg-gold-600/15 translate-y-full group-hover:translate-y-0 transition-transform duration-700" />
-                        <span className="relative z-10 text-[10px] md:text-[12px] tracking-[0.5em] md:tracking-[0.6em] uppercase font-medium text-white md:text-gold-300 group-hover:text-white transition-colors duration-700 block">
-                          {t('hero.inquire')}
-                        </span>
-                      </Link>
-                    </motion.div>
-
-                    <div className="w-full sm:w-auto">
-                      <Link
-                        to="/portfolio"
-                        className="group relative px-10 md:px-14 py-5 md:py-6 overflow-hidden whitespace-nowrap block text-center"
-                      >
-                        <span className="relative z-10 text-[10px] md:text-[12px] tracking-[0.4em] md:tracking-[0.5em] uppercase font-light text-white/70 group-hover:text-white transition-all duration-700 block [text-shadow:0_1px_8px_rgba(0,0,0,0.6)]">
-                          {t('hero.portfolio')}
-                        </span>
-                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-0 h-[1px] bg-white/50 group-hover:w-1/2 transition-all duration-700" />
-                      </Link>
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
-            </div>
-
-            {/* Right Side - Decorative Signature/Detail */}
-            <div className="hidden lg:block lg:col-span-4 xl:col-span-5 relative h-full">
-              <motion.div
-                variants={{
-                  hidden: { opacity: 0 },
-                  visible: { opacity: 1, transition: { duration: 2, delay: 1.5 } }
-                }}
-                className="absolute right-0 top-1/2 -translate-y-1/2"
-              >
-                <div className="relative">
-                  <div className="text-[20rem] xl:text-[25rem] font-script text-white/[0.02] leading-none select-none">
-                    387
-                  </div>
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-96 border border-white/5 rotate-12" />
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-96 border border-gold-600/10 -rotate-6" />
-                </div>
-              </motion.div>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Slide Indicators */}
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex items-center gap-6 md:gap-10">
-          <button
-            onClick={() => setCurrentSlide((prev) => (prev === 0 ? slides.length - 1 : prev - 1))}
-            className="group flex items-center text-white/40 hover:text-white transition-all duration-500 p-5 -m-5 cursor-pointer"
-            aria-label="Previous slide"
-          >
-            <div className="relative flex items-center">
-              <div className="w-10 md:w-16 h-[1px] bg-current opacity-50 group-hover:opacity-100 group-hover:w-14 md:group-hover:w-20 transition-all duration-500" />
-              <div className="absolute left-0 w-2.5 h-2.5 border-l-2 border-t-2 border-current -rotate-45 origin-left opacity-50 group-hover:opacity-100 transition-all duration-500" />
-            </div>
-          </button>
-
-          <div className="flex items-center gap-4 font-serif text-sm md:text-base tracking-[0.2em] text-white/40 select-none min-w-[80px] justify-center">
-            <span className="text-white font-light tabular-nums">{String(currentSlide + 1).padStart(2, '0')}</span>
-            <span className="text-[10px] opacity-20 font-sans">—</span>
-            <span className="font-light tabular-nums">{String(slides.length).padStart(2, '0')}</span>
-          </div>
-
-          <button
-            onClick={() => setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1))}
-            className="group flex items-center text-white/40 hover:text-white transition-all duration-500 p-5 -m-5 cursor-pointer"
-            aria-label="Next slide"
-          >
-            <div className="relative flex items-center">
-              <div className="w-10 md:w-16 h-[1px] bg-current opacity-50 group-hover:opacity-100 group-hover:w-14 md:group-hover:w-20 transition-all duration-500" />
-              <div className="absolute right-0 w-2.5 h-2.5 border-r-2 border-t-2 border-current rotate-45 origin-right opacity-50 group-hover:opacity-100 transition-all duration-500" />
-            </div>
-          </button>
-        </div>
-
-        {/* Floating Structural Elements */}
-        <div className="absolute left-8 md:left-12 bottom-12 hidden xl:block">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1.5, delay: 2 }}
-            className="flex items-center gap-12"
-          >
-            <span style={getContentStyle('hero.location')} className="text-[9px] tracking-[1em] uppercase text-white/20 font-bold whitespace-nowrap">
-              {t('hero.location')}
-            </span>
-            <div className="w-24 h-[1px] bg-white/10" />
-            <span className="text-[9px] tracking-[1em] uppercase text-white/20 font-bold whitespace-nowrap">
-              Est. 2016
-            </span>
-          </motion.div>
-        </div>
-
-        {/* Scroll Indicator - Minimalist */}
+      {/* Hero — filmstrip of images below the light header (editorial style) */}
+      <section className="bg-white pt-6 md:pt-10">
+        {/* Filmstrip marquee: continuously drifting strip of gallery images */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 1.5, delay: 2.5 }}
-          className="absolute bottom-12 right-12 hidden xl:flex flex-col items-center gap-6"
+          transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
+          className="relative overflow-hidden marquee-pause h-[42vh] sm:h-[46vh] md:h-[52vh] bg-gold-50/40"
         >
-          <div className="flex flex-col items-center gap-4 animate-[scrollBounce_2s_ease-in-out_infinite]">
-            <span className="text-[9px] tracking-[0.8em] uppercase text-white/40 font-black rotate-90 origin-right translate-x-full mb-4">
-              {t('home.scroll')}
-            </span>
-            <div className="h-24 w-[1px] bg-gradient-to-b from-gold-600 to-transparent" />
+          {/* Edge fades — cinematic depth on both ends of the strip */}
+          <div className="absolute inset-y-0 left-0 w-12 md:w-28 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" aria-hidden="true" />
+          <div className="absolute inset-y-0 right-0 w-12 md:w-28 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" aria-hidden="true" />
+          <div
+            className="flex h-full w-max animate-marquee"
+            style={{ '--marquee-duration': `${Math.max(loopImages.length * 3, 40)}s` } as React.CSSProperties}
+          >
+            {loopImages.map((src, i) => {
+              const r = respImg(src, [320, 480, 640]);
+              return (
+                <div
+                  key={`${src}-${i}`}
+                  className="relative flex-none w-[56vw] sm:w-[30vw] md:w-[15vw] h-full mr-1 overflow-hidden group"
+                >
+                  <img
+                    src={r.src}
+                    srcSet={r.srcSet}
+                    sizes="(min-width: 768px) 15vw, 56vw"
+                    alt={`Wedding ${(i % stripBase.length) + 1}`}
+                    className="w-full h-full object-cover transition-transform duration-[1400ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.05]"
+                    loading={i < 8 ? 'eager' : 'lazy'}
+                    fetchPriority={i < 4 ? 'high' : 'auto'}
+                    decoding="async"
+                    draggable={false}
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-700 pointer-events-none" />
+                </div>
+              );
+            })}
           </div>
         </motion.div>
-      </section>
 
-      {/* Intro Section */}
-      <section className="pt-20 md:pt-32 pb-8 px-6 sm:px-8 lg:px-16 max-w-[1800px] mx-auto">
-        <div className="text-center mb-16 md:mb-24">
+        {/* Centered statement below the strip */}
+        <div className="relative max-w-5xl mx-auto px-6 sm:px-8 text-center pt-16 md:pt-24 pb-14 md:pb-20">
+          {/* Soft gold glow behind the title */}
+          <div
+            className="absolute inset-x-0 top-4 h-80 pointer-events-none"
+            style={{ background: 'radial-gradient(ellipse 55% 60% at 50% 40%, rgba(166,134,93,0.10) 0%, transparent 70%)' }}
+            aria-hidden="true"
+          />
+
+          {/* Sparkle ornament */}
+          <motion.div
+            initial={{ opacity: 0, rotate: -90, scale: 0.5 }}
+            whileInView={{ opacity: 1, rotate: 0, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.1, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className="relative flex justify-center mb-5"
+            aria-hidden="true"
+          >
+            <Sparkles size={20} strokeWidth={1.2} className="text-gold-600/70" />
+          </motion.div>
+
+          {/* Tag flanked by growing gold lines */}
+          <div className="relative flex items-center justify-center gap-4 md:gap-6 mb-7 md:mb-9">
+            <motion.span
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="w-10 md:w-16 h-[1px] bg-gold-600/40 origin-right"
+              aria-hidden="true"
+            />
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.9, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              style={getContentStyle('hero.location')}
+              className="text-[10px] md:text-xs tracking-[0.45em] md:tracking-[0.6em] uppercase font-bold text-moody-900/60"
+            >
+              {t('hero.location')}
+            </motion.p>
+            <motion.span
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="w-10 md:w-16 h-[1px] bg-gold-600/40 origin-left"
+              aria-hidden="true"
+            />
+          </div>
+
+          {/* Title — per-word mask reveal */}
+          <h1 className="relative text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-light text-moody-900 leading-[1.02] tracking-tight mb-3 flex flex-wrap justify-center gap-x-[0.26em]">
+            {titleWords.map((tw, i) => (
+              <span key={`${tw.w}-${i}`} className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em]">
+                <motion.span
+                  initial={{ y: '112%' }}
+                  whileInView={{ y: '0%' }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 1.15, delay: 0.4 + i * 0.13, ease: [0.16, 1, 0.3, 1] }}
+                  style={getContentStyle(tw.styleKey)}
+                  className={`inline-block ${tw.italic ? 'italic text-gold-600' : ''}`}
+                >
+                  {tw.w}
+                </motion.span>
+              </span>
+            ))}
+          </h1>
+
+          {/* Hand-drawn flourish that draws itself in */}
+          <motion.svg
+            viewBox="0 0 300 22"
+            fill="none"
+            className="relative w-44 md:w-64 h-auto mx-auto mb-10 md:mb-14 text-gold-600/80"
+            aria-hidden="true"
+          >
+            <motion.path
+              d="M6 16 Q 80 2 150 9 T 294 8"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              initial={{ pathLength: 0, opacity: 0 }}
+              whileInView={{ pathLength: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.3, delay: 1.15, ease: 'easeInOut' }}
+            />
+          </motion.svg>
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 1.2 }}
-            className="max-w-4xl mx-auto"
+            transition={{ duration: 1, delay: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            className="relative flex flex-col sm:flex-row items-center justify-center gap-5 sm:gap-10"
           >
-            <span style={getContentStyle('home.intro.tag')} className="luxury-text-sm block mb-8">{t('home.intro.tag')}</span>
-            <h2 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-serif font-light text-moody-900 mb-10 tracking-tight uppercase leading-[1.1]">
-              <span style={getContentStyle('home.intro.title.part1')}>{t('home.intro.title.part1')}</span>{' '}
-              <span style={getContentStyle('home.intro.title.part2')} className="italic opacity-40">{t('home.intro.title.part2')}</span> <br />
-              <span style={getContentStyle('home.intro.title.part3')}>{t('home.intro.title.part3')}</span>
-            </h2>
-            <p style={getContentStyle('home.intro.desc')} className="max-w-2xl mx-auto text-moody-900/60 font-light text-base md:text-xl leading-relaxed italic px-4">
-              {t('home.intro.desc')}
-            </p>
+            {/* Primary — filled gold with pulsing ring */}
+            <Link
+              to="/contact"
+              className="group relative w-full sm:w-auto px-12 md:px-16 py-5 overflow-hidden whitespace-nowrap block bg-gold-600 hover:bg-gold-700 transition-colors duration-500 rounded-full text-center shadow-lg shadow-gold-600/25 animate-[ctaPulse_3s_ease-in-out_infinite]"
+            >
+              <span style={getContentStyle('hero.inquire')} className="relative z-10 text-[10px] md:text-[11px] tracking-[0.5em] uppercase font-semibold text-white flex items-center justify-center gap-3">
+                {t('hero.inquire')}
+                <ArrowRight size={14} className="group-hover:translate-x-1.5 transition-transform duration-500" aria-hidden="true" />
+              </span>
+            </Link>
+
+            {/* Secondary — understated text link */}
+            <Link
+              to="/portfolio"
+              className="group relative w-full sm:w-auto px-10 py-5 whitespace-nowrap block text-center"
+            >
+              <span style={getContentStyle('hero.portfolio')} className="text-[10px] md:text-[11px] tracking-[0.45em] uppercase font-medium text-moody-900/70 group-hover:text-moody-900 transition-colors duration-500">
+                {t('hero.portfolio')}
+              </span>
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-0 h-[1px] bg-gold-600/60 group-hover:w-1/2 transition-all duration-700" />
+            </Link>
+          </motion.div>
+
+          {/* Scroll indicator */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.2, delay: 0.9 }}
+            className="hidden md:flex flex-col items-center gap-4 mt-16"
+            aria-hidden="true"
+          >
+            <span className="text-[9px] tracking-[0.5em] uppercase text-moody-900/35 font-bold">{t('home.scroll')}</span>
+            <div className="h-14 w-[1px] bg-gradient-to-b from-gold-600/70 to-transparent animate-[scrollBounce_2s_ease-in-out_infinite]" />
           </motion.div>
         </div>
 
-        {/* Image Grid - 9 Images */}
-        <div className="grid grid-cols-12 gap-4 lg:gap-12 mb-24">
-          {/* Column 1 */}
-          <div className="col-span-12 md:col-span-4 flex flex-col gap-4 lg:gap-12">
-            <InteractiveImage
-              src={settings['img.home.grid.1'] || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800'}
-              alt="Wedding Portrait" grayscale={true} delay={0} title="The Highlands" location="Scotland, 2024" />
-            <InteractiveImage
-              src={settings['img.home.grid.2'] || 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=800'}
-              alt="Wedding Rings" aspect="aspect-square" delay={0.2} title="Minimalist Vows" location="London, 2023" />
-            <InteractiveImage
-              src={settings['img.home.grid.3'] || 'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=800'}
-              alt="Wedding Table" delay={0.4} title="Al Fresco Dinner" location="Tuscany, 2024" />
-          </div>
+      </section>
 
-          {/* Column 2 */}
-          <div className="col-span-12 md:col-span-4 flex flex-col gap-4 lg:gap-12 md:mt-24">
-            <InteractiveImage
-              src={settings['img.home.grid.4'] || 'https://images.unsplash.com/photo-1544078751-58fee2d8a03b?auto=format&fit=crop&q=80&w=800'}
-              alt="Wedding Staircase" aspect="aspect-square" delay={0.1} title="The Grand Entrance" location="Paris, 2024" />
-            <InteractiveImage
-              src={settings['img.home.grid.5'] || 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=800'}
-              alt="Wedding Tent" delay={0.3} title="Midnight Celebration" location="Sarajevo, 2023" />
-            <InteractiveImage
-              src={settings['img.home.grid.6'] || 'https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&q=80&w=800'}
-              alt="Wedding Detail" aspect="aspect-square" delay={0.5} title="Heirloom Details" location="Vienna, 2024" />
-          </div>
+      {/* Process Section — editorial steps with parallax + ghost numbers */}
+      <section className="relative bg-gold-100/50 pt-24 md:pt-36 pb-24 md:pb-32 px-6 sm:px-8 lg:px-16 overflow-hidden">
+        <div className="max-w-[1400px] mx-auto space-y-28 md:space-y-44">
+          {([
+            { num: '01', fallbackIcon: 'sparkles', reversed: false, hasCta: false,
+              img: settings['img.home.process.1'] || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1200' },
+            { num: '02', fallbackIcon: 'mappin', reversed: true, hasCta: false,
+              img: settings['img.home.process.2'] || 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=1200' },
+            { num: '03', fallbackIcon: 'heart', reversed: false, hasCta: true,
+              img: settings['img.home.process.3'] || 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=1200' },
+          ] as const).map(step => (
+            <ProcessStep
+              key={step.num}
+              num={step.num}
+              img={step.img}
+              fallbackIcon={step.fallbackIcon}
+              reversed={step.reversed}
+              hasCta={step.hasCta}
+              t={t}
+              getContentStyle={getContentStyle}
+            />
+          ))}
+        </div>
+      </section>
 
-          {/* Column 3 */}
-          <div className="col-span-12 md:col-span-4 flex flex-col gap-4 lg:gap-12">
-            <InteractiveImage
-              src={settings['img.home.grid.7'] || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800'}
-              alt="Bride Portrait" delay={0.2} title="Quiet Anticipation" location="Prague, 2024" />
-            <InteractiveImage
-              src={settings['img.home.grid.8'] || 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800'}
-              alt="Wedding Reception" aspect="aspect-square" delay={0.4} title="The First Dance" location="Rome, 2023" />
-            <InteractiveImage
-              src={settings['img.home.grid.9'] || 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=800'}
-              alt="Wedding Toast" delay={0.6} title="Shared Laughter" location="Berlin, 2024" />
+      {/* Collections Section — browse by category */}
+      <section className="bg-white pt-24 md:pt-32 pb-16 md:pb-24 px-6 sm:px-8 lg:px-16">
+        <div className="max-w-[1800px] mx-auto">
+        <div className="text-center mb-12 md:mb-20">
+          <div className="max-w-5xl mx-auto">
+            {/* Tag flanked by growing gold lines */}
+            <div className="flex items-center justify-center gap-4 md:gap-6 mb-6">
+              <motion.span
+                initial={{ scaleX: 0 }}
+                whileInView={{ scaleX: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                className="w-10 md:w-16 h-[1px] bg-gold-600/40 origin-right"
+                aria-hidden="true"
+              />
+              <motion.span
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+                style={getContentStyle('home.collections.tag')}
+                className="luxury-text-sm block"
+              >
+                {t('home.collections.tag')}
+              </motion.span>
+              <motion.span
+                initial={{ scaleX: 0 }}
+                whileInView={{ scaleX: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                className="w-10 md:w-16 h-[1px] bg-gold-600/40 origin-left"
+                aria-hidden="true"
+              />
+            </div>
+
+            {/* Title — letter-by-letter mask reveal */}
+            <div className="overflow-hidden pb-[0.1em] -mb-[0.1em]">
+              <h2
+                style={getContentStyle('home.collections.title')}
+                aria-label={collTitle}
+                className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-serif font-light text-moody-900 tracking-[0.08em] uppercase leading-[1.1] flex flex-wrap justify-center"
+              >
+                {collTitle.split('').map((ch, i) => (
+                  <motion.span
+                    key={`${ch}-${i}`}
+                    initial={{ y: '112%' }}
+                    whileInView={{ y: '0%' }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.9, delay: 0.2 + i * 0.045, ease: [0.16, 1, 0.3, 1] }}
+                    className="inline-block"
+                    aria-hidden="true"
+                  >
+                    {ch === ' ' ? ' ' : ch}
+                  </motion.span>
+                ))}
+              </h2>
+            </div>
           </div>
+        </div>
+
+        {/* Category cards — scroll-scrubbed deck spread */}
+        <div ref={collRef} className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-10 mb-16 md:mb-24 max-w-[1500px] mx-auto">
+          {COLLECTIONS.map((c, i) => (
+            <motion.div
+              key={c.cat}
+              style={reducedMotion ? undefined : { opacity: collOpacity, ...collFx[i] }}
+            >
+              <Link
+                to={`/portfolio?cat=${c.cat}`}
+                className="group relative block aspect-[4/5] md:aspect-[3/4] overflow-hidden shadow-lg shadow-moody-900/5 hover:shadow-2xl hover:shadow-moody-900/20 hover:-translate-y-2 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
+              >
+                <img
+                  src={respImg(covers[c.cat] || c.fallback, [480, 960, 1280]).src}
+                  srcSet={respImg(covers[c.cat] || c.fallback, [480, 960, 1280]).srcSet}
+                  sizes="(min-width: 768px) 33vw, 100vw"
+                  alt={t(c.labelKey)}
+                  className="w-full h-full object-cover transition-transform duration-[1400ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.06]"
+                  loading="lazy"
+                  decoding="async"
+                  draggable={false}
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/5 to-transparent group-hover:from-black/70 transition-colors duration-700" />
+                <div className="absolute inset-x-0 bottom-6 md:bottom-8 flex flex-col items-center gap-1.5">
+                  <span
+                    style={getContentStyle(c.labelKey)}
+                    className="text-white font-serif text-3xl lg:text-4xl uppercase tracking-[0.12em] group-hover:tracking-[0.2em] transition-all duration-700 whitespace-nowrap [text-shadow:0_2px_16px_rgba(0,0,0,0.5)]"
+                  >
+                    {t(c.labelKey)}
+                  </span>
+                  {counts[c.cat] > 0 && (
+                    <span className="text-[9px] tracking-[0.4em] uppercase font-bold text-white/0 group-hover:text-white/70 transition-colors duration-700">
+                      {counts[c.cat]} {language === 'ENG' ? 'photos' : 'fotografija'}
+                    </span>
+                  )}
+                </div>
+                {/* Thin inner frame on hover */}
+                <div className="absolute inset-3 border border-white/0 group-hover:border-white/25 transition-colors duration-700 pointer-events-none" aria-hidden="true" />
+              </Link>
+            </motion.div>
+          ))}
         </div>
 
         {/* Explore Portfolio Button */}
@@ -411,232 +586,175 @@ const Home = () => {
             </Link>
           </motion.div>
         </div>
-      </section>
-
-      {/* Process Section */}
-      <section className="bg-gold-100/50 pt-20 md:pt-32 pb-20 md:pb-24 px-6 sm:px-8 lg:px-16">
-        <div className="max-w-[1400px] mx-auto space-y-20 md:space-y-32">
-          
-          {/* Step 01 */}
-          <div className="flex flex-col md:flex-row items-center gap-10 lg:gap-24">
-            <motion.div 
-              initial={{ opacity: 0, x: -50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.2 }}
-              className="w-full md:w-1/2 aspect-[4/5] overflow-hidden rounded-sm premium-border"
-            >
-              <img
-                src={settings['img.home.process.1'] || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1200'}
-                alt="Vision"
-                className="w-full h-full object-cover grayscale hover:grayscale-0 transition-[filter] duration-700"
-                loading="lazy"
-                referrerPolicy="no-referrer"
-              />
-            </motion.div>
-            <motion.div 
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.2 }}
-              className="w-full md:w-1/2 space-y-6 md:space-y-8"
-            >
-              <div className="flex items-center gap-6">
-                <span className="text-5xl sm:text-6xl md:text-8xl font-serif font-light text-gold-600/20 block">{t('home.process.01.num') || '01.'}</span>
-                {ICON_MAP[t('home.process.01.icon')] ?? ICON_MAP['sparkles']}
-              </div>
-              <h3 style={getContentStyle('home.process.01.title')} className="text-3xl sm:text-4xl md:text-5xl font-serif font-light text-moody-900 leading-tight">
-                {t('home.process.01.title')}
-              </h3>
-              <div className="space-y-4 md:space-y-6">
-                <span style={getContentStyle('home.process.01.tag')} className="luxury-text-sm block">{t('home.process.01.tag')}</span>
-                <p style={getContentStyle('home.process.01.desc')} className="text-moody-900/70 font-light text-sm md:text-lg leading-relaxed max-w-md">
-                  {t('home.process.01.desc')}
-                </p>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Step 02 */}
-          <div className="flex flex-col md:flex-row-reverse items-center gap-12 lg:gap-24">
-            <motion.div 
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.2 }}
-              className="w-full md:w-1/2 aspect-[4/5] overflow-hidden rounded-sm"
-            >
-              <img
-                src={settings['img.home.process.2'] || 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=1200'}
-                alt="Location"
-                className="w-full h-full object-cover"
-                loading="lazy"
-                referrerPolicy="no-referrer"
-              />
-            </motion.div>
-            <motion.div 
-              initial={{ opacity: 0, x: -50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.2 }}
-              className="w-full md:w-1/2 space-y-8"
-            >
-              <div className="flex items-center gap-6">
-                <span className="text-6xl md:text-8xl font-serif font-light text-moody-900 opacity-20 block">{t('home.process.02.num') || '02.'}</span>
-                {ICON_MAP[t('home.process.02.icon')] ?? ICON_MAP['mappin']}
-              </div>
-              <h3 style={getContentStyle('home.process.02.title')} className="text-4xl md:text-5xl font-serif font-light text-moody-900 leading-tight">
-                {t('home.process.02.title')}
-              </h3>
-              <div className="space-y-6">
-                <span style={getContentStyle('home.process.02.tag')} className="text-[10px] tracking-[0.4em] uppercase text-gold-600 font-bold block">{t('home.process.02.tag')}</span>
-                <p style={getContentStyle('home.process.02.desc')} className="text-moody-900/60 font-light text-base leading-relaxed max-w-md">
-                  {t('home.process.02.desc')}
-                </p>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Step 03 */}
-          <div className="flex flex-col md:flex-row items-center gap-12 lg:gap-24">
-            <motion.div 
-              initial={{ opacity: 0, x: -50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.2 }}
-              className="w-full md:w-1/2 aspect-[4/5] overflow-hidden rounded-sm"
-            >
-              <img
-                src={settings['img.home.process.3'] || 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=1200'}
-                alt="Art"
-                className="w-full h-full object-cover"
-                loading="lazy"
-                referrerPolicy="no-referrer"
-              />
-            </motion.div>
-            <motion.div 
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.2 }}
-              className="w-full md:w-1/2 space-y-8"
-            >
-              <div className="flex items-center gap-6">
-                <span className="text-6xl md:text-8xl font-serif font-light text-moody-900 opacity-20 block">{t('home.process.03.num') || '03.'}</span>
-                {ICON_MAP[t('home.process.03.icon')] ?? ICON_MAP['heart']}
-              </div>
-              <h3 style={getContentStyle('home.process.03.title')} className="text-4xl md:text-5xl font-serif font-light text-moody-900 leading-tight">
-                {t('home.process.03.title')}
-              </h3>
-              <div className="space-y-6">
-                <span style={getContentStyle('home.process.03.tag')} className="text-[10px] tracking-[0.4em] uppercase text-gold-600 font-bold block">{t('home.process.03.tag')}</span>
-                <p style={getContentStyle('home.process.03.desc')} className="text-moody-900/60 font-light text-base leading-relaxed max-w-md">
-                  {t('home.process.03.desc')}
-                </p>
-                <div className="pt-12">
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 1.2, delay: 0.4 }}
-                  >
-                    <Link
-                      to="/contact"
-                      className="group flex items-center gap-3 md:gap-6 py-4"
-                    >
-                      <span className="text-[10px] md:text-[11px] tracking-[0.3em] md:tracking-[0.5em] lg:group-hover:tracking-[0.7em] uppercase text-moody-900 font-black whitespace-nowrap group-hover:text-gold-600 transition-all duration-700">
-                        {t('home.process.03.cta')}
-                      </span>
-                      <div className="relative flex items-center justify-center">
-                        <div className="w-8 md:w-12 h-[1px] bg-moody-900/20 group-hover:bg-gold-600/40 lg:group-hover:w-20 transition-all duration-700" />
-                        <ArrowRight size={16} className="text-moody-900 group-hover:text-gold-600 lg:group-hover:translate-x-4 transition-all duration-700 flex-shrink-0" />
-                      </div>
-                    </Link>
-                  </motion.div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
         </div>
       </section>
-      {/* About Us Section */}
-      <section className="pb-24 md:pb-32 px-6 sm:px-8 bg-white">
-        <div className="max-w-[1400px] mx-auto">
-          <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl sm:text-4xl md:text-6xl font-serif font-light text-moody-900 tracking-tight">
-              <span style={getContentStyle('home.about.title')} className="italic text-gold-600">{t('home.about.title')}</span> <span style={getContentStyle('home.about.and')} className="italic text-gold-600">{t('home.about.and')}</span>
-            </h2>
-            <div className="w-16 md:w-24 h-[1px] bg-gold-600/30 mx-auto mt-6 md:mt-8" aria-hidden="true" />
+
+      {/* About Us Section — layered editorial composition */}
+      <section className="relative py-24 md:py-36 px-6 sm:px-8 lg:px-16 bg-gold-100/40 overflow-hidden">
+        {/* Decorative script watermark */}
+        <div className="absolute -right-10 top-1/2 -translate-y-1/2 text-[16rem] lg:text-[24rem] font-script text-gold-600/[0.06] leading-none select-none pointer-events-none hidden md:block" aria-hidden="true">
+          387
+        </div>
+
+        <div className="max-w-[1500px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-14 lg:gap-20 items-center relative">
+          {/* Layered portrait duo */}
+          <div className="lg:col-span-6 relative mb-14 lg:mb-0">
+            {/* Thin gold frame behind, offset for depth */}
+            <div className="absolute -top-5 -left-5 w-2/3 aspect-[3/4] border border-gold-600/30 pointer-events-none" aria-hidden="true" />
+
+            <ParallaxY from={25} to={-25} className="w-[78%]">
+              <motion.div
+                initial={{ opacity: 0, x: -40 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1.3, ease: [0.16, 1, 0.3, 1] }}
+                className="w-full aspect-[3/4] overflow-hidden shadow-2xl shadow-moody-900/15"
+              >
+                <img
+                  src={respImg(settings['img.home.team.aldin'] || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=900', [480, 960]).src}
+                  srcSet={respImg(settings['img.home.team.aldin'] || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=900', [480, 960]).srcSet}
+                  sizes="(min-width: 1024px) 39vw, 78vw"
+                  alt="Aldin"
+                  className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-1000"
+                  loading="lazy"
+                  decoding="async"
+                  draggable={false}
+                  referrerPolicy="no-referrer"
+                />
+              </motion.div>
+            </ParallaxY>
+
+            {/* Overlapping second portrait — faster parallax for depth */}
+            <div className="absolute -bottom-12 right-0 w-[46%]">
+              <ParallaxY from={60} to={-30}>
+                <motion.div
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 1.3, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                  className="w-full aspect-[3/4] overflow-hidden border-[6px] md:border-8 border-white shadow-xl shadow-moody-900/20"
+                >
+                  <img
+                    src={respImg(settings['img.home.team.melisa'] || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=900', [320, 640]).src}
+                    srcSet={respImg(settings['img.home.team.melisa'] || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=900', [320, 640]).srcSet}
+                    sizes="(min-width: 1024px) 23vw, 46vw"
+                    alt="Melisa"
+                    className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-1000"
+                    loading="lazy"
+                    decoding="async"
+                    draggable={false}
+                    referrerPolicy="no-referrer"
+                  />
+                </motion.div>
+              </ParallaxY>
+            </div>
           </div>
 
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-20">
-            {/* Left Portrait */}
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.2 }}
-              className="w-full sm:w-2/3 lg:w-1/3 aspect-[3/4] overflow-hidden rounded-sm grayscale"
-            >
-              <img
-                src={settings['img.home.team.aldin'] || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800'}
-                alt="Aldin"
-                className="w-full h-full object-cover"
-                loading="lazy"
-                referrerPolicy="no-referrer"
-              />
-            </motion.div>
-
-            {/* Center Text */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
+          {/* Text column */}
+          <div className="lg:col-span-6 lg:pl-6 text-center lg:text-left">
+            <motion.span
+              initial={{ opacity: 0, y: 14 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 1.2, delay: 0.2 }}
-              className="w-full lg:w-1/3 text-center space-y-8 md:space-y-12 px-4"
+              transition={{ duration: 0.9 }}
+              style={getContentStyle('about.artists')}
+              className="luxury-text-sm block mb-5"
             >
-              <div className="space-y-6 md:space-y-8 text-moody-900/70 font-light text-base md:text-lg leading-relaxed">
-                <p style={getContentStyle('home.about.desc.1')} className="text-moody-900 font-medium text-xl md:text-2xl font-serif">{t('home.about.desc.1').split('.')[0]}.</p>
-                <p style={getContentStyle('home.about.desc.2')}>{t('home.about.desc.2')}</p>
-                <p style={getContentStyle('home.about.desc.3')}>{t('home.about.desc.3')}</p>
-              </div>
+              {t('about.artists')}
+            </motion.span>
 
-              <div className="space-y-4 text-moody-900/40 text-[11px] tracking-[0.3em] uppercase font-bold">
-                <p>{settings.email || 'hello@387cinematicweddings.com'}</p>
-                {settings.phone && <p>{settings.phone}</p>}
-                <p className="text-gold-600">{t('contact.response.note').split('.')[0]}.</p>
-              </div>
+            <motion.h2
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.1, delay: 0.1 }}
+              className="text-4xl sm:text-5xl lg:text-6xl font-serif font-light text-moody-900 leading-[1.05] mb-7"
+            >
+              <span style={getContentStyle('home.about.title')}>{t('home.about.title')}</span>{' '}
+              <span style={getContentStyle('home.about.and')} className="italic text-gold-600">{t('home.about.and')}</span>
+            </motion.h2>
 
-              <div className="pt-6 md:pt-12 flex justify-center">
-                <Link
-                  to="/contact"
-                  className="inline-flex items-center gap-4 md:gap-8 group"
-                >
-                  <span className="luxury-text-sm text-gold-600 group-hover:text-moody-900 transition-colors duration-500">
-                    {t('home.about.cta')}
-                  </span>
-                  <div className="w-12 md:w-20 h-[1px] bg-gold-600/30 group-hover:bg-gold-600/60 lg:group-hover:w-40 transition-all duration-1000" aria-hidden="true" />
-                  <ArrowRight size={20} className="text-gold-600 group-hover:text-moody-900 lg:group-hover:translate-x-4 transition-all duration-1000" aria-hidden="true" />
-                </Link>
-              </div>
+            <motion.div
+              initial={{ opacity: 0, scaleX: 0 }}
+              whileInView={{ opacity: 1, scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1, delay: 0.2 }}
+              className="w-16 h-[1px] bg-gold-600/50 mb-8 mx-auto lg:mx-0 origin-left"
+              aria-hidden="true"
+            />
+
+            <motion.p
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1, delay: 0.25 }}
+              style={getContentStyle('home.about.desc.1')}
+              className="font-serif text-xl md:text-2xl text-moody-900/85 leading-relaxed mb-6"
+            >
+              {t('home.about.desc.1')}
+            </motion.p>
+
+            <motion.p
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1, delay: 0.35 }}
+              style={getContentStyle('home.about.desc.2')}
+              className="text-base md:text-lg text-moody-900/60 font-light leading-relaxed mb-5"
+            >
+              {t('home.about.desc.2')}
+            </motion.p>
+
+            <motion.p
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1, delay: 0.45 }}
+              style={getContentStyle('home.about.desc.3')}
+              className="text-base md:text-lg text-moody-900/60 font-light italic leading-relaxed mb-10"
+            >
+              {t('home.about.desc.3')}
+            </motion.p>
+
+            {/* Contact row */}
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1, delay: 0.55 }}
+              className="flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-2 text-[11px] tracking-[0.25em] uppercase font-bold text-moody-900/45 mb-10"
+            >
+              <a href={`mailto:${settings.email || 'hello@387cinematicweddings.com'}`} className="hover:text-gold-600 transition-colors duration-300">
+                {settings.email || 'hello@387cinematicweddings.com'}
+              </a>
+              {settings.phone && (
+                <>
+                  <span className="w-1 h-1 rounded-full bg-gold-600/50" aria-hidden="true" />
+                  <a href={`tel:${settings.phone.replace(/\s/g, '')}`} className="hover:text-gold-600 transition-colors duration-300">
+                    {settings.phone}
+                  </a>
+                </>
+              )}
             </motion.div>
 
-            {/* Right Portrait */}
+            {/* CTA */}
             <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              whileInView={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 1.2 }}
-              className="w-full sm:w-2/3 lg:w-1/3 aspect-[3/4] overflow-hidden rounded-sm grayscale"
+              transition={{ duration: 1, delay: 0.65 }}
+              className="flex justify-center lg:justify-start"
             >
-              <img
-                src={settings['img.home.team.melisa'] || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=800'}
-                alt="Melisa"
-                className="w-full h-full object-cover"
-                loading="lazy"
-                referrerPolicy="no-referrer"
-              />
+              <Link
+                to="/about"
+                className="group relative px-12 md:px-14 py-4.5 md:py-5 overflow-hidden whitespace-nowrap inline-block border border-gold-600/50 hover:border-gold-600 transition-all duration-700 rounded-full text-center"
+              >
+                <div className="absolute inset-0 bg-gold-600 translate-y-full group-hover:translate-y-0 transition-transform duration-700" />
+                <span style={getContentStyle('home.about.cta')} className="relative z-10 text-[10px] md:text-[11px] tracking-[0.5em] uppercase font-medium text-gold-700 group-hover:text-white transition-colors duration-700 flex items-center gap-3">
+                  {t('home.about.cta')}
+                  <ArrowRight size={14} className="group-hover:translate-x-1.5 transition-transform duration-500" aria-hidden="true" />
+                </span>
+              </Link>
             </motion.div>
           </div>
         </div>

@@ -69,6 +69,7 @@ const PAGE_PATHS: Record<string, string> = {
 const SECTION_LABELS: Record<string, string> = {
   hero:          'Hero sekcija',
   intro:         'Uvod',
+  collections:   'Kolekcije (kategorije)',
   process:       'Proces / Koraci',
   story:         'Priča',
   philosophy:    'Filozofija',
@@ -437,13 +438,13 @@ export default function PagesManager() {
                                       key={ff}
                                       type="button"
                                       onClick={() => handleStyleChange(field.key, 'fontFamily', em.fontFamily === ff ? '' : ff)}
-                                      title={ff === 'serif' ? 'Cormorant (serif)' : ff === 'sans' ? 'Montserrat (sans)' : 'Caveat (script)'}
+                                      title={ff === 'serif' ? 'Playfair (serif)' : ff === 'sans' ? 'Montserrat (sans)' : 'Caveat (script)'}
                                       className={`px-2 py-0.5 text-[11px] rounded-sm border transition-all ${
                                         em.fontFamily === ff
                                           ? 'border-gold-500/50 bg-gold-500/10 text-gold-300'
                                           : 'border-white/10 text-white/30 hover:text-white/60 hover:border-white/20'
                                       }`}
-                                      style={{ fontFamily: ff === 'serif' ? '"Cormorant Garamond", serif' : ff === 'sans' ? '"Montserrat", sans-serif' : '"Caveat", cursive' }}
+                                      style={{ fontFamily: ff === 'serif' ? '"Playfair Display", serif' : ff === 'sans' ? '"Montserrat", sans-serif' : '"Caveat", cursive' }}
                                     >
                                       {ff === 'serif' ? 'Serif' : ff === 'sans' ? 'Sans' : 'Script'}
                                     </button>
