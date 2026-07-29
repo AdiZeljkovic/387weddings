@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Menu, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
@@ -49,71 +48,122 @@ const Navbar = () => {
     if (location.pathname === path) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  return (
-    <>
-      <nav
+  // Desktop nav item — gold rule grows from the centre on hover, stays for the
+  // current page; the label widens a touch so the motion reads as intentional.
+  const NavLink = ({ path, label }: { path: string; label: string }) => {
+    const active = location.pathname === path;
+    return (
+      <Link
+        to={path}
+        onClick={() => handleLinkClick(path)}
+        aria-current={active ? 'page' : undefined}
         className={cn(
-          "sticky top-0 z-[1000] transition-all duration-500 px-6 md:px-8 lg:px-16 bg-white/95 backdrop-blur-md",
-          scrolled
-            ? "py-4 md:py-5 border-b border-gold-600/10 shadow-sm"
-            : "py-5 md:py-7 border-b border-gold-600/5"
+          'group relative py-1.5 luxury-text-base transition-colors duration-500',
+          active ? 'text-gold-600' : 'text-moody-900/55 hover:text-moody-900',
         )}
       >
+        <span className="transition-[letter-spacing] duration-700 group-hover:tracking-[0.34em]">
+          {label}
+        </span>
+        <span
+          aria-hidden="true"
+          className={cn(
+            'absolute inset-x-0 -bottom-0.5 h-[1px] bg-gold-600 origin-center transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]',
+            active ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100',
+          )}
+        />
+      </Link>
+    );
+  };
+
+  return (
+    <>
+      <motion.nav
+        initial={{ opacity: 0, y: -14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+        className={cn(
+          "sticky top-0 z-[1000] transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] px-6 md:px-8 lg:px-16 bg-white/90 backdrop-blur-xl",
+          scrolled ? "py-3.5 md:py-4 shadow-[0_1px_24px_rgba(26,26,26,0.05)]" : "py-5 md:py-7"
+        )}
+      >
+        {/* Hairline that fades out toward the edges — softer than a full border */}
+        <span
+          aria-hidden="true"
+          className={cn(
+            "absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-gold-600/30 to-transparent transition-opacity duration-700",
+            scrolled ? "opacity-100" : "opacity-50"
+          )}
+        />
+
         <div className="max-w-[1800px] mx-auto flex items-center justify-between">
           {/* Left: Desktop links | Mobile: empty spacer */}
-          <div className="flex-1 flex items-center justify-end pr-4 lg:pr-12 xl:pr-20">
-            <div className="hidden lg:flex items-center gap-8 xl:gap-16">
+          <div className="flex-1 flex items-center justify-end pr-4 lg:pr-10 xl:pr-16">
+            <div className="hidden lg:flex items-center gap-8 xl:gap-14">
               {leftLinks.map(link => (
-                <Link key={link.path} to={link.path} onClick={() => handleLinkClick(link.path)}
-                  className={cn("luxury-text-base transition-all duration-500 relative pb-1",
-                    location.pathname === link.path ? "text-gold-600"
-                      : "text-moody-900/60 hover:text-moody-900"
-                  )}>
-                  {link.label}
-                </Link>
+                <NavLink key={link.path} path={link.path} label={link.label} />
               ))}
             </div>
           </div>
 
-          {/* Logo — centered */}
-          <div className="flex-none flex justify-center">
+          {/* Logo — centered, flanked by hairlines that reach toward the links */}
+          <div className="flex-none flex items-center justify-center gap-6 xl:gap-9">
+            <span
+              aria-hidden="true"
+              className="hidden lg:block w-10 xl:w-16 h-[1px] bg-gradient-to-l from-gold-600/40 to-transparent"
+            />
+
             <Link to="/" className="flex flex-col items-center group relative z-10">
-              <span className={cn(
-                "text-[2rem] md:text-[2.25rem] xl:text-[2.5rem] font-script tracking-normal transition-colors duration-500 leading-none",
-                "text-moody-900"
-              )}>
+              <span
+                className={cn(
+                  "font-script tracking-normal leading-none text-moody-900 group-hover:text-gold-700 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                  scrolled
+                    ? "text-[1.85rem] md:text-[2rem] xl:text-[2.2rem]"
+                    : "text-[2rem] md:text-[2.25rem] xl:text-[2.5rem]"
+                )}
+              >
                 3<span className="inline-block relative -top-[4px]">8</span>7 Cinematic
               </span>
-              <span className={cn(
-                "text-[9px] md:text-[11px] xl:text-[12px] tracking-[0.75em] uppercase font-bold mt-0.5 transition-colors duration-500",
-                "text-gold-600"
-              )}>
+              <span
+                className={cn(
+                  "uppercase font-bold mt-1 text-gold-600 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                  scrolled
+                    ? "text-[8px] md:text-[10px] tracking-[0.7em]"
+                    : "text-[9px] md:text-[11px] xl:text-[12px] tracking-[0.75em] group-hover:tracking-[0.85em]"
+                )}
+              >
                 Weddings
               </span>
             </Link>
+
+            <span
+              aria-hidden="true"
+              className="hidden lg:block w-10 xl:w-16 h-[1px] bg-gradient-to-r from-gold-600/40 to-transparent"
+            />
           </div>
 
           {/* Right: Desktop links | Mobile: hamburger */}
-          <div className="flex-1 flex items-center justify-start pl-4 lg:pl-12 xl:pl-20">
+          <div className="flex-1 flex items-center justify-start pl-4 lg:pl-10 xl:pl-16">
             {/* Desktop */}
-            <div className="hidden lg:flex items-center gap-8 xl:gap-16">
+            <div className="hidden lg:flex items-center gap-8 xl:gap-14">
               {rightLinks.map(link => (
-                <Link key={link.path} to={link.path} onClick={() => handleLinkClick(link.path)}
-                  className={cn("luxury-text-base transition-all duration-500 relative pb-1",
-                    location.pathname === link.path ? "text-gold-600"
-                      : "text-moody-900/60 hover:text-moody-900"
-                  )}>
-                  {link.label}
-                </Link>
+                <NavLink key={link.path} path={link.path} label={link.label} />
               ))}
-              <div className="flex items-center gap-3">
+
+              {/* Language — set apart from the nav by a vertical hairline */}
+              <div className="flex items-center gap-3.5 pl-8 xl:pl-12 border-l border-moody-900/10">
                 {(['ENG', 'BOS'] as const).map((lang, i) => (
                   <React.Fragment key={lang}>
-                    {i > 0 && <span className="w-[1px] h-3 bg-moody-900/10" />}
-                    <button type="button" onClick={() => setLanguage(lang)}
-                      className={cn("luxury-text-base transition-all duration-500 cursor-pointer",
-                        language === lang ? "text-gold-600" : "text-moody-900/60 hover:text-moody-900"
-                      )}>
+                    {i > 0 && <span className="w-[1px] h-3 bg-moody-900/15" aria-hidden="true" />}
+                    <button
+                      type="button"
+                      onClick={() => setLanguage(lang)}
+                      aria-pressed={language === lang}
+                      className={cn(
+                        "text-[11px] xl:text-[12px] tracking-[0.28em] font-medium transition-colors duration-500 cursor-pointer",
+                        language === lang ? "text-gold-600" : "text-moody-900/35 hover:text-moody-900"
+                      )}
+                    >
                       {lang}
                     </button>
                   </React.Fragment>
@@ -121,34 +171,47 @@ const Navbar = () => {
               </div>
             </div>
 
-            {/* Mobile hamburger */}
+            {/* Mobile hamburger — two rules that morph into a cross */}
             <div className="flex lg:hidden flex-1 justify-end">
               <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className={cn("p-2 -mr-2 transition-colors duration-500",
-                  "text-moody-900"
-                )}
-                aria-label="Toggle menu"
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="relative w-11 h-11 -mr-2 flex flex-col items-center justify-center gap-[7px] group"
+                aria-label="Open menu"
+                aria-expanded={isMobileMenuOpen}
               >
-                <Menu size={22} strokeWidth={1.5} />
+                <span className="block w-6 h-[1.5px] bg-moody-900 group-hover:bg-gold-600 transition-colors duration-500" />
+                <span className="block w-4 h-[1.5px] bg-moody-900 group-hover:w-6 group-hover:bg-gold-600 transition-all duration-500" />
               </button>
             </div>
           </div>
         </div>
-      </nav>
+      </motion.nav>
 
       {/* ── Full-screen mobile menu ─────────────────────────────────────────── */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -14 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }}
+            transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
             className="fixed inset-0 z-[1010] bg-gold-50 flex flex-col lg:hidden overflow-hidden"
           >
-            {/* Top bar — logo + close */}
-            <div className="flex items-center justify-between px-6 py-6 flex-shrink-0">
+            {/* Warm glow + oversized script mark */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: 'radial-gradient(ellipse 70% 50% at 50% 30%, rgba(166,134,93,0.13) 0%, transparent 70%)' }}
+              aria-hidden="true"
+            />
+            <div
+              className="absolute -bottom-12 -right-6 text-[15rem] font-script text-moody-900/[0.035] leading-none select-none pointer-events-none"
+              aria-hidden="true"
+            >
+              387
+            </div>
+
+            {/* Top bar — mirrors the header so the logo never appears to move */}
+            <div className="relative flex items-center justify-between px-6 py-5 flex-shrink-0">
               <div className="flex-1" />
               <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="flex flex-col items-center">
                 <span className="text-[2rem] font-script text-moody-900 leading-none">
@@ -161,60 +224,79 @@ const Navbar = () => {
               <div className="flex-1 flex justify-end">
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="p-2 -mr-2 text-moody-900/50 hover:text-moody-900 transition-colors"
+                  className="relative w-11 h-11 -mr-2 flex items-center justify-center group"
                   aria-label="Close menu"
                 >
-                  <X size={22} strokeWidth={1.5} />
+                  <motion.span
+                    initial={{ rotate: 0, opacity: 0 }}
+                    animate={{ rotate: 45, opacity: 1 }}
+                    transition={{ duration: 0.8, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute block w-6 h-[1.5px] bg-moody-900 group-hover:bg-gold-600 transition-colors duration-500"
+                  />
+                  <motion.span
+                    initial={{ rotate: 0, opacity: 0 }}
+                    animate={{ rotate: -45, opacity: 1 }}
+                    transition={{ duration: 0.8, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute block w-6 h-[1.5px] bg-moody-900 group-hover:bg-gold-600 transition-colors duration-500"
+                  />
                 </button>
               </div>
             </div>
 
-            {/* Nav links — large serif */}
-            <div className="flex-1 flex flex-col items-center justify-center gap-1 px-8">
-              {allLinks.map((link, i) => (
-                <motion.div
-                  key={link.path}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.07 + 0.05, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                >
-                  <Link
-                    to={link.path}
-                    onClick={() => handleLinkClick(link.path)}
-                    className={cn(
-                      "text-5xl sm:text-6xl font-serif font-light block text-center py-3 transition-colors duration-300",
-                      location.pathname === link.path ? "text-gold-600" : "text-moody-900/35 hover:text-moody-900/70"
-                    )}
-                  >
-                    {link.label}
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
+            {/* Nav links — each rises through its own mask */}
+            <nav className="relative flex-1 flex flex-col items-center justify-center px-8">
+              {allLinks.map((link, i) => {
+                const active = location.pathname === link.path;
+                return (
+                  <div key={link.path} className="overflow-hidden py-1.5">
+                    <motion.div
+                      initial={{ y: '110%' }}
+                      animate={{ y: '0%' }}
+                      transition={{ delay: 0.25 + i * 0.11, duration: 1.05, ease: [0.16, 1, 0.3, 1] }}
+                    >
+                      <Link
+                        to={link.path}
+                        onClick={() => handleLinkClick(link.path)}
+                        className={cn(
+                          'group relative block text-center text-[2.75rem] sm:text-6xl font-serif font-light leading-tight transition-colors duration-500',
+                          active ? 'text-gold-600' : 'text-moody-900/80 hover:text-gold-600',
+                        )}
+                      >
+                        {link.label}
+                        {/* Gold rule under the current page */}
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            'block h-[1px] bg-gold-600 mx-auto mt-1 transition-all duration-500',
+                            active ? 'w-10' : 'w-0 group-hover:w-10',
+                          )}
+                        />
+                      </Link>
+                    </motion.div>
+                  </div>
+                );
+              })}
+            </nav>
 
             {/* Bottom bar */}
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.35 }}
-              className="flex-shrink-0 border-t border-gold-600/10 px-8 pt-6 pb-10 relative overflow-hidden"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.75, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+              className="relative flex-shrink-0 border-t border-gold-600/15 px-8 pt-7 pb-10"
             >
-              {/* Decorative 387 watermark */}
-              <div className="absolute -bottom-4 right-4 text-[9rem] font-script text-moody-900/[0.04] leading-none select-none pointer-events-none">
-                387
-              </div>
-
               {/* Language switcher */}
-              <div className="flex items-center justify-center gap-5 mb-5">
+              <div className="flex items-center justify-center gap-5 mb-6">
                 {(['ENG', 'BOS'] as const).map((lang, i) => (
                   <React.Fragment key={lang}>
-                    {i > 0 && <span className="w-[1px] h-4 bg-moody-900/10" />}
+                    {i > 0 && <span className="w-[1px] h-4 bg-moody-900/15" aria-hidden="true" />}
                     <button
                       type="button"
                       onClick={() => setLanguage(lang)}
+                      aria-pressed={language === lang}
                       className={cn(
-                        "text-[12px] tracking-[0.35em] font-bold transition-colors duration-300",
-                        language === lang ? "text-gold-600" : "text-moody-900/30"
+                        'px-2 py-1 text-[12px] tracking-[0.35em] font-bold transition-colors duration-300',
+                        language === lang ? 'text-gold-600' : 'text-moody-900/35 hover:text-moody-900/70',
                       )}
                     >
                       {lang}
@@ -225,13 +307,13 @@ const Navbar = () => {
 
               {/* Connect */}
               {email && (
-                <div className="space-y-1 relative z-10 text-center">
+                <div className="space-y-2 text-center">
                   <span className="text-[9px] tracking-[0.5em] uppercase font-bold text-gold-600 block">
-                    {t('footer.navigation') === 'Navigation' ? 'Connect' : t('footer.navigation')}
+                    {language === 'ENG' ? 'Connect' : 'Kontakt'}
                   </span>
                   <a
                     href={`mailto:${email}`}
-                    className="text-moody-900/35 text-xs hover:text-gold-600 transition-colors duration-300"
+                    className="inline-block text-moody-900/50 text-xs hover:text-gold-600 transition-colors duration-300"
                   >
                     {email}
                   </a>

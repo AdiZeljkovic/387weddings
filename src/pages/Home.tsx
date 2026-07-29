@@ -273,7 +273,7 @@ const Home = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
-          className="relative overflow-hidden marquee-pause h-[42vh] sm:h-[46vh] md:h-[52vh] bg-gold-50/40"
+          className="relative overflow-hidden marquee-pause h-[34vh] sm:h-[37vh] md:h-[42vh] bg-gold-50/40"
         >
           {/* Edge fades — cinematic depth on both ends of the strip */}
           <div className="absolute inset-y-0 left-0 w-12 md:w-28 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" aria-hidden="true" />

@@ -122,13 +122,6 @@ const About = () => {
     loadSettings().then(setImgs).catch(err => console.warn('About: settings load failed', err));
   }, []);
 
-  // ── Hero — scroll-scrubbed parallax + slow push-in ─────────────────────────
-  const heroRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress: heroProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
-  const heroY     = useTransform(heroProgress, [0, 1], ['-8%', '8%']);
-  const heroScale = useTransform(heroProgress, [0, 1], [1.06, 1.2]);
-  const heroFade  = useTransform(heroProgress, [0, 0.85], [1, 0]);
-
   // ── Experience spine — the gold line draws itself down the section ─────────
   const spineRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress: spineProgress } = useScroll({ target: spineRef, offset: ['start 0.8', 'end 0.55'] });
@@ -155,91 +148,49 @@ const About = () => {
 
   return (
     <div className="bg-white overflow-hidden">
-      {/* ── Hero — cinematic dark plate, scrubbed drift ─────────────────────── */}
-      <section ref={heroRef} className="relative h-[82vh] min-h-[520px] flex items-center justify-center overflow-hidden bg-moody-950">
-        <motion.div style={st({ y: heroY, scale: heroScale })} className="absolute inset-0 z-0 will-change-transform">
-          <motion.img
-            src={hero.src}
-            srcSet={hero.srcSet}
-            sizes="100vw"
-            alt={t('about.hero.title')}
-            initial={{ opacity: 0, scale: 1.12 }}
-            animate={{ opacity: 0.55, scale: 1 }}
-            transition={{ duration: 2.4, ease: EASE }}
-            className="w-full h-full object-cover grayscale brightness-75"
-            loading="eager"
-            fetchPriority="high"
-            decoding="async"
-            draggable={false}
-            referrerPolicy="no-referrer"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/10 to-moody-950" aria-hidden="true" />
-        </motion.div>
+      {/* ── Page opener — editorial title block, no image hero ──────────────── */}
+      <section className="relative bg-white pt-16 md:pt-24 pb-4 md:pb-8 px-6 sm:px-8 lg:px-16 overflow-hidden">
         <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 60% 65% at 50% 45%, rgba(166,134,93,0.18) 0%, transparent 70%)' }}
+          className="absolute inset-x-0 top-0 h-80 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse 50% 60% at 50% 30%, rgba(166,134,93,0.10) 0%, transparent 70%)' }}
           aria-hidden="true"
         />
 
-        <motion.div style={st({ opacity: heroFade })} className="relative z-10 text-center px-6 w-full max-w-5xl">
-          {/* Ornament */}
-          <motion.div
-            initial={{ opacity: 0, rotate: -90, scale: 0.5 }}
-            animate={{ opacity: 1, rotate: 0, scale: 1 }}
-            transition={{ duration: 1.2, delay: 0.3, ease: EASE }}
-            className="flex justify-center mb-7"
-            aria-hidden="true"
-          >
-            <Sparkles size={20} strokeWidth={1.2} className="text-gold-400/80" />
-          </motion.div>
+        <div className="relative max-w-4xl mx-auto text-center">
+          <SectionTag style={getContentStyle('about.artists')} className="mb-7">
+            {t('about.artists')}
+          </SectionTag>
 
-          <h1 className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-serif font-light text-white leading-[0.95] tracking-tight uppercase mb-8">
-            <WordReveal words={heroWords} delay={0.45} />
+          <h1
+            style={getContentStyle('about.hero.title')}
+            aria-label={t('about.hero.title')}
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-light text-moody-900 leading-[0.98] tracking-tight uppercase mb-5"
+          >
+            <WordReveal words={heroWords} delay={0.15} />
           </h1>
 
-          {/* Subtitle flanked by growing hairlines */}
-          <div className="flex items-center justify-center gap-4 md:gap-6">
-            <motion.span
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ duration: 1.2, delay: 0.9, ease: EASE }}
-              className="w-10 md:w-20 h-[1px] bg-gold-400/50 origin-right"
-              aria-hidden="true"
-            />
-            <motion.p
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.85, ease: EASE }}
-              style={getContentStyle('about.hero.subtitle')}
-              className="text-white/60 text-[9px] md:text-[11px] tracking-[0.45em] md:tracking-[0.55em] uppercase font-bold"
-            >
-              {t('about.hero.subtitle')}
-            </motion.p>
-            <motion.span
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ duration: 1.2, delay: 0.9, ease: EASE }}
-              className="w-10 md:w-20 h-[1px] bg-gold-400/50 origin-left"
-              aria-hidden="true"
-            />
-          </div>
-        </motion.div>
+          <motion.p
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.55, ease: EASE }}
+            style={getContentStyle('about.hero.subtitle')}
+            className="font-serif italic text-lg md:text-xl text-gold-600"
+          >
+            {t('about.hero.subtitle')}
+          </motion.p>
 
-        {/* Scroll cue */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1.2, delay: 1.4 }}
-          style={st({ opacity: heroFade })}
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 hidden md:block"
-          aria-hidden="true"
-        >
-          <div className="h-14 w-[1px] bg-gradient-to-b from-gold-400/70 to-transparent animate-[scrollBounce_2s_ease-in-out_infinite]" />
-        </motion.div>
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 1.1, delay: 0.7, ease: EASE }}
+            className="w-16 h-[1px] bg-gold-600/50 mx-auto mt-9"
+            aria-hidden="true"
+          />
+        </div>
       </section>
 
       {/* ── Story — layered editorial composition ───────────────────────────── */}
-      <section className="relative bg-white pt-28 md:pt-40 pb-32 md:pb-48 px-6 sm:px-8 lg:px-16 overflow-hidden">
+      <section className="relative bg-white pt-16 md:pt-24 pb-32 md:pb-48 px-6 sm:px-8 lg:px-16 overflow-hidden">
         {/* Script watermark */}
         <div
           className="absolute -left-10 top-24 text-[15rem] lg:text-[22rem] font-script text-gold-600/[0.05] leading-none select-none pointer-events-none hidden md:block"
@@ -292,27 +243,15 @@ const About = () => {
 
           {/* Text column */}
           <div className="lg:col-span-6 lg:pl-6 text-center lg:text-left">
-            {/* Tag with a line growing out of it */}
-            <div className="flex items-center justify-center lg:justify-start gap-5 mb-6">
-              <motion.span
-                initial={{ opacity: 0, y: 12 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.9, ease: EASE }}
-                style={getContentStyle('about.artists')}
-                className="luxury-text-sm block"
-              >
-                {t('about.artists')}
-              </motion.span>
-              <motion.span
-                initial={{ scaleX: 0 }}
-                whileInView={{ scaleX: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1, delay: 0.15, ease: EASE }}
-                className="w-12 md:w-20 h-[1px] bg-gold-600/40 origin-left"
-                aria-hidden="true"
-              />
-            </div>
+            {/* The tag lives in the page opener now — a rule alone leads the heading */}
+            <motion.span
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1, ease: EASE }}
+              className="block w-12 md:w-20 h-[1px] bg-gold-600/40 mb-7 mx-auto lg:mx-0 origin-left"
+              aria-hidden="true"
+            />
 
             <h2 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-light text-moody-900 leading-[1.05] tracking-tight mb-8">
               <WordReveal words={storyWords} className="lg:justify-start" delay={0.15} />
