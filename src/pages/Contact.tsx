@@ -26,13 +26,14 @@ const FIELD_INPUT =
 // ── Field chrome ─────────────────────────────────────────────────────────────
 // Label rides above the field and warms to gold on focus; a gold rule wipes in
 // from the left over the resting hairline; a small gold dot marks a filled field.
-const FieldFrame = ({ id, label, labelStyle, focused, filled, delay = 0, children }: {
+const FieldFrame = ({ id, label, labelStyle, focused, filled, delay = 0, optionalLabel, children }: {
   id: string;
   label: string;
   labelStyle?: React.CSSProperties;
   focused: boolean;
   filled: boolean;
   delay?: number;
+  optionalLabel?: string;
   children: React.ReactNode;
 }) => (
   <motion.div
@@ -42,15 +43,23 @@ const FieldFrame = ({ id, label, labelStyle, focused, filled, delay = 0, childre
     transition={{ duration: 0.9, delay, ease: EASE }}
     className="relative"
   >
-    <label
-      htmlFor={id}
-      style={labelStyle}
-      className={`block text-[9px] md:text-[10px] tracking-[0.45em] uppercase font-bold mb-3 transition-colors duration-500 ${
-        focused ? 'text-gold-600' : 'text-moody-900/40'
-      }`}
-    >
-      {label}
-    </label>
+    <div className="flex items-baseline justify-between gap-3 mb-3">
+      <label
+        htmlFor={id}
+        style={labelStyle}
+        className={`block text-[9px] md:text-[10px] tracking-[0.45em] uppercase font-bold transition-colors duration-500 ${
+          focused ? 'text-gold-600' : 'text-moody-900/40'
+        }`}
+      >
+        {label}
+      </label>
+      {/* Only name + email are required — say so, so nobody abandons the form */}
+      {optionalLabel && (
+        <span className="text-[9px] tracking-[0.2em] uppercase text-moody-900/25 font-medium flex-none">
+          {optionalLabel}
+        </span>
+      )}
+    </div>
 
     {children}
 
@@ -81,7 +90,7 @@ const FieldFrame = ({ id, label, labelStyle, focused, filled, delay = 0, childre
 
 const TextField = ({
   id, label, labelStyle, placeholder, value, onValueChange,
-  type = 'text', min, delay, inputClassName = '', autoComplete, required = false,
+  type = 'text', min, delay, inputClassName = '', autoComplete, required = false, optionalLabel,
   onFocusExtra, onBlurExtra,
 }: {
   id: string;
@@ -96,6 +105,7 @@ const TextField = ({
   inputClassName?: string;
   autoComplete?: string;
   required?: boolean;
+  optionalLabel?: string;
   onFocusExtra?: (e: React.FocusEvent<HTMLInputElement>) => void;
   onBlurExtra?: (e: React.FocusEvent<HTMLInputElement>) => void;
 }) => {
@@ -108,6 +118,7 @@ const TextField = ({
       focused={focused}
       filled={value.trim().length > 0}
       delay={delay}
+      optionalLabel={optionalLabel}
     >
       <input
         id={id}
@@ -127,7 +138,7 @@ const TextField = ({
 };
 
 const TextAreaField = ({
-  id, label, labelStyle, placeholder, value, onValueChange, rows = 4, delay,
+  id, label, labelStyle, placeholder, value, onValueChange, rows = 4, delay, optionalLabel,
 }: {
   id: string;
   label: string;
@@ -137,6 +148,7 @@ const TextAreaField = ({
   onValueChange: (v: string) => void;
   rows?: number;
   delay?: number;
+  optionalLabel?: string;
 }) => {
   const [focused, setFocused] = useState(false);
   return (
@@ -147,6 +159,7 @@ const TextAreaField = ({
       focused={focused}
       filled={value.trim().length > 0}
       delay={delay}
+      optionalLabel={optionalLabel}
     >
       <textarea
         id={id}
@@ -163,7 +176,7 @@ const TextAreaField = ({
 };
 
 const Contact = () => {
-  const { t, getContentStyle } = useLanguage();
+  const { t, getContentStyle, language } = useLanguage();
   const reduced = useReducedMotion();
 
   const [formData, setFormData] = useState({
@@ -240,6 +253,7 @@ const Contact = () => {
 
   const submitting = status === 'submitting';
   const today = new Date().toISOString().split('T')[0];
+  const optionalLabel = language === 'ENG' ? 'optional' : 'opcionalno';
 
   const hero = respImg(settings['img.contact.hero'] || HERO_FALLBACK, [640, 1024, 1600, 2000]);
 
@@ -421,6 +435,22 @@ const Contact = () => {
           >
             {t('contact.hero.subtitle')}
           </motion.p>
+
+          {/* Availability — set in Admin → Postavke; reassures the couple we're taking bookings */}
+          {settings.availability_text && (
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.9, delay: 0.7, ease: EASE }}
+              className="flex justify-center mt-8"
+            >
+              <span className="inline-flex items-center gap-3 text-[9px] md:text-[10px] tracking-[0.35em] uppercase font-bold text-gold-700 bg-gold-50 px-6 py-2.5 border border-gold-600/20 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-gold-600 animate-pulse" aria-hidden="true" />
+                {settings.availability_text}
+              </span>
+            </motion.div>
+          )}
         </div>
 
         {/* Cinematic band — curtain reveal inside an offset gold frame */}
@@ -528,6 +558,7 @@ const Contact = () => {
                       onBlurExtra={(e) => {
                         if (!e.target.value) e.target.type = 'text';
                       }}
+                      optionalLabel={optionalLabel}
                       delay={0.16}
                     />
                     <TextField
@@ -537,6 +568,7 @@ const Contact = () => {
                       placeholder={t('contact.form.location.placeholder')}
                       value={formData.location}
                       onValueChange={(v) => setFormData(prev => ({ ...prev, location: v }))}
+                      optionalLabel={optionalLabel}
                       delay={0.24}
                     />
                   </div>
@@ -549,6 +581,7 @@ const Contact = () => {
                     value={formData.message}
                     onValueChange={(v) => setFormData(prev => ({ ...prev, message: v }))}
                     rows={5}
+                    optionalLabel={optionalLabel}
                     delay={0.32}
                   />
 

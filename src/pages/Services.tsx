@@ -11,7 +11,8 @@ import type { LucideIcon } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
 import { respImg } from '../lib/img';
-import { EASE, ParallaxY, RevealImage, SectionTag, WordReveal, GoldPill } from '../components/anim';
+import { EASE, ParallaxY, RevealImage, SectionTag, WordReveal } from '../components/anim';
+import Testimonials from '../components/Testimonials';
 
 // ── Icon registry (CMS picks one by name) ────────────────────────────────────
 const ICONS: Record<string, LucideIcon> = {
@@ -98,8 +99,6 @@ const JourneyStep = ({ n, index, t, getContentStyle }: {
   const s = index * 0.11; // cascade offset
   const y = useTransform(p, [s, s + 0.65], [72, 0]);
   const o = useTransform(p, [s, s + 0.55], [0, 1]);
-  const numY = useTransform(p, [s, s + 0.8], [46, 0]);
-  const numO = useTransform(p, [s, s + 0.8], [0, 1]);
   const dot = useTransform(p, [s, s + 0.5], [0, 1]);
 
   const st = (styles: Record<string, unknown>) => (reduced ? undefined : styles);
@@ -107,41 +106,25 @@ const JourneyStep = ({ n, index, t, getContentStyle }: {
 
   return (
     <div ref={ref} className="relative">
-      {/* Ghost number behind the step */}
-      <motion.span
-        style={st({ y: numY, opacity: numO })}
-        aria-hidden="true"
-        className="absolute -top-10 md:-top-14 left-1/2 md:left-0 -translate-x-1/2 md:translate-x-0 text-[7rem] md:text-[9rem] font-serif leading-none text-gold-600/[0.09] select-none pointer-events-none"
-      >
-        {t(`experience.journey.step.${n}.num`)}
-      </motion.span>
-
-      {/* Node on the rail */}
+      {/* Node on the rail — a single clean disc, no badge */}
       <motion.div
         style={st({ scale: dot, opacity: o })}
-        aria-hidden="true"
-        className="relative z-10 mx-auto md:mx-0 mb-8 w-14 h-14 md:w-16 md:h-16 rounded-full bg-white border border-gold-600/25 shadow-lg shadow-gold-600/10 flex items-center justify-center text-gold-600"
+        className="relative z-10 mx-auto md:mx-0 mb-8 w-[72px] h-[72px] rounded-full bg-moody-950/70 backdrop-blur-sm border border-gold-400/40 shadow-lg shadow-black/40 flex items-center justify-center text-gold-400"
       >
-        <Icon size={22} strokeWidth={1.1} />
+        <Icon size={26} strokeWidth={1.1} aria-hidden="true" />
       </motion.div>
 
       <motion.div style={st({ y, opacity: o })} className="relative z-10 text-center md:text-left">
-        <span
-          style={getContentStyle(`experience.journey.step.${n}.num`)}
-          className="block text-[10px] tracking-[0.45em] uppercase font-bold text-gold-600/70 mb-4"
-        >
-          {t(`experience.journey.step.${n}.num`)}
-        </span>
         <h3
           style={getContentStyle(`experience.journey.step.${n}.title`)}
-          className="text-xl md:text-2xl font-serif font-light text-moody-900 leading-snug mb-4"
+          className="text-2xl md:text-[1.65rem] font-serif font-light text-white leading-snug mb-5"
         >
           {t(`experience.journey.step.${n}.title`)}
         </h3>
-        <div className="w-10 h-[1px] bg-gold-600/40 mb-4 mx-auto md:mx-0" aria-hidden="true" />
+        <div className="w-12 h-[1px] bg-gold-400/60 mb-5 mx-auto md:mx-0" aria-hidden="true" />
         <p
           style={getContentStyle(`experience.journey.step.${n}.desc`)}
-          className="text-moody-900/60 text-sm font-light leading-relaxed"
+          className="text-white/65 text-[15px] font-light leading-relaxed"
         >
           {t(`experience.journey.step.${n}.desc`)}
         </p>
@@ -167,6 +150,14 @@ const PackageCard = ({ pkg, index, language, t, getContentStyle, tOr }: {
 
   const dark = pkg.is_featured;
 
+  // Spotlight — a soft gold light follows the pointer across the card
+  const onSpotlightMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (reduced) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
+    e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
+  };
+
   const name = language === 'ENG'
     ? (pkg.name_en || pkg.name_bs || pkg.name)
     : (pkg.name_bs || pkg.name);
@@ -181,21 +172,19 @@ const PackageCard = ({ pkg, index, language, t, getContentStyle, tOr }: {
     <motion.div
       ref={ref}
       style={reduced ? undefined : { y, opacity: o, rotate: rot }}
-      className={`w-full sm:w-[286px] lg:w-[300px] xl:w-[312px] flex-shrink-0 ${dark ? 'lg:-mt-8 lg:mb-8' : ''}`}
+      className={`w-full sm:w-[340px] lg:w-[360px] xl:w-[390px] flex-shrink-0 ${dark ? 'lg:-mt-10 lg:mb-10' : ''}`}
     >
       {/* Hover lift lives on a plain wrapper so it never fights the scrub transform */}
-      <div className="group relative h-full transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-3">
-        {/* Offset gold frame — depth cue for the featured collection */}
-        {dark && (
-          <div className="absolute -inset-3 border border-gold-600/25 pointer-events-none" aria-hidden="true" />
-        )}
-
+      <div
+        onMouseMove={onSpotlightMove}
+        className="group relative h-full transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-3"
+      >
         {/* Most popular badge, straddling the top border */}
         {dark && (
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
+          <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-20">
             <span
               style={getContentStyle('experience.package.popular')}
-              className="whitespace-nowrap text-[7px] tracking-[0.5em] uppercase font-bold bg-gold-600 text-white px-5 py-2 shadow-lg shadow-gold-600/30"
+              className="whitespace-nowrap text-[8px] tracking-[0.45em] uppercase font-bold bg-gold-600 text-white px-6 py-2.5 rounded-full shadow-lg shadow-gold-600/40"
             >
               {t('experience.package.popular')}
             </span>
@@ -203,17 +192,27 @@ const PackageCard = ({ pkg, index, language, t, getContentStyle, tOr }: {
         )}
 
         <div
-          className={`relative h-full flex flex-col overflow-hidden border transition-shadow duration-700
+          className={`relative h-full min-h-[560px] flex flex-col overflow-hidden border transition-shadow duration-700
             ${dark
               ? 'bg-moody-950 border-gold-600/30 shadow-[0_24px_70px_rgba(0,0,0,0.35)] hover:shadow-[0_34px_90px_rgba(0,0,0,0.5)]'
               : 'bg-white border-moody-900/12 shadow-[0_10px_40px_rgba(26,26,26,0.04)] hover:shadow-[0_24px_70px_rgba(26,26,26,0.10)]'
             }`}
         >
-          {/* Ghost roman numeral watermark */}
+          {/* Gold accent bar crowning the card */}
+          <div
+            aria-hidden="true"
+            className={`absolute inset-x-0 top-0 h-[3px] ${
+              dark
+                ? 'bg-gradient-to-r from-transparent via-gold-500 to-transparent'
+                : 'bg-gradient-to-r from-transparent via-gold-600/35 to-transparent'
+            }`}
+          />
+
+          {/* Ghost roman numeral watermark — kept inside the card bounds */}
           <span
             aria-hidden="true"
-            className={`absolute -top-6 -right-2 text-[7.5rem] font-serif leading-none select-none pointer-events-none
-              ${dark ? 'text-gold-400/[0.07]' : 'text-gold-600/[0.07]'}`}
+            className={`absolute top-4 right-5 text-[7rem] font-serif leading-none select-none pointer-events-none
+              ${dark ? 'text-white/[0.05]' : 'text-moody-900/[0.045]'}`}
           >
             {toRoman(index + 1)}
           </span>
@@ -227,18 +226,29 @@ const PackageCard = ({ pkg, index, language, t, getContentStyle, tOr }: {
             />
           )}
 
-          <div className={`relative z-10 flex flex-col flex-1 px-8 pb-10 ${dark ? 'pt-12' : 'pt-10'}`}>
+          {/* Pointer-tracking spotlight */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+            style={{
+              background: `radial-gradient(340px circle at var(--mx, 50%) var(--my, 0%), ${
+                dark ? 'rgba(166,134,93,0.20)' : 'rgba(166,134,93,0.13)'
+              } 0%, transparent 70%)`,
+            }}
+          />
+
+          <div className={`relative z-10 flex flex-col flex-1 px-9 md:px-10 pb-11 ${dark ? 'pt-14' : 'pt-12'}`}>
             {/* Collection tag */}
             <p
               style={getContentStyle('experience.package.collection')}
-              className={`text-[8px] tracking-[0.5em] uppercase font-bold mb-4 ${dark ? 'text-gold-400/60' : 'text-gold-600/55'}`}
+              className={`text-[9px] tracking-[0.5em] uppercase font-bold mb-5 ${dark ? 'text-gold-400/70' : 'text-gold-600/65'}`}
             >
               {t('experience.package.collection')} {toRoman(index + 1)}
             </p>
 
             {/* Name — per-package colour / size from the DB */}
             <h3
-              className={`text-2xl md:text-[1.65rem] font-serif font-light leading-snug mb-3 ${dark ? 'text-white' : 'text-moody-900'}`}
+              className={`text-3xl md:text-[2.1rem] font-serif font-light leading-tight mb-4 ${dark ? 'text-white' : 'text-moody-900'}`}
               style={{
                 ...(pkg.name_color     ? { color: pkg.name_color }         : {}),
                 ...(pkg.name_font_size ? { fontSize: pkg.name_font_size }  : {}),
@@ -247,59 +257,67 @@ const PackageCard = ({ pkg, index, language, t, getContentStyle, tOr }: {
               {name}
             </h3>
 
-            <div className={`w-10 h-[1px] mb-5 ${dark ? 'bg-gold-400/40' : 'bg-gold-600/40'}`} aria-hidden="true" />
+            <div className={`w-12 h-[1px] mb-6 ${dark ? 'bg-gold-400/50' : 'bg-gold-600/50'}`} aria-hidden="true" />
 
             {/* Description */}
-            <p className={`text-[11px] font-light italic leading-relaxed mb-8 ${dark ? 'text-white/40' : 'text-moody-900/45'}`}>
+            <p className={`text-[13px] font-light italic leading-relaxed mb-10 ${dark ? 'text-white/50' : 'text-moody-900/55'}`}>
               {description}
             </p>
 
-            {/* Starting at */}
-            <p
-              style={getContentStyle('experience.package.starting_at')}
-              className={`text-[8px] tracking-[0.4em] uppercase font-bold mb-1 ${dark ? 'text-gold-400/45' : 'text-gold-600/45'}`}
+            {/* Price block — the reason people are on this page */}
+            <div
+              className={`-mx-9 md:-mx-10 px-9 md:px-10 py-8 mb-9 border-y ${
+                dark ? 'bg-white/[0.03] border-white/10' : 'bg-gold-50/80 border-gold-600/15'
+              }`}
             >
-              {tOr('experience.package.starting_at', 'Starting at')}
-            </p>
-
-            {/* Price */}
-            <div className="mb-8 flex items-baseline gap-2">
-              <span className={`font-serif font-light leading-none tracking-tight
-                ${pkg.price.length > 5 ? 'text-4xl md:text-5xl' : 'text-5xl md:text-[3.5rem]'}
-                ${dark ? 'text-white' : 'text-moody-900'}`}>
-                {pkg.price}
-              </span>
-              <span className={`text-[10px] tracking-[0.25em] uppercase font-bold ${dark ? 'text-gold-400/70' : 'text-gold-600/70'}`}>
-                KM
-              </span>
+              <p
+                style={getContentStyle('experience.package.starting_at')}
+                className={`text-[9px] tracking-[0.4em] uppercase font-bold mb-3 ${dark ? 'text-gold-400/70' : 'text-gold-600/70'}`}
+              >
+                {tOr('experience.package.starting_at', 'Starting at')}
+              </p>
+              <div className="flex items-baseline gap-2.5">
+                <span
+                  className={`font-serif font-light leading-none tracking-tight
+                    ${pkg.price.length > 6 ? 'text-4xl md:text-5xl' : 'text-6xl md:text-7xl'}
+                    ${dark ? 'text-gold-400' : 'text-moody-900'}`}
+                >
+                  {pkg.price}
+                </span>
+                <span className={`text-sm tracking-[0.25em] uppercase font-bold ${dark ? 'text-gold-400/60' : 'text-gold-600/70'}`}>
+                  KM
+                </span>
+              </div>
             </div>
 
-            {/* Separator */}
-            <div className={`w-full h-px mb-7 ${dark ? 'bg-white/10' : 'bg-moody-900/8'}`} aria-hidden="true" />
+            {/* Features — only rendered when the package actually has any */}
+            {featureList.length > 0 && (
+              <ul className="flex-1 space-y-4 mb-11">
+                {featureList.map((feature, fi) => (
+                  <li
+                    key={fi}
+                    className={`flex items-start gap-3 font-light leading-relaxed ${dark ? 'text-white/70' : 'text-moody-900/70'}`}
+                    style={{ fontSize: pkg.features_font_size || '0.8125rem' }}
+                  >
+                    <span className={`mt-[3px] flex-none ${dark ? 'text-gold-400/80' : 'text-gold-600/70'}`}>
+                      {getFeatureIcon(feature)}
+                    </span>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            )}
 
-            {/* Features */}
-            <ul className="flex-1 space-y-3 mb-10">
-              {featureList.map((feature, fi) => (
-                <li
-                  key={fi}
-                  className={`flex items-start gap-2.5 font-light leading-relaxed ${dark ? 'text-white/60' : 'text-moody-900/65'}`}
-                  style={{ fontSize: pkg.features_font_size || '0.6875rem' }}
-                >
-                  <span className={`mt-[3px] flex-none ${dark ? 'text-gold-400/70' : 'text-gold-600/60'}`}>
-                    {getFeatureIcon(feature)}
-                  </span>
-                  {feature}
-                </li>
-              ))}
-            </ul>
+            {/* Push the CTA to the bottom when there is no feature list */}
+            {featureList.length === 0 && <div className="flex-1" aria-hidden="true" />}
 
             {/* CTA */}
             <Link
               to="/contact"
-              className={`group/cta relative block w-full py-4 overflow-hidden text-center transition-colors duration-500
+              className={`group/cta relative block w-full py-5 overflow-hidden text-center rounded-full transition-colors duration-500
                 ${dark
-                  ? 'bg-gold-600 hover:bg-gold-500'
-                  : 'border border-moody-900/15 hover:border-gold-600/50'
+                  ? 'bg-gold-600 hover:bg-gold-500 shadow-lg shadow-gold-600/25'
+                  : 'border border-moody-900/20 hover:border-gold-600'
                 }`}
             >
               {!dark && (
@@ -307,10 +325,11 @@ const PackageCard = ({ pkg, index, language, t, getContentStyle, tOr }: {
               )}
               <span
                 style={getContentStyle('experience.package.inquire')}
-                className={`relative z-10 text-[9px] tracking-[0.5em] uppercase font-bold transition-colors duration-500
-                  ${dark ? 'text-white' : 'text-moody-900/50 group-hover/cta:text-white'}`}
+                className={`relative z-10 text-[10px] tracking-[0.5em] uppercase font-bold transition-colors duration-500 flex items-center justify-center gap-2.5
+                  ${dark ? 'text-white' : 'text-moody-900/60 group-hover/cta:text-white'}`}
               >
                 {t('experience.package.inquire')}
+                <ArrowRight size={13} className="group-hover/cta:translate-x-1 transition-transform duration-500" aria-hidden="true" />
               </span>
             </Link>
           </div>
@@ -335,14 +354,22 @@ const FaqRow = ({ n, open, onToggle, t, getContentStyle }: {
       type="button"
       onClick={onToggle}
       aria-expanded={open}
-      className="group w-full flex items-start justify-between gap-6 py-7 md:py-8 text-left"
+      className="group w-full flex items-start justify-between gap-6 py-8 md:py-10 text-left"
     >
-      <h4
-        style={getContentStyle(`experience.faq.${n}.q`)}
-        className={`text-lg md:text-xl font-serif font-light leading-snug transition-colors duration-500 ${open ? 'text-gold-600' : 'text-moody-900 group-hover:text-gold-600'}`}
-      >
-        {t(`experience.faq.${n}.q`)}
-      </h4>
+      <div className="flex items-start gap-5 md:gap-8">
+        <span
+          aria-hidden="true"
+          className={`font-serif text-2xl md:text-4xl leading-none flex-none transition-colors duration-500 ${open ? 'text-gold-600' : 'text-gold-600/30 group-hover:text-gold-600/60'}`}
+        >
+          {String(n).padStart(2, '0')}
+        </span>
+        <h4
+          style={getContentStyle(`experience.faq.${n}.q`)}
+          className={`text-xl md:text-2xl lg:text-[1.7rem] font-serif font-light leading-snug transition-colors duration-500 ${open ? 'text-gold-600' : 'text-moody-900 group-hover:text-gold-600'}`}
+        >
+          {t(`experience.faq.${n}.q`)}
+        </h4>
+      </div>
       <span
         className={`flex-none mt-1 w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-500
           ${open ? 'border-gold-600 bg-gold-600 text-white rotate-45' : 'border-moody-900/20 text-moody-900/50 group-hover:border-gold-600/50 group-hover:text-gold-600'}`}
@@ -363,7 +390,7 @@ const FaqRow = ({ n, open, onToggle, t, getContentStyle }: {
         >
           <p
             style={getContentStyle(`experience.faq.${n}.a`)}
-            className="pb-8 pr-12 text-moody-900/55 font-light leading-relaxed text-sm md:text-base"
+            className="pb-9 pr-12 md:pl-[4.5rem] text-moody-900/60 font-light leading-relaxed text-base md:text-lg"
           >
             {t(`experience.faq.${n}.a`)}
           </p>
@@ -381,6 +408,17 @@ const Experience = () => {
   const [openFaq, setOpenFaq] = useState<number | null>(1);
 
   const reduced = useReducedMotion();
+
+  // Page-level reading progress for the hairline at the top
+  const { scrollYProgress: pageProgress } = useScroll();
+  const readProgress = useSpring(pageProgress, { stiffness: 120, damping: 30, mass: 0.4 });
+
+  const packagesRef = useRef<HTMLElement>(null);
+  const scrollToPackages = () =>
+    packagesRef.current?.scrollIntoView({
+      behavior: reduced ? 'auto' : 'smooth',
+      block: 'start',
+    });
 
   // t() echoes the key back when a CMS entry is missing, so `t(k) || fallback`
   // can never fire. Compare against the key name instead.
@@ -425,12 +463,13 @@ const Experience = () => {
   const heroSrc = imgs['img.services.hero'] || 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=1600';
   const benefitSrc = imgs['img.services.pkg.1'] || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1200';
   const resultSrc = imgs['img.services.pkg.2'] || 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=1200';
-  const addonsSrc = imgs['img.services.cta'] || 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=1600';
+  // Backdrop for the Journey plate — reuses the slot the removed section freed up
+  const journeySrc = imgs['img.services.cta'] || 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=1600';
 
   const hero = respImg(heroSrc, [768, 1280, 1920]);
   const benefit = respImg(benefitSrc, [480, 960, 1280]);
   const result = respImg(resultSrc, [480, 960, 1280]);
-  const addons = respImg(addonsSrc, [640, 1280, 1600]);
+  const journey = respImg(journeySrc, [768, 1280, 1920]);
 
   // Big headings split into words for the shared mask reveal
   const heroWords = t('experience.hero.title').split(' ').filter(Boolean)
@@ -443,18 +482,8 @@ const Experience = () => {
       .map(w => ({ w, style: getContentStyle('experience.intro.title.part2'), italic: true })),
   ];
 
-  const philosophyWords = t('experience.philosophy').split(' ').filter(Boolean)
-    .map(w => ({ w, style: getContentStyle('experience.philosophy') }));
-
   const investmentWords = t('experience.investment.title').split(' ').filter(Boolean)
     .map(w => ({ w, style: getContentStyle('experience.investment.title') }));
-
-  const addonsWords = [
-    ...t('experience.addons.title.part1').split(' ').filter(Boolean)
-      .map(w => ({ w, style: getContentStyle('experience.addons.title.part1') })),
-    ...t('experience.addons.title.part2').split(' ').filter(Boolean)
-      .map(w => ({ w, style: getContentStyle('experience.addons.title.part2'), italic: true })),
-  ];
 
   const ctaWords = [
     ...t('experience.cta.title.part1').split(' ').filter(Boolean)
@@ -463,15 +492,17 @@ const Experience = () => {
       .map(w => ({ w, style: getContentStyle('experience.cta.title.part2'), italic: true })),
   ];
 
-  // The promo block is optional content — t() echoes the key when it's missing,
-  // so test against the key names rather than truthiness.
-  const hasPromo =
-    t('experience.promo.tag') !== 'experience.promo.tag' ||
-    t('experience.promo.desc') !== 'experience.promo.desc';
 
   return (
     <div className="bg-gold-50 overflow-hidden">
       <div className="grain" aria-hidden="true" />
+
+      {/* Reading progress — this page is long; the hairline tracks how far in you are */}
+      <motion.div
+        style={reduced ? undefined : { scaleX: readProgress }}
+        className="fixed top-0 left-0 right-0 h-[2px] bg-gold-600 origin-left z-[1001] pointer-events-none"
+        aria-hidden="true"
+      />
 
       {/* ── Hero — cinematic dark plate, scrubbed drift ──────────────────── */}
       <section ref={heroRef} className="relative h-[82vh] min-h-[520px] flex items-center justify-center overflow-hidden bg-moody-950">
@@ -536,6 +567,28 @@ const Experience = () => {
               aria-hidden="true"
             />
           </div>
+
+          {/* Jump straight to pricing — most visitors land here for exactly that */}
+          <motion.button
+            type="button"
+            onClick={scrollToPackages}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 1.15, ease: EASE }}
+            className="group mt-12 inline-flex items-center gap-4 px-10 py-4 border border-gold-400/40 hover:border-gold-400 rounded-full transition-colors duration-500"
+          >
+            <span
+              style={getContentStyle('experience.investment.tag')}
+              className="text-[10px] md:text-[11px] tracking-[0.5em] uppercase font-medium text-gold-300 group-hover:text-white transition-colors duration-500"
+            >
+              {t('experience.investment.tag')}
+            </span>
+            <ArrowRight
+              size={14}
+              className="text-gold-400 rotate-90 group-hover:translate-y-1 transition-transform duration-500"
+              aria-hidden="true"
+            />
+          </motion.button>
         </motion.div>
 
         {/* Scroll cue */}
@@ -702,14 +755,43 @@ const Experience = () => {
         </div>
       </section>
 
-      {/* ── Journey — scroll-scrubbed rail with 4 steps ──────────────────── */}
-      <section className="relative bg-white py-24 md:py-36 px-6 sm:px-8 lg:px-16 overflow-hidden">
-        <div className="max-w-[1500px] mx-auto">
+      {/* ── Journey — full-bleed cinematic plate with the four steps ──────── */}
+      <section className="relative py-28 md:py-40 px-6 sm:px-8 lg:px-16 overflow-hidden bg-moody-950">
+        <ParallaxY from={-50} to={50} className="absolute inset-0">
+          <img
+            src={journey.src}
+            srcSet={journey.srcSet}
+            sizes="100vw"
+            alt=""
+            aria-hidden="true"
+            className="w-full h-[125%] object-cover opacity-40"
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+            referrerPolicy="no-referrer"
+          />
+        </ParallaxY>
+        <div className="absolute inset-0 bg-gradient-to-b from-moody-950/90 via-moody-950/65 to-moody-950" aria-hidden="true" />
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse 60% 65% at 50% 40%, rgba(166,134,93,0.20) 0%, transparent 70%)' }}
+          aria-hidden="true"
+        />
+
+        <div className="relative z-10 max-w-[1500px] mx-auto">
           <div className="text-center mb-24 md:mb-32">
-            <SectionTag style={getContentStyle('experience.journey.tag')} className="mb-7 md:mb-9">
+            <motion.span
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.9, ease: EASE }}
+              style={getContentStyle('experience.journey.tag')}
+              className="block text-[10px] md:text-[11px] tracking-[0.6em] uppercase font-bold text-gold-400 mb-7 md:mb-9"
+            >
               {t('experience.journey.tag')}
-            </SectionTag>
-            <h2 className="text-4xl sm:text-5xl md:text-6xl font-serif font-light text-moody-900 leading-tight tracking-tight">
+            </motion.span>
+
+            <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-serif font-light text-white leading-[1.05] tracking-tight">
               <WordReveal
                 words={t('experience.journey.title').split(' ').filter(Boolean)
                   .map(w => ({ w, style: getContentStyle('experience.journey.title') }))}
@@ -722,11 +804,11 @@ const Experience = () => {
             {/* Gold rail that draws itself across the four steps */}
             <motion.div
               style={st({ scaleX: railP })}
-              className="hidden md:block absolute top-8 left-[10%] right-[10%] h-[1px] bg-gradient-to-r from-transparent via-gold-600/45 to-transparent origin-left"
+              className="hidden md:block absolute top-9 left-[10%] right-[10%] h-[1px] bg-gradient-to-r from-transparent via-gold-400/60 to-transparent origin-left"
               aria-hidden="true"
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-20 sm:gap-14 lg:gap-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-14 sm:gap-14 lg:gap-12">
               {([1, 2, 3, 4] as const).map((n, i) => (
                 <JourneyStep key={n} n={n} index={i} t={t} getContentStyle={getContentStyle} />
               ))}
@@ -735,40 +817,10 @@ const Experience = () => {
         </div>
       </section>
 
-      {/* ── Philosophy — dark plate, word-by-word reveal ─────────────────── */}
-      <section className="relative bg-moody-950 py-28 md:py-44 px-6 sm:px-8 overflow-hidden">
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 55% 60% at 50% 50%, rgba(166,134,93,0.14) 0%, transparent 70%)' }}
-          aria-hidden="true"
-        />
-        <span
-          className="absolute left-1/2 -translate-x-1/2 top-4 md:top-2 text-[14rem] md:text-[22rem] font-serif leading-none text-gold-400/[0.07] select-none pointer-events-none"
-          aria-hidden="true"
-        >
-          &ldquo;
-        </span>
-
-        <div className="relative z-10 max-w-4xl mx-auto text-center">
-          <h2 className="text-2xl sm:text-3xl md:text-5xl font-serif font-light text-white italic leading-[1.25] tracking-tight">
-            <WordReveal words={philosophyWords} delay={0.2} />
-          </h2>
-
-          <motion.div
-            initial={{ scaleX: 0 }}
-            whileInView={{ scaleX: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1.2, delay: 0.6, ease: EASE }}
-            className="w-24 h-[1px] bg-gold-400/50 mx-auto mt-12"
-            aria-hidden="true"
-          />
-        </div>
-      </section>
-
       {/* ── Packages — the investment ────────────────────────────────────── */}
-      <section className="relative bg-gold-50 py-24 md:py-36 overflow-hidden">
+      <section ref={packagesRef} className="relative bg-gold-50 py-24 md:py-36 overflow-hidden scroll-mt-24">
         <div
-          className="absolute right-0 top-24 text-[14rem] lg:text-[20rem] font-script text-gold-600/[0.05] leading-none select-none pointer-events-none hidden lg:block"
+          className="absolute -right-16 top-24 text-[14rem] lg:text-[20rem] font-script text-gold-600/[0.05] leading-none select-none pointer-events-none hidden lg:block"
           aria-hidden="true"
         >
           387
@@ -805,7 +857,7 @@ const Experience = () => {
         {loading && (
           <div className="flex flex-wrap justify-center gap-5 px-6">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="w-full sm:w-[286px] lg:w-[300px] border border-moody-900/8 bg-white p-8 animate-pulse space-y-6">
+              <div key={i} className="w-full sm:w-[340px] lg:w-[360px] border border-moody-900/8 bg-white p-9 animate-pulse space-y-6">
                 <div className="h-2 w-16 bg-moody-200 rounded" />
                 <div className="h-5 w-2/3 bg-moody-200 rounded" />
                 <div className="h-3 w-full bg-moody-100 rounded" />
@@ -836,150 +888,9 @@ const Experience = () => {
         )}
       </section>
 
-      {/* ── Promo — dark plate ───────────────────────────────────────────── */}
-      {hasPromo && (
-        <section className="relative bg-moody-950 py-24 md:py-32 px-6 sm:px-8 lg:px-16 overflow-hidden">
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{ background: 'radial-gradient(ellipse 60% 70% at 50% 0%, rgba(166,134,93,0.16) 0%, transparent 70%)' }}
-            aria-hidden="true"
-          />
-
-          <div className="relative z-10 max-w-3xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, rotate: -90, scale: 0.5 }}
-              whileInView={{ opacity: 1, rotate: 0, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.1, ease: EASE }}
-              className="flex justify-center mb-8"
-              aria-hidden="true"
-            >
-              <Sparkles size={20} strokeWidth={1.2} className="text-gold-400/80" />
-            </motion.div>
-
-            <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-serif font-light text-white italic leading-[1.08] tracking-tight mb-8">
-              <WordReveal
-                words={t('experience.promo.tag').split(' ').filter(Boolean)
-                  .map(w => ({ w, style: getContentStyle('experience.promo.tag') }))}
-                delay={0.2}
-              />
-            </h2>
-
-            <motion.p
-              initial={{ opacity: 0, y: 18 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1, delay: 0.4, ease: EASE }}
-              style={getContentStyle('experience.promo.desc')}
-              className="text-white/45 font-light text-sm md:text-base leading-relaxed max-w-xl mx-auto mb-12"
-            >
-              {t('experience.promo.desc')}
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 18 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1, delay: 0.55, ease: EASE }}
-              className="flex justify-center"
-            >
-              <Link
-                to="/contact"
-                className="group relative inline-block px-12 md:px-16 py-5 overflow-hidden whitespace-nowrap border border-white/25 hover:border-gold-600 rounded-full transition-colors duration-700"
-              >
-                <span className="absolute inset-0 bg-gold-600 translate-y-full group-hover:translate-y-0 transition-transform duration-700" aria-hidden="true" />
-                <span
-                  style={getContentStyle('experience.promo.cta')}
-                  className="relative z-10 text-[10px] md:text-[11px] tracking-[0.5em] uppercase font-bold text-white/70 group-hover:text-white transition-colors duration-700 flex items-center justify-center gap-3"
-                >
-                  {tOr('experience.promo.cta', t('hero.inquire'))}
-                  <ArrowRight size={14} className="group-hover:translate-x-1.5 transition-transform duration-500" aria-hidden="true" />
-                </span>
-              </Link>
-            </motion.div>
-          </div>
-        </section>
-      )}
-
-      {/* ── Add-ons / Our support — layered composition ──────────────────── */}
-      <section className="relative bg-white py-24 md:py-36 px-6 sm:px-8 lg:px-16 overflow-hidden">
-        <div className="max-w-[1500px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-20 items-center">
-          {/* Text column */}
-          <div className="lg:col-span-6 text-center lg:text-left">
-            <motion.span
-              initial={{ opacity: 0, y: 14 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.9, ease: EASE }}
-              style={getContentStyle('experience.addons.tag')}
-              className="luxury-text-sm block mb-6"
-            >
-              {t('experience.addons.tag')}
-            </motion.span>
-
-            <h2 className="text-4xl sm:text-5xl md:text-6xl font-serif font-light text-moody-900 leading-[1.05] tracking-tight mb-6">
-              <WordReveal words={addonsWords} className="lg:justify-start" delay={0.25} />
-            </h2>
-
-            <motion.div
-              initial={{ scaleX: 0 }}
-              whileInView={{ scaleX: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1, delay: 0.35, ease: EASE }}
-              className="w-16 h-[1px] bg-gold-600/50 mb-12 mx-auto lg:mx-0 origin-left"
-              aria-hidden="true"
-            />
-
-            <div className="space-y-10">
-              {([1, 2, 3, 4] as const).map((n, index) => {
-                const Icon = iconFor(t(`experience.addons.${n}.icon`));
-                return (
-                  <motion.div
-                    key={n}
-                    initial={{ opacity: 0, x: -26 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 1, delay: index * 0.12, ease: EASE }}
-                    className="group flex justify-center lg:justify-start gap-6"
-                  >
-                    <div className="flex-none w-12 h-12 rounded-full border border-gold-600/20 bg-gold-50 flex items-center justify-center text-gold-600/70 group-hover:bg-gold-600 group-hover:text-white group-hover:border-gold-600 transition-all duration-700">
-                      <Icon size={20} strokeWidth={1.1} />
-                    </div>
-                    <div className="text-left max-w-sm">
-                      <h4
-                        style={getContentStyle(`experience.addons.${n}.title`)}
-                        className="text-lg md:text-xl font-serif font-light text-moody-900 mb-2"
-                      >
-                        {t(`experience.addons.${n}.title`)}
-                      </h4>
-                      <p
-                        style={getContentStyle(`experience.addons.${n}.desc`)}
-                        className="text-moody-900/50 text-sm font-light leading-relaxed"
-                      >
-                        {t(`experience.addons.${n}.desc`)}
-                      </p>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Image column — offset frame + parallax */}
-          <div className="lg:col-span-6 relative">
-            <div className="absolute -top-6 -right-6 w-3/4 aspect-[4/5] border border-gold-600/25 pointer-events-none hidden md:block" aria-hidden="true" />
-            <ParallaxY from={34} to={-34}>
-              <RevealImage
-                src={addons.src}
-                srcSet={addons.srcSet}
-                sizes="(min-width: 1024px) 48vw, 100vw"
-                alt={t('experience.addons.tag')}
-                className="aspect-[4/5] md:aspect-[3/4] shadow-2xl shadow-moody-900/15"
-              />
-            </ParallaxY>
-          </div>
-        </div>
-      </section>
+      {/* ── Social proof — right where the pricing decision is made.
+             Renders only once the client adds reviews in Admin → Recenzije. ── */}
+      <Testimonials className="bg-white" />
 
       {/* ── FAQ — accordion ──────────────────────────────────────────────── */}
       <section className="relative bg-gold-100/40 py-24 md:py-36 px-6 sm:px-8 lg:px-16 overflow-hidden">
@@ -1017,16 +928,43 @@ const Experience = () => {
         </div>
       </section>
 
-      {/* ── Final CTA ────────────────────────────────────────────────────── */}
-      <section className="relative bg-white py-24 md:py-40 px-6 sm:px-8 text-center overflow-hidden">
+      {/* ── Final CTA — full-bleed cinematic closer ──────────────────────── */}
+      <section className="relative min-h-[70vh] flex items-center justify-center px-6 sm:px-8 py-28 md:py-40 text-center overflow-hidden bg-moody-950">
+        <ParallaxY from={-50} to={50} className="absolute inset-0">
+          {/* Bookends the page with the hero frame — already cached, costs nothing */}
+          <img
+            src={hero.src}
+            srcSet={hero.srcSet}
+            sizes="100vw"
+            alt=""
+            aria-hidden="true"
+            className="w-full h-[125%] object-cover opacity-40"
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+            referrerPolicy="no-referrer"
+          />
+        </ParallaxY>
+        <div className="absolute inset-0 bg-gradient-to-b from-moody-950/85 via-moody-950/60 to-moody-950" aria-hidden="true" />
         <div
-          className="absolute inset-x-0 top-1/4 h-80 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 50% 60% at 50% 40%, rgba(166,134,93,0.12) 0%, transparent 70%)' }}
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse 55% 60% at 50% 45%, rgba(166,134,93,0.22) 0%, transparent 70%)' }}
           aria-hidden="true"
         />
 
-        <div className="relative max-w-5xl mx-auto">
-          <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-light text-moody-900 leading-[1.02] tracking-tight mb-12 md:mb-16">
+        <div className="relative z-10 max-w-5xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, rotate: -90, scale: 0.5 }}
+            whileInView={{ opacity: 1, rotate: 0, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.1, ease: EASE }}
+            className="flex justify-center mb-8"
+            aria-hidden="true"
+          >
+            <Sparkles size={22} strokeWidth={1.2} className="text-gold-400/80" />
+          </motion.div>
+
+          <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-light text-white leading-[1.02] tracking-tight mb-12 md:mb-16">
             <WordReveal words={ctaWords} delay={0.25} />
           </h2>
 
@@ -1037,9 +975,18 @@ const Experience = () => {
             transition={{ duration: 1, delay: 0.5, ease: EASE }}
             className="flex justify-center"
           >
-            <GoldPill to="/contact" style={getContentStyle('experience.cta.button')}>
-              {t('experience.cta.button')}
-            </GoldPill>
+            <Link
+              to="/contact"
+              className="group relative inline-block px-14 md:px-16 py-5 overflow-hidden whitespace-nowrap bg-gold-600 hover:bg-gold-500 rounded-full text-center shadow-xl shadow-gold-600/30 animate-[ctaPulse_3s_ease-in-out_infinite] transition-colors duration-500"
+            >
+              <span
+                style={getContentStyle('experience.cta.button')}
+                className="relative z-10 text-[10px] md:text-[11px] tracking-[0.5em] uppercase font-semibold text-white flex items-center justify-center gap-3"
+              >
+                {t('experience.cta.button')}
+                <ArrowRight size={14} className="group-hover:translate-x-1.5 transition-transform duration-500" aria-hidden="true" />
+              </span>
+            </Link>
           </motion.div>
         </div>
       </section>

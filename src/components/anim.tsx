@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
@@ -6,16 +6,32 @@ import { ArrowRight } from 'lucide-react';
 // Shared house easing — used across the whole site
 export const EASE = [0.16, 1, 0.3, 1] as const;
 
+// True on tablet and up. Scroll-linked transforms of full-bleed images are the
+// most expensive thing on the page, so phones opt out and render statically.
+export const useIsDesktop = () => {
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window === 'undefined' || window.matchMedia('(min-width: 768px)').matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const onChange = () => setIsDesktop(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return isDesktop;
+};
+
 // ── Scroll-driven parallax wrapper ───────────────────────────────────────────
 // Child drifts vertically (from → to px) as it crosses the viewport.
 export const ParallaxY = ({ children, from = 40, to = -40, className = '' }: {
   children: React.ReactNode; from?: number; to?: number; className?: string;
 }) => {
   const ref = useRef<HTMLDivElement>(null);
+  const isDesktop = useIsDesktop();
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
   const y = useTransform(scrollYProgress, [0, 1], [from, to]);
   return (
-    <motion.div ref={ref} style={{ y }} className={className}>
+    <motion.div ref={ref} style={isDesktop ? { y } : undefined} className={className}>
       {children}
     </motion.div>
   );

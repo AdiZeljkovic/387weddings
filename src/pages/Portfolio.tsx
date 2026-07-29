@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform, useReducedMotion } from 'motion/react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowRight, Sparkles } from 'lucide-react';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
 import { respImg } from '../lib/img';
-import { EASE, SectionTag, WordReveal, GoldPill } from '../components/anim';
+import { EASE, ParallaxY, SectionTag, WordReveal } from '../components/anim';
 
 const categories = ['ALL', 'WEDDINGS', 'STUDIO', 'PORTRAITS'] as const;
 type Category = typeof categories[number];
@@ -36,13 +37,14 @@ const ASPECT: Record<string, string> = {
 // Relative height per aspect, used to balance the columns while packing
 const WEIGHT: Record<string, number> = { TALL: 1.333, SQUARE: 1, WIDE: 0.75 };
 
+const colsFor = (w: number) => (w < 640 ? 1 : w < 1024 ? 2 : w < 1280 ? 3 : 4);
+
 const useColumnCount = () => {
   const [cols, setCols] = useState(() =>
-    typeof window === 'undefined' ? 3 : window.innerWidth < 640 ? 1 : window.innerWidth < 1024 ? 2 : 3
+    typeof window === 'undefined' ? 4 : colsFor(window.innerWidth)
   );
   useEffect(() => {
-    const onResize = () =>
-      setCols(window.innerWidth < 640 ? 1 : window.innerWidth < 1024 ? 2 : 3);
+    const onResize = () => setCols(colsFor(window.innerWidth));
     window.addEventListener('resize', onResize, { passive: true });
     return () => window.removeEventListener('resize', onResize);
   }, []);
@@ -51,7 +53,6 @@ const useColumnCount = () => {
 
 const Portfolio = () => {
   const { t, getContentStyle } = useLanguage();
-  const reduced = useReducedMotion();
   // Home collection cards link here as /portfolio?cat=WEDDINGS|STUDIO|PORTRAITS
   const [searchParams] = useSearchParams();
   const initialCat = (searchParams.get('cat') || '').toUpperCase();
@@ -63,13 +64,6 @@ const Portfolio = () => {
   const [settings, setSettings] = useState<Record<string, string>>({});
   const cols = useColumnCount();
 
-  // Hero parallax
-  const heroRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress: heroProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
-  const heroY     = useTransform(heroProgress, [0, 1], ['0%', '22%']);
-  const heroScale = useTransform(heroProgress, [0, 1], [1, 1.12]);
-  const heroFade  = useTransform(heroProgress, [0, 0.8], [1, 0]);
-
   useEffect(() => {
     fetch('/api/gallery')
       .then(r => r.json())
@@ -77,6 +71,12 @@ const Portfolio = () => {
       .catch(() => setLoading(false));
     loadSettings().then(setSettings).catch(err => console.warn('Portfolio: settings load failed', err));
   }, []);
+
+  // Backdrop for the closing plate — reuses the slot the removed hero freed up
+  const ctaBackdrop = respImg(
+    settings['img.portfolio.hero'] || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1600',
+    [768, 1280, 1920],
+  );
 
   const filteredItems = useMemo(
     () => (activeFilter === 'ALL' ? images : images.filter(i => i.category === activeFilter)),
@@ -97,99 +97,59 @@ const Portfolio = () => {
     return buckets;
   }, [filteredItems, cols]);
 
-  const heroImg = settings['img.portfolio.hero'] || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1600';
-  const heroR = respImg(heroImg, [960, 1280, 1920]);
-
   return (
     <div className="bg-white overflow-hidden">
-      {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section ref={heroRef} className="relative h-[82vh] md:h-[88vh] flex items-center justify-center overflow-hidden bg-moody-950">
-        <motion.div style={reduced ? undefined : { y: heroY, scale: heroScale }} className="absolute inset-0 z-0">
-          <motion.img
-            initial={{ scale: 1.15, opacity: 0 }}
-            animate={{ scale: 1, opacity: 0.75 }}
-            transition={{ duration: 2.2, ease: EASE }}
-            src={heroR.src}
-            srcSet={heroR.srcSet}
-            sizes="100vw"
-            alt={t('portfolio.hero.title')}
-            className="w-full h-full object-cover brightness-[0.62]"
-            loading="eager"
-            fetchPriority="high"
-            draggable={false}
-            referrerPolicy="no-referrer"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/15 to-black/70" aria-hidden="true" />
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{ background: 'radial-gradient(ellipse 70% 60% at 50% 45%, rgba(166,134,93,0.14) 0%, transparent 70%)' }}
-            aria-hidden="true"
-          />
-        </motion.div>
-        <div className="grain opacity-[0.05]" />
+      {/* ── Page opener (no image hero — gallery leads the page) ───────────── */}
+      <section className="bg-white pt-16 md:pt-24 pb-14 md:pb-20 px-6 sm:px-8 lg:px-16">
+        <div className="max-w-4xl mx-auto text-center">
+          <SectionTag style={getContentStyle('portfolio.approach.title')} className="mb-7">
+            {t('portfolio.approach.title')}
+          </SectionTag>
 
-        <motion.div style={reduced ? undefined : { opacity: heroFade }} className="relative z-10 text-center px-6">
           <h1
             style={getContentStyle('portfolio.hero.title')}
             aria-label={t('portfolio.hero.title')}
-            className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-serif font-light text-white leading-[0.95] tracking-tight uppercase mb-7"
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-light text-moody-900 leading-[0.98] tracking-tight uppercase mb-5"
           >
             <WordReveal
               words={t('portfolio.hero.title').split(' ').filter(Boolean).map(w => ({ w }))}
-              delay={0.35}
+              delay={0.15}
             />
           </h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.55, ease: EASE }}
+            style={getContentStyle('portfolio.hero.subtitle')}
+            className="font-serif italic text-lg md:text-xl text-gold-600 mb-9"
+          >
+            {t('portfolio.hero.subtitle')}
+          </motion.p>
 
           <motion.div
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
-            transition={{ duration: 1.1, delay: 1, ease: EASE }}
-            className="w-20 h-[1px] bg-gold-500/70 mx-auto mb-6"
+            transition={{ duration: 1.1, delay: 0.7, ease: EASE }}
+            className="w-16 h-[1px] bg-gold-600/50 mx-auto mb-10"
             aria-hidden="true"
           />
 
-          <motion.p
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 1.15, ease: EASE }}
-            style={getContentStyle('portfolio.hero.subtitle')}
-            className="text-white/70 text-[10px] md:text-xs tracking-[0.5em] uppercase font-bold"
-          >
-            {t('portfolio.hero.subtitle')}
-          </motion.p>
-        </motion.div>
-      </section>
-
-      {/* ── Approach ──────────────────────────────────────────────────────── */}
-      <section className="bg-white py-20 md:py-32 px-6 sm:px-8 lg:px-16">
-        <div className="max-w-4xl mx-auto text-center">
-          <SectionTag style={getContentStyle('portfolio.approach.title')} className="mb-8">
-            {t('portfolio.approach.title')}
-          </SectionTag>
-
-          <h2 className="text-4xl sm:text-5xl md:text-6xl font-serif font-light text-moody-900 leading-[1.1] mb-8">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-light text-moody-900 leading-[1.15] mb-7">
             <WordReveal
               words={[
                 ...t('portfolio.approach.heading').split(' ').filter(Boolean).map(w => ({ w, style: getContentStyle('portfolio.approach.heading') })),
                 ...t('portfolio.approach.subheading').split(' ').filter(Boolean).map(w => ({ w, style: getContentStyle('portfolio.approach.subheading'), italic: true })),
               ]}
+              delay={0.5}
             />
           </h2>
-
-          <motion.div
-            initial={{ scaleX: 0 }}
-            whileInView={{ scaleX: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1, delay: 0.3, ease: EASE }}
-            className="w-16 h-[1px] bg-gold-600/50 mx-auto mb-8"
-            aria-hidden="true"
-          />
 
           <motion.p
             initial={{ opacity: 0, y: 18 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 1, delay: 0.35, ease: EASE }}
+            transition={{ duration: 1, delay: 0.8, ease: EASE }}
             style={getContentStyle('portfolio.approach.desc')}
             className="text-moody-900/65 font-light text-base md:text-lg leading-relaxed max-w-2xl mx-auto"
           >
@@ -226,8 +186,8 @@ const Portfolio = () => {
 
           {/* Gallery */}
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {[...Array(6)].map((_, i) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+              {[...Array(8)].map((_, i) => (
                 <div
                   key={i}
                   className={`${['aspect-[3/4]', 'aspect-square', 'aspect-[4/3]'][i % 3]} bg-moody-900/[0.06] animate-pulse`}
@@ -264,7 +224,7 @@ const Portfolio = () => {
                           <img
                             src={r.src}
                             srcSet={r.srcSet}
-                            sizes="(min-width: 1024px) 32vw, (min-width: 640px) 48vw, 100vw"
+                            sizes="(min-width: 1280px) 24vw, (min-width: 1024px) 32vw, (min-width: 640px) 48vw, 100vw"
                             alt={item.title || t(CATEGORY_KEYS[item.category as Category] ?? 'portfolio.filter.all')}
                             className="w-full h-full object-cover transition-transform duration-[1400ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.07]"
                             loading="lazy"
@@ -272,12 +232,12 @@ const Portfolio = () => {
                             draggable={false}
                             referrerPolicy="no-referrer"
                           />
-                          {/* Caption veil */}
+                          {/* Caption veil — always on for touch, hover-reveal on pointer devices */}
                           <div
-                            className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                            className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-700"
                             aria-hidden="true"
                           />
-                          <figcaption className="absolute inset-x-0 bottom-0 p-6 md:p-7 translate-y-3 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-700">
+                          <figcaption className="absolute inset-x-0 bottom-0 p-5 md:p-7 opacity-100 translate-y-0 md:translate-y-3 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100 transition-all duration-700">
                             <span className="text-gold-300 text-[9px] tracking-[0.4em] uppercase font-bold block mb-1.5">
                               {t(CATEGORY_KEYS[item.category as Category] ?? 'portfolio.filter.all')}
                             </span>
@@ -308,17 +268,48 @@ const Portfolio = () => {
         </div>
       </section>
 
-      {/* ── Inquire CTA ───────────────────────────────────────────────────── */}
-      <section className="relative bg-gold-100/40 py-24 md:py-36 px-6 sm:px-8 lg:px-16 text-center overflow-hidden">
+      {/* ── Inquire CTA — full-bleed cinematic closer into the dark footer ── */}
+      <section className="relative min-h-[70vh] flex items-center justify-center px-6 sm:px-8 py-28 md:py-40 text-center overflow-hidden bg-moody-950">
+        <ParallaxY from={-50} to={50} className="absolute inset-0">
+          <img
+            src={ctaBackdrop.src}
+            srcSet={ctaBackdrop.srcSet}
+            sizes="100vw"
+            alt=""
+            aria-hidden="true"
+            className="w-full h-[125%] object-cover opacity-40"
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+            referrerPolicy="no-referrer"
+          />
+        </ParallaxY>
+        <div className="absolute inset-0 bg-gradient-to-b from-moody-950/85 via-moody-950/60 to-moody-950" aria-hidden="true" />
         <div
-          className="absolute -right-10 top-1/2 -translate-y-1/2 text-[16rem] lg:text-[22rem] font-script text-gold-600/[0.06] leading-none select-none pointer-events-none hidden md:block"
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse 55% 60% at 50% 45%, rgba(166,134,93,0.22) 0%, transparent 70%)' }}
+          aria-hidden="true"
+        />
+        <div
+          className="absolute -right-10 top-1/2 -translate-y-1/2 text-[16rem] lg:text-[22rem] font-script text-white/[0.04] leading-none select-none pointer-events-none hidden md:block"
           aria-hidden="true"
         >
           387
         </div>
 
-        <div className="relative max-w-4xl mx-auto">
-          <h2 className="text-4xl sm:text-5xl md:text-7xl font-serif font-light text-moody-900 leading-[1.05] mb-10">
+        <div className="relative z-10 max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, rotate: -90, scale: 0.5 }}
+            whileInView={{ opacity: 1, rotate: 0, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.1, ease: EASE }}
+            className="flex justify-center mb-8"
+            aria-hidden="true"
+          >
+            <Sparkles size={22} strokeWidth={1.2} className="text-gold-400/80" />
+          </motion.div>
+
+          <h2 className="text-4xl sm:text-5xl md:text-7xl font-serif font-light text-white leading-[1.05] mb-12 md:mb-14">
             <WordReveal
               words={[
                 ...t('portfolio.ready').split(' ').filter(Boolean).map(w => ({ w, style: getContentStyle('portfolio.ready') })),
@@ -332,10 +323,20 @@ const Portfolio = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 1, delay: 0.45, ease: EASE }}
+            className="flex justify-center"
           >
-            <GoldPill to="/contact" style={getContentStyle('portfolio.cta.button')}>
-              {t('portfolio.cta.button')}
-            </GoldPill>
+            <Link
+              to="/contact"
+              className="group relative inline-block px-14 md:px-16 py-5 overflow-hidden whitespace-nowrap bg-gold-600 hover:bg-gold-500 rounded-full text-center shadow-xl shadow-gold-600/30 animate-[ctaPulse_3s_ease-in-out_infinite] transition-colors duration-500"
+            >
+              <span
+                style={getContentStyle('portfolio.cta.button')}
+                className="relative z-10 text-[10px] md:text-[11px] tracking-[0.5em] uppercase font-semibold text-white flex items-center justify-center gap-3"
+              >
+                {t('portfolio.cta.button')}
+                <ArrowRight size={14} className="group-hover:translate-x-1.5 transition-transform duration-500" aria-hidden="true" />
+              </span>
+            </Link>
           </motion.div>
         </div>
       </section>

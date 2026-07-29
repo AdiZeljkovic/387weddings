@@ -232,6 +232,12 @@ const Home = () => {
 
   // Marquee needs two identical halves (translateX -50% loops seamlessly);
   // with few images duplicate 4× so the track is wider than the viewport.
+  // Backdrop for the closing plate — the hero slot, so the page bookends itself
+  const aboutBackdrop = respImg(
+    settings['img.home.hero.1'] || FALLBACK_SLIDES[0],
+    [768, 1280, 1920],
+  );
+
   const stripBase = stripImages.length > 0 ? stripImages : slides;
   const stripCopies = stripBase.length >= 8 ? 2 : 4;
   const loopImages = stripBase.length > 0
@@ -552,7 +558,7 @@ const Home = () => {
                     {t(c.labelKey)}
                   </span>
                   {counts[c.cat] > 0 && (
-                    <span className="text-[9px] tracking-[0.4em] uppercase font-bold text-white/0 group-hover:text-white/70 transition-colors duration-700">
+                    <span className="text-[9px] tracking-[0.4em] uppercase font-bold text-white/70 md:text-white/0 md:group-hover:text-white/70 transition-colors duration-700">
                       {counts[c.cat]} {language === 'ENG' ? 'photos' : 'fotografija'}
                     </span>
                   )}
@@ -589,18 +595,39 @@ const Home = () => {
         </div>
       </section>
 
-      {/* About Us Section — layered editorial composition */}
-      <section className="relative py-24 md:py-36 px-6 sm:px-8 lg:px-16 bg-gold-100/40 overflow-hidden">
+      {/* About Us — full-bleed cinematic plate that flows into the dark footer */}
+      <section className="relative py-24 md:py-36 px-6 sm:px-8 lg:px-16 bg-moody-950 overflow-hidden">
+        <ParallaxY from={-50} to={50} className="absolute inset-0">
+          <img
+            src={aboutBackdrop.src}
+            srcSet={aboutBackdrop.srcSet}
+            sizes="100vw"
+            alt=""
+            aria-hidden="true"
+            className="w-full h-[125%] object-cover opacity-[0.28]"
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+            referrerPolicy="no-referrer"
+          />
+        </ParallaxY>
+        <div className="absolute inset-0 bg-gradient-to-b from-moody-950/90 via-moody-950/70 to-moody-950" aria-hidden="true" />
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse 60% 65% at 50% 40%, rgba(166,134,93,0.18) 0%, transparent 70%)' }}
+          aria-hidden="true"
+        />
+
         {/* Decorative script watermark */}
-        <div className="absolute -right-10 top-1/2 -translate-y-1/2 text-[16rem] lg:text-[24rem] font-script text-gold-600/[0.06] leading-none select-none pointer-events-none hidden md:block" aria-hidden="true">
+        <div className="absolute -right-10 top-1/2 -translate-y-1/2 text-[16rem] lg:text-[24rem] font-script text-white/[0.04] leading-none select-none pointer-events-none hidden md:block" aria-hidden="true">
           387
         </div>
 
-        <div className="max-w-[1500px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-14 lg:gap-20 items-center relative">
+        <div className="max-w-[1500px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-14 lg:gap-20 items-center relative z-10">
           {/* Layered portrait duo */}
-          <div className="lg:col-span-6 relative mb-14 lg:mb-0">
+          <div className="lg:col-span-6 relative mb-20 lg:mb-0">
             {/* Thin gold frame behind, offset for depth */}
-            <div className="absolute -top-5 -left-5 w-2/3 aspect-[3/4] border border-gold-600/30 pointer-events-none" aria-hidden="true" />
+            <div className="absolute -top-5 -left-5 w-2/3 aspect-[3/4] border border-gold-400/35 pointer-events-none" aria-hidden="true" />
 
             <ParallaxY from={25} to={-25} className="w-[78%]">
               <motion.div
@@ -608,7 +635,7 @@ const Home = () => {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 1.3, ease: [0.16, 1, 0.3, 1] }}
-                className="w-full aspect-[3/4] overflow-hidden shadow-2xl shadow-moody-900/15"
+                className="w-full aspect-[3/4] overflow-hidden shadow-2xl shadow-black/50"
               >
                 <img
                   src={respImg(settings['img.home.team.aldin'] || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=900', [480, 960]).src}
@@ -632,7 +659,7 @@ const Home = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 1.3, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                  className="w-full aspect-[3/4] overflow-hidden border-[6px] md:border-8 border-white shadow-xl shadow-moody-900/20"
+                  className="w-full aspect-[3/4] overflow-hidden border-[6px] md:border-8 border-moody-950 shadow-xl shadow-black/60"
                 >
                   <img
                     src={respImg(settings['img.home.team.melisa'] || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=900', [320, 640]).src}
@@ -658,7 +685,7 @@ const Home = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.9 }}
               style={getContentStyle('about.artists')}
-              className="luxury-text-sm block mb-5"
+              className="block text-[10px] md:text-[11px] tracking-[0.6em] uppercase font-bold text-gold-400 mb-5"
             >
               {t('about.artists')}
             </motion.span>
@@ -668,10 +695,10 @@ const Home = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 1.1, delay: 0.1 }}
-              className="text-4xl sm:text-5xl lg:text-6xl font-serif font-light text-moody-900 leading-[1.05] mb-7"
+              className="text-4xl sm:text-5xl lg:text-6xl font-serif font-light text-white leading-[1.05] mb-7"
             >
               <span style={getContentStyle('home.about.title')}>{t('home.about.title')}</span>{' '}
-              <span style={getContentStyle('home.about.and')} className="italic text-gold-600">{t('home.about.and')}</span>
+              <span style={getContentStyle('home.about.and')} className="italic text-gold-400">{t('home.about.and')}</span>
             </motion.h2>
 
             <motion.div
@@ -679,7 +706,7 @@ const Home = () => {
               whileInView={{ opacity: 1, scaleX: 1 }}
               viewport={{ once: true }}
               transition={{ duration: 1, delay: 0.2 }}
-              className="w-16 h-[1px] bg-gold-600/50 mb-8 mx-auto lg:mx-0 origin-left"
+              className="w-16 h-[1px] bg-gold-400/60 mb-8 mx-auto lg:mx-0 origin-left"
               aria-hidden="true"
             />
 
@@ -689,7 +716,7 @@ const Home = () => {
               viewport={{ once: true }}
               transition={{ duration: 1, delay: 0.25 }}
               style={getContentStyle('home.about.desc.1')}
-              className="font-serif text-xl md:text-2xl text-moody-900/85 leading-relaxed mb-6"
+              className="font-serif text-xl md:text-2xl text-white/90 leading-relaxed mb-6"
             >
               {t('home.about.desc.1')}
             </motion.p>
@@ -700,7 +727,7 @@ const Home = () => {
               viewport={{ once: true }}
               transition={{ duration: 1, delay: 0.35 }}
               style={getContentStyle('home.about.desc.2')}
-              className="text-base md:text-lg text-moody-900/60 font-light leading-relaxed mb-5"
+              className="text-base md:text-lg text-white/65 font-light leading-relaxed mb-5"
             >
               {t('home.about.desc.2')}
             </motion.p>
@@ -711,7 +738,7 @@ const Home = () => {
               viewport={{ once: true }}
               transition={{ duration: 1, delay: 0.45 }}
               style={getContentStyle('home.about.desc.3')}
-              className="text-base md:text-lg text-moody-900/60 font-light italic leading-relaxed mb-10"
+              className="text-base md:text-lg text-white/60 font-light italic leading-relaxed mb-10"
             >
               {t('home.about.desc.3')}
             </motion.p>
@@ -722,15 +749,15 @@ const Home = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 1, delay: 0.55 }}
-              className="flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-2 text-[11px] tracking-[0.25em] uppercase font-bold text-moody-900/45 mb-10"
+              className="flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-2 text-[11px] tracking-[0.25em] uppercase font-bold text-white/50 mb-10"
             >
-              <a href={`mailto:${settings.email || 'hello@387cinematicweddings.com'}`} className="hover:text-gold-600 transition-colors duration-300">
+              <a href={`mailto:${settings.email || 'hello@387cinematicweddings.com'}`} className="hover:text-gold-400 transition-colors duration-300">
                 {settings.email || 'hello@387cinematicweddings.com'}
               </a>
               {settings.phone && (
                 <>
-                  <span className="w-1 h-1 rounded-full bg-gold-600/50" aria-hidden="true" />
-                  <a href={`tel:${settings.phone.replace(/\s/g, '')}`} className="hover:text-gold-600 transition-colors duration-300">
+                  <span className="w-1 h-1 rounded-full bg-gold-400/60" aria-hidden="true" />
+                  <a href={`tel:${settings.phone.replace(/\s/g, '')}`} className="hover:text-gold-400 transition-colors duration-300">
                     {settings.phone}
                   </a>
                 </>
@@ -747,10 +774,9 @@ const Home = () => {
             >
               <Link
                 to="/about"
-                className="group relative px-12 md:px-14 py-4.5 md:py-5 overflow-hidden whitespace-nowrap inline-block border border-gold-600/50 hover:border-gold-600 transition-all duration-700 rounded-full text-center"
+                className="group relative px-12 md:px-14 py-5 overflow-hidden whitespace-nowrap inline-block bg-gold-600 hover:bg-gold-500 transition-colors duration-500 rounded-full text-center shadow-xl shadow-gold-600/25"
               >
-                <div className="absolute inset-0 bg-gold-600 translate-y-full group-hover:translate-y-0 transition-transform duration-700" />
-                <span style={getContentStyle('home.about.cta')} className="relative z-10 text-[10px] md:text-[11px] tracking-[0.5em] uppercase font-medium text-gold-700 group-hover:text-white transition-colors duration-700 flex items-center gap-3">
+                <span style={getContentStyle('home.about.cta')} className="relative z-10 text-[10px] md:text-[11px] tracking-[0.5em] uppercase font-semibold text-white flex items-center gap-3">
                   {t('home.about.cta')}
                   <ArrowRight size={14} className="group-hover:translate-x-1.5 transition-transform duration-500" aria-hidden="true" />
                 </span>

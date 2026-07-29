@@ -220,7 +220,7 @@ const Footer = () => {
                     aria-label={s.label}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:border-gold-600/60 hover:bg-gold-600/15 transition-all duration-500"
+                    className="w-11 h-11 rounded-full border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:border-gold-600/60 hover:bg-gold-600/15 transition-all duration-500"
                   >
                     {s.icon}
                   </a>

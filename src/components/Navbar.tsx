@@ -145,7 +145,7 @@ const Navbar = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-0 z-[999] bg-gold-50 flex flex-col lg:hidden overflow-hidden"
+            className="fixed inset-0 z-[1010] bg-gold-50 flex flex-col lg:hidden overflow-hidden"
           >
             {/* Top bar — logo + close */}
             <div className="flex items-center justify-between px-6 py-6 flex-shrink-0">
