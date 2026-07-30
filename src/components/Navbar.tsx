@@ -48,6 +48,10 @@ const Navbar = () => {
     if (location.pathname === path) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // The home hero is a dark full-bleed frame, so the header floats over it
+  // until the visitor scrolls, then settles into its solid state.
+  const overlay = location.pathname === '/' && !scrolled;
+
   // Desktop nav item — gold rule grows from the centre on hover, stays for the
   // current page; the label widens a touch so the motion reads as intentional.
   const NavLink = ({ path, label }: { path: string; label: string }) => {
@@ -59,7 +63,11 @@ const Navbar = () => {
         aria-current={active ? 'page' : undefined}
         className={cn(
           'group relative py-1.5 luxury-text-base transition-colors duration-500',
-          active ? 'text-gold-600' : 'text-moody-900/55 hover:text-moody-900',
+          active
+            ? (overlay ? 'text-gold-300' : 'text-gold-600')
+            : overlay
+              ? 'text-white/75 hover:text-white [text-shadow:0_1px_10px_rgba(0,0,0,0.4)]'
+              : 'text-moody-900/55 hover:text-moody-900',
         )}
       >
         <span className="transition-[letter-spacing] duration-700 group-hover:tracking-[0.34em]">
@@ -68,7 +76,8 @@ const Navbar = () => {
         <span
           aria-hidden="true"
           className={cn(
-            'absolute inset-x-0 -bottom-0.5 h-[1px] bg-gold-600 origin-center transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]',
+            'absolute inset-x-0 -bottom-0.5 h-[1px] origin-center transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]',
+            overlay ? 'bg-gold-300' : 'bg-gold-600',
             active ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100',
           )}
         />
@@ -83,7 +92,10 @@ const Navbar = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
         className={cn(
-          "sticky top-0 z-[1000] transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] px-6 md:px-8 lg:px-16 bg-white/90 backdrop-blur-xl",
+          "top-0 left-0 right-0 z-[1000] transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] px-6 md:px-8 lg:px-16",
+          // Home floats the bar over its dark hero; every other page keeps it in flow
+          location.pathname === '/' ? "fixed" : "sticky",
+          overlay ? "bg-transparent" : "bg-white/90 backdrop-blur-xl",
           scrolled ? "py-3.5 md:py-4 shadow-[0_1px_24px_rgba(26,26,26,0.05)]" : "py-5 md:py-7"
         )}
       >
@@ -91,8 +103,9 @@ const Navbar = () => {
         <span
           aria-hidden="true"
           className={cn(
-            "absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-gold-600/30 to-transparent transition-opacity duration-700",
-            scrolled ? "opacity-100" : "opacity-50"
+            "absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent to-transparent transition-opacity duration-700",
+            overlay ? "via-white/20 opacity-100" : "via-gold-600/30",
+            !overlay && (scrolled ? "opacity-100" : "opacity-50")
           )}
         />
 
@@ -110,13 +123,13 @@ const Navbar = () => {
           <div className="flex-none flex items-center justify-center gap-6 xl:gap-9">
             <span
               aria-hidden="true"
-              className="hidden lg:block w-10 xl:w-16 h-[1px] bg-gradient-to-l from-gold-600/40 to-transparent"
+              className={cn("hidden lg:block w-10 xl:w-16 h-[1px] bg-gradient-to-l to-transparent transition-colors duration-700", overlay ? "from-white/45" : "from-gold-600/40")}
             />
 
             <Link to="/" className="flex flex-col items-center group relative z-10">
               <span
                 className={cn(
-                  "font-script tracking-normal leading-none text-moody-900 group-hover:text-gold-700 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                  "font-script tracking-normal leading-none transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]", overlay ? "text-white group-hover:text-gold-200 [text-shadow:0_2px_18px_rgba(0,0,0,0.45)]" : "text-moody-900 group-hover:text-gold-700",
                   scrolled
                     ? "text-[1.85rem] md:text-[2rem] xl:text-[2.2rem]"
                     : "text-[2rem] md:text-[2.25rem] xl:text-[2.5rem]"
@@ -126,7 +139,7 @@ const Navbar = () => {
               </span>
               <span
                 className={cn(
-                  "uppercase font-bold mt-1 text-gold-600 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                  "uppercase font-bold mt-1 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]", overlay ? "text-gold-200" : "text-gold-600",
                   scrolled
                     ? "text-[8px] md:text-[10px] tracking-[0.7em]"
                     : "text-[9px] md:text-[11px] xl:text-[12px] tracking-[0.75em] group-hover:tracking-[0.85em]"
@@ -138,7 +151,7 @@ const Navbar = () => {
 
             <span
               aria-hidden="true"
-              className="hidden lg:block w-10 xl:w-16 h-[1px] bg-gradient-to-r from-gold-600/40 to-transparent"
+              className={cn("hidden lg:block w-10 xl:w-16 h-[1px] bg-gradient-to-r to-transparent transition-colors duration-700", overlay ? "from-white/45" : "from-gold-600/40")}
             />
           </div>
 
@@ -151,17 +164,17 @@ const Navbar = () => {
               ))}
 
               {/* Language — set apart from the nav by a vertical hairline */}
-              <div className="flex items-center gap-3.5 pl-8 xl:pl-12 border-l border-moody-900/10">
+              <div className={cn("flex items-center gap-3.5 pl-8 xl:pl-12 border-l transition-colors duration-700", overlay ? "border-white/20" : "border-moody-900/10")}>
                 {(['ENG', 'BOS'] as const).map((lang, i) => (
                   <React.Fragment key={lang}>
-                    {i > 0 && <span className="w-[1px] h-3 bg-moody-900/15" aria-hidden="true" />}
+                    {i > 0 && <span className={cn("w-[1px] h-3 transition-colors duration-700", overlay ? "bg-white/25" : "bg-moody-900/15")} aria-hidden="true" />}
                     <button
                       type="button"
                       onClick={() => setLanguage(lang)}
                       aria-pressed={language === lang}
                       className={cn(
                         "text-[11px] xl:text-[12px] tracking-[0.28em] font-medium transition-colors duration-500 cursor-pointer",
-                        language === lang ? "text-gold-600" : "text-moody-900/35 hover:text-moody-900"
+                        language === lang ? (overlay ? "text-gold-300" : "text-gold-600") : overlay ? "text-white/55 hover:text-white" : "text-moody-900/35 hover:text-moody-900"
                       )}
                     >
                       {lang}
@@ -179,8 +192,8 @@ const Navbar = () => {
                 aria-label="Open menu"
                 aria-expanded={isMobileMenuOpen}
               >
-                <span className="block w-6 h-[1.5px] bg-moody-900 group-hover:bg-gold-600 transition-colors duration-500" />
-                <span className="block w-4 h-[1.5px] bg-moody-900 group-hover:w-6 group-hover:bg-gold-600 transition-all duration-500" />
+                <span className={cn("block w-6 h-[1.5px] transition-colors duration-500", overlay ? "bg-white group-hover:bg-gold-300" : "bg-moody-900 group-hover:bg-gold-600")} />
+                <span className={cn("block w-4 h-[1.5px] group-hover:w-6 transition-all duration-500", overlay ? "bg-white group-hover:bg-gold-300" : "bg-moody-900 group-hover:bg-gold-600")} />
               </button>
             </div>
           </div>

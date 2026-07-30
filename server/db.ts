@@ -355,7 +355,22 @@ export async function initDB() {
         ('nav.stories',      'Navigacija: Link "O nama"',      'footer', 'nav',   'text',     'About Us',            'O nama',               3),
         ('nav.inquire',      'Navigacija: Link "Upit"',        'footer', 'nav',   'text',     'Inquire',             'Upit',                 4),
         ('home.collections.tag',   'Kolekcije: Tag iznad naslova', 'home', 'collections', 'text', 'Browse by',  'Pregledajte po', 0),
-        ('home.collections.title', 'Kolekcije: Veliki naslov',     'home', 'collections', 'text', 'Collection', 'Kolekcijama',    1)
+        ('home.collections.title', 'Kolekcije: Veliki naslov',     'home', 'collections', 'text', 'Collection', 'Kolekcijama',    1),
+        ('hero.desc', 'Hero: Kratki opis ispod naslova', 'home', 'hero', 'textarea',
+         'We capture the emotions that remain long after everything else has passed.',
+         'Zabilježimo emocije koje traju kada sve drugo prođe.', 5),
+        ('home.collections.desc', 'Kolekcije: Opis ispod naslova', 'home', 'collections', 'textarea',
+         'Every story is unique. From weddings and studio sessions to portraits — we create memories that last forever.',
+         'Svaka priča je jedinstvena. Od vjenčanja i studijskih snimanja do portreta – stvaramo uspomene koje traju zauvijek.', 2),
+        ('home.collections.weddings.desc', 'Kartica Vjenčanja: Opis', 'home', 'collections', 'textarea',
+         'Your special day, captured through its most beautiful moments.',
+         'Vaš poseban dan, zabilježen kroz najljepše trenutke.', 3),
+        ('home.collections.studio.desc', 'Kartica Studio: Opis', 'home', 'collections', 'textarea',
+         'Timeless photographs in a perfectly composed setting.',
+         'Bezvremenske fotografije u savršenom ambijentu.', 4),
+        ('home.collections.portraits.desc', 'Kartica Portreti: Opis', 'home', 'collections', 'textarea',
+         'Portraits that reveal your character and emotion.',
+         'Portreti koji otkrivaju vašu jedinstvenost i emociju.', 5)
       ON CONFLICT (key) DO NOTHING
     `);
 
