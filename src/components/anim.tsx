@@ -86,7 +86,7 @@ export const SectionTag = ({ children, style, className = '' }: {
       viewport={{ once: true }}
       transition={{ duration: 0.9, ease: EASE }}
       style={style}
-      className="luxury-text-sm block"
+      className="block text-[10px] md:text-[11px] tracking-[0.5em] uppercase font-bold text-gold-300"
     >
       {children}
     </motion.span>
@@ -131,10 +131,10 @@ export const GoldPill = ({ to, children, style, className = '' }: {
 }) => (
   <Link
     to={to}
-    className={`group relative inline-block px-12 md:px-14 py-5 overflow-hidden whitespace-nowrap border border-gold-600/50 hover:border-gold-600 transition-all duration-700 rounded-full text-center ${className}`}
+    className={`group relative inline-block px-12 md:px-14 py-5 overflow-hidden whitespace-nowrap border border-gold-500/40 hover:border-gold-400 transition-colors duration-700 text-center ${className}`}
   >
-    <span className="absolute inset-0 bg-gold-600 translate-y-full group-hover:translate-y-0 transition-transform duration-700" aria-hidden="true" />
-    <span style={style} className="relative z-10 text-[10px] md:text-[11px] tracking-[0.5em] uppercase font-medium text-gold-700 group-hover:text-white transition-colors duration-700 flex items-center justify-center gap-3">
+    <span className="absolute inset-0 bg-gold-600 -translate-x-full group-hover:translate-x-0 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]" aria-hidden="true" />
+    <span style={style} className="relative z-10 text-[10px] md:text-[11px] tracking-[0.5em] uppercase font-medium text-gold-200 group-hover:text-white transition-colors duration-700 flex items-center justify-center gap-3">
       {children}
       <ArrowRight size={14} className="group-hover:translate-x-1.5 transition-transform duration-500" aria-hidden="true" />
     </span>

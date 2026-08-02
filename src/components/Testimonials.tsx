@@ -56,7 +56,7 @@ const Testimonials = ({ className = '' }: { className?: string }) => {
           {t('home.testimonials.tag')}
         </SectionTag>
 
-        <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif font-light text-moody-900 leading-[1.1] mb-12 md:mb-16">
+        <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif font-light text-white leading-[1.1] mb-12 md:mb-16">
           <WordReveal
             words={t('home.testimonials.title').split(' ').filter(Boolean)
               .map(w => ({ w, style: getContentStyle('home.testimonials.title') }))}
@@ -77,7 +77,7 @@ const Testimonials = ({ className = '' }: { className?: string }) => {
             className="flex justify-center mb-8"
             aria-hidden="true"
           >
-            <Quote size={30} strokeWidth={1} className="text-gold-600/45" />
+            <Quote size={30} strokeWidth={1} className="text-gold-400/50" />
           </motion.div>
 
           {/* Quote — crossfades between entries */}
@@ -91,17 +91,17 @@ const Testimonials = ({ className = '' }: { className?: string }) => {
                 transition={{ duration: 0.75, ease: EASE }}
                 className="m-0"
               >
-                <p className="font-serif font-light italic text-xl sm:text-2xl md:text-3xl text-moody-900/85 leading-[1.5] max-w-3xl mx-auto">
+                <p className="font-serif font-light italic text-xl sm:text-2xl md:text-3xl text-white/85 leading-[1.5] max-w-3xl mx-auto">
                   {current.text}
                 </p>
 
                 <footer className="mt-9">
-                  <div className="w-10 h-[1px] bg-gold-600/45 mx-auto mb-5" aria-hidden="true" />
-                  <cite className="not-italic block text-gold-600 text-[11px] tracking-[0.4em] uppercase font-bold">
+                  <div className="w-10 h-[1px] bg-gold-400/50 mx-auto mb-5" aria-hidden="true" />
+                  <cite className="not-italic block text-gold-300 text-[11px] tracking-[0.4em] uppercase font-bold">
                     {current.client_name}
                   </cite>
                   {meta && (
-                    <span className="block text-moody-900/40 text-[10px] tracking-[0.25em] uppercase mt-2">
+                    <span className="block text-white/40 text-[10px] tracking-[0.25em] uppercase mt-2">
                       {meta}
                     </span>
                   )}
@@ -121,7 +121,7 @@ const Testimonials = ({ className = '' }: { className?: string }) => {
                   aria-label={`${item.client_name}`}
                   aria-current={i === index}
                   className={`h-[3px] rounded-full transition-all duration-500 ${
-                    i === index ? 'w-8 bg-gold-600' : 'w-3 bg-moody-900/15 hover:bg-moody-900/30'
+                    i === index ? 'w-8 bg-gold-400' : 'w-3 bg-white/15 hover:bg-white/30'
                   }`}
                 />
               ))}

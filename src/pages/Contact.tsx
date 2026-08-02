@@ -20,8 +20,8 @@ const HERO_FALLBACK = 'https://images.unsplash.com/photo-1519225421980-715cb0215
 
 // Shared input skin — transparent field, the underline carries the state
 const FIELD_INPUT =
-  'w-full bg-transparent py-3 md:py-4 pr-6 text-moody-900 font-light text-sm md:text-base ' +
-  'placeholder:text-moody-900/25 placeholder:font-light outline-none focus:outline-none';
+  'w-full bg-transparent py-3 md:py-4 pr-6 text-white font-light text-sm md:text-base ' +
+  'placeholder:text-white/25 placeholder:font-light outline-none focus:outline-none';
 
 // ── Field chrome ─────────────────────────────────────────────────────────────
 // Label rides above the field and warms to gold on focus; a gold rule wipes in
@@ -48,14 +48,14 @@ const FieldFrame = ({ id, label, labelStyle, focused, filled, delay = 0, optiona
         htmlFor={id}
         style={labelStyle}
         className={`block text-[9px] md:text-[10px] tracking-[0.45em] uppercase font-bold transition-colors duration-500 ${
-          focused ? 'text-gold-600' : 'text-moody-900/40'
+          focused ? 'text-gold-300' : 'text-white/40'
         }`}
       >
         {label}
       </label>
       {/* Only name + email are required — say so, so nobody abandons the form */}
       {optionalLabel && (
-        <span className="text-[9px] tracking-[0.2em] uppercase text-moody-900/25 font-medium flex-none">
+        <span className="text-[9px] tracking-[0.2em] uppercase text-white/30 font-medium flex-none">
           {optionalLabel}
         </span>
       )}
@@ -63,13 +63,13 @@ const FieldFrame = ({ id, label, labelStyle, focused, filled, delay = 0, optiona
 
     {children}
 
-    <span aria-hidden="true" className="absolute left-0 bottom-0 h-px w-full bg-gold-600/20" />
+    <span aria-hidden="true" className="absolute left-0 bottom-0 h-px w-full bg-white/15" />
     <motion.span
       aria-hidden="true"
       initial={false}
       animate={{ scaleX: focused ? 1 : 0 }}
       transition={{ duration: 0.7, ease: EASE }}
-      className="absolute left-0 bottom-0 h-[1.5px] w-full bg-gold-600 origin-left"
+      className="absolute left-0 bottom-0 h-[1.5px] w-full bg-gold-400 origin-left"
     />
 
     <AnimatePresence>
@@ -283,7 +283,7 @@ const Contact = () => {
   );
 
   return (
-    <div className="bg-gold-50 overflow-hidden">
+    <div className="bg-moody-950 overflow-hidden">
       {/* ── Success modal — the single success surface ───────────────────── */}
       <AnimatePresence>
         {showModal && (
@@ -307,7 +307,7 @@ const Contact = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 16 }}
               transition={{ duration: 0.75, ease: EASE }}
-              className="relative w-full max-w-lg bg-gold-50 border border-gold-600/15 shadow-2xl px-8 py-12 md:px-14 md:py-16 text-center"
+              className="relative w-full max-w-lg bg-moody-950 border border-gold-500/25 shadow-2xl shadow-black/60 px-8 py-12 md:px-14 md:py-16 text-center"
             >
               <div className="absolute inset-3 border border-gold-600/15 pointer-events-none" aria-hidden="true" />
 
@@ -315,7 +315,7 @@ const Contact = () => {
                 initial={{ scale: 0, rotate: -30 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ duration: 0.9, delay: 0.15, ease: EASE }}
-                className="relative w-20 h-20 rounded-full bg-gold-100 flex items-center justify-center mx-auto mb-8"
+                className="relative w-20 h-20 rounded-full bg-gold-600/15 border border-gold-500/40 flex items-center justify-center mx-auto mb-8"
                 aria-hidden="true"
               >
                 <CheckCircle2 className="text-gold-600" size={38} strokeWidth={1.2} />
@@ -324,7 +324,7 @@ const Contact = () => {
               <h2
                 id="contact-success-title"
                 style={getContentStyle('contact.form.success.title')}
-                className="relative text-3xl md:text-4xl font-serif font-light text-moody-900 mb-5"
+                className="relative text-3xl md:text-4xl font-serif font-light text-white mb-5"
               >
                 {t('contact.form.success.title')}
               </h2>
@@ -339,7 +339,7 @@ const Contact = () => {
 
               <p
                 style={getContentStyle('contact.form.success.desc')}
-                className="relative text-moody-900/55 font-light leading-relaxed mb-10"
+                className="relative text-white/60 font-light leading-relaxed mb-10"
               >
                 {t('contact.form.success.desc')}
               </p>
@@ -360,7 +360,7 @@ const Contact = () => {
               <button onClick={sendAnother} className="group relative mt-6 inline-block">
                 <span
                   style={getContentStyle('contact.form.success.another')}
-                  className="text-[10px] tracking-[0.35em] uppercase font-bold text-moody-900/45 group-hover:text-gold-600 border-b border-gold-600/25 pb-1 transition-colors duration-500"
+                  className="text-[10px] tracking-[0.35em] uppercase font-bold text-white/50 group-hover:text-gold-300 border-b border-gold-400/30 pb-1 transition-colors duration-500"
                 >
                   {t('contact.form.success.another')}
                 </span>
@@ -371,7 +371,7 @@ const Contact = () => {
       </AnimatePresence>
 
       {/* ── Hero statement ───────────────────────────────────────────────── */}
-      <section className="relative bg-white pt-10 md:pt-16 pb-16 md:pb-24 overflow-hidden">
+      <section className="relative bg-moody-950 pt-10 md:pt-16 pb-16 md:pb-24 overflow-hidden">
         {/* Soft gold glow behind the statement */}
         <div
           className="absolute inset-x-0 top-0 h-[26rem] pointer-events-none"
@@ -395,7 +395,7 @@ const Contact = () => {
           {/* Title — per-word mask reveal */}
           <h1
             aria-label={t('contact.hero.title')}
-            className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-serif font-light text-moody-900 leading-[1.02] tracking-tight uppercase mb-3"
+            className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-serif font-light text-white leading-[1.02] tracking-tight uppercase mb-3"
           >
             <WordReveal
               delay={0.2}
@@ -431,7 +431,7 @@ const Contact = () => {
             viewport={{ once: true }}
             transition={{ duration: 1, delay: 0.55, ease: EASE }}
             style={getContentStyle('contact.hero.subtitle')}
-            className="text-[10px] md:text-xs tracking-[0.4em] md:tracking-[0.5em] uppercase font-bold text-moody-900/50 max-w-xl mx-auto leading-loose"
+            className="text-[10px] md:text-xs tracking-[0.4em] md:tracking-[0.5em] uppercase font-bold text-white/55 max-w-xl mx-auto leading-loose"
           >
             {t('contact.hero.subtitle')}
           </motion.p>
@@ -445,7 +445,7 @@ const Contact = () => {
               transition={{ duration: 0.9, delay: 0.7, ease: EASE }}
               className="flex justify-center mt-8"
             >
-              <span className="inline-flex items-center gap-3 text-[9px] md:text-[10px] tracking-[0.35em] uppercase font-bold text-gold-700 bg-gold-50 px-6 py-2.5 border border-gold-600/20 rounded-full">
+              <span className="inline-flex items-center gap-3 text-[9px] md:text-[10px] tracking-[0.35em] uppercase font-bold text-gold-300 bg-gold-600/10 px-6 py-2.5 border border-gold-500/30 rounded-full">
                 <span className="w-1.5 h-1.5 rounded-full bg-gold-600 animate-pulse" aria-hidden="true" />
                 {settings.availability_text}
               </span>
@@ -460,7 +460,7 @@ const Contact = () => {
       </section>
 
       {/* ── The inquiry ──────────────────────────────────────────────────── */}
-      <section className="relative bg-gold-100/40 py-24 md:py-36 px-6 sm:px-8 lg:px-16 overflow-hidden">
+      <section className="relative bg-moody-950 py-24 md:py-36 px-6 sm:px-8 lg:px-16 overflow-hidden">
         {/* Decorative script watermark */}
         <div
           className="absolute -left-12 top-1/3 text-[16rem] xl:text-[22rem] font-script text-gold-600/[0.05] leading-none select-none pointer-events-none hidden lg:block"
@@ -475,7 +475,7 @@ const Contact = () => {
               {t('contact.connect.tag')}
             </SectionTag>
 
-            <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-serif font-light text-moody-900 leading-[1.05] tracking-tight">
+            <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-serif font-light text-white leading-[1.05] tracking-tight">
               <WordReveal
                 delay={0.2}
                 words={[
@@ -503,7 +503,7 @@ const Contact = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-60px' }}
                 transition={{ duration: 1.2, ease: EASE }}
-                className="relative bg-white border border-gold-600/10 shadow-xl shadow-moody-900/[0.06] p-7 sm:p-10 lg:p-14 overflow-hidden"
+                className="relative bg-gradient-to-b from-white/[0.05] to-white/[0.015] border border-white/10 shadow-2xl shadow-black/50 p-7 sm:p-10 lg:p-14 overflow-hidden"
               >
                 <div
                   className="absolute -top-28 -right-28 w-72 h-72 bg-gold-200/25 blur-3xl rounded-full pointer-events-none"
@@ -661,7 +661,7 @@ const Contact = () => {
                     <li>
                       <a
                         href={`mailto:${settings.email}`}
-                        className="group flex items-center gap-4 py-5 text-moody-900/70 hover:text-gold-600 transition-colors duration-500"
+                        className="group flex items-center gap-4 py-5 text-white/70 hover:text-gold-300 transition-colors duration-500"
                       >
                         <Mail size={15} strokeWidth={1.5} className="text-gold-600 flex-shrink-0" aria-hidden="true" />
                         <span className="text-[11px] md:text-xs tracking-[0.2em] uppercase font-bold break-all">{settings.email}</span>
@@ -673,7 +673,7 @@ const Contact = () => {
                     <li>
                       <a
                         href={`tel:${settings.phone.replace(/\s/g, '')}`}
-                        className="group flex items-center gap-4 py-5 text-moody-900/70 hover:text-gold-600 transition-colors duration-500"
+                        className="group flex items-center gap-4 py-5 text-white/70 hover:text-gold-300 transition-colors duration-500"
                       >
                         <Phone size={15} strokeWidth={1.5} className="text-gold-600 flex-shrink-0" aria-hidden="true" />
                         <span className="text-[11px] md:text-xs tracking-[0.2em] uppercase font-bold">{settings.phone}</span>
@@ -682,7 +682,7 @@ const Contact = () => {
                     </li>
                   )}
                   {settings.location && (
-                    <li className="flex items-center gap-4 py-5 text-moody-900/70">
+                    <li className="flex items-center gap-4 py-5 text-white/70">
                       <MapPin size={15} strokeWidth={1.5} className="text-gold-600 flex-shrink-0" aria-hidden="true" />
                       <span className="text-[11px] md:text-xs tracking-[0.2em] uppercase font-bold">{settings.location}</span>
                     </li>
@@ -696,14 +696,14 @@ const Contact = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 1, delay: 0.25, ease: EASE }}
-                className="relative border border-gold-600/15 bg-white/60 p-8 md:p-10"
+                className="relative border border-white/10 bg-white/[0.03] p-8 md:p-10"
               >
                 <span style={getContentStyle('contact.note.tag')} className="luxury-text-sm block mb-4">
                   {t('contact.note.tag')}
                 </span>
                 <p
                   style={getContentStyle('contact.response.note')}
-                  className="text-moody-900/55 font-light text-sm leading-relaxed italic"
+                  className="text-white/55 font-light text-sm leading-relaxed italic"
                 >
                   {t('contact.response.note')}
                 </p>
@@ -715,7 +715,7 @@ const Contact = () => {
 
       {/* ── Follow ───────────────────────────────────────────────────────── */}
       {socials.length > 0 && (
-        <section className="bg-white py-20 md:py-28 px-6 sm:px-8 lg:px-16">
+        <section className="bg-moody-950 py-20 md:py-28 px-6 sm:px-8 lg:px-16">
           <div className="max-w-3xl mx-auto text-center">
             <SectionTag style={getContentStyle('contact.follow.tag')} className="mb-9 md:mb-11">
               {t('contact.follow.tag')}
@@ -733,7 +733,7 @@ const Contact = () => {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.8, delay: i * 0.09, ease: EASE }}
-                  className="w-14 h-14 md:w-16 md:h-16 rounded-full border border-gold-600/25 flex items-center justify-center text-moody-900/70 hover:text-white hover:bg-gold-600 hover:border-gold-600 hover:-translate-y-1.5 transition-all duration-500"
+                  className="w-14 h-14 md:w-16 md:h-16 rounded-full border border-gold-500/30 flex items-center justify-center text-white/70 hover:text-white hover:bg-gold-600 hover:border-gold-500 hover:-translate-y-1.5 transition-all duration-500"
                 >
                   {social.icon}
                 </motion.a>

@@ -46,7 +46,7 @@
     scroll-behavior: auto;
   }
   body {
-    @apply bg-gold-50 text-moody-900 font-sans antialiased selection:bg-gold-200 selection:text-moody-900;
+    @apply bg-moody-950 text-white font-sans antialiased selection:bg-gold-600 selection:text-white;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -107,7 +107,7 @@
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-white;
+  @apply bg-moody-950;
 }
 
 ::-webkit-scrollbar-thumb {

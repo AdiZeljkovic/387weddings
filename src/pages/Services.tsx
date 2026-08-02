@@ -90,7 +90,7 @@ const FaqRow = ({ n, open, onToggle, t, getContentStyle }: {
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true }}
     transition={{ duration: 0.9, delay: (n - 1) * 0.08, ease: EASE }}
-    className="border-b border-moody-900/10"
+    className="border-b border-white/10"
   >
     <button
       type="button"
@@ -101,20 +101,20 @@ const FaqRow = ({ n, open, onToggle, t, getContentStyle }: {
       <div className="flex items-start gap-5 md:gap-8">
         <span
           aria-hidden="true"
-          className={`font-serif text-2xl md:text-4xl leading-none flex-none transition-colors duration-500 ${open ? 'text-gold-600' : 'text-gold-600/30 group-hover:text-gold-600/60'}`}
+          className={`font-serif text-2xl md:text-4xl leading-none flex-none transition-colors duration-500 ${open ? 'text-gold-400' : 'text-gold-400/30 group-hover:text-gold-400/60'}`}
         >
           {String(n).padStart(2, '0')}
         </span>
         <h4
           style={getContentStyle(`experience.faq.${n}.q`)}
-          className={`text-xl md:text-2xl lg:text-[1.7rem] font-serif font-light leading-snug transition-colors duration-500 ${open ? 'text-gold-600' : 'text-moody-900 group-hover:text-gold-600'}`}
+          className={`text-xl md:text-2xl lg:text-[1.7rem] font-serif font-light leading-snug transition-colors duration-500 ${open ? 'text-gold-300' : 'text-white group-hover:text-gold-300'}`}
         >
           {t(`experience.faq.${n}.q`)}
         </h4>
       </div>
       <span
         className={`flex-none mt-1 w-8 h-8 rounded-full border flex items-center justify-center transition-all duration-500
-          ${open ? 'border-gold-600 bg-gold-600 text-white rotate-45' : 'border-moody-900/20 text-moody-900/50 group-hover:border-gold-600/50 group-hover:text-gold-600'}`}
+          ${open ? 'border-gold-500 bg-gold-500 text-white rotate-45' : 'border-white/20 text-white/50 group-hover:border-gold-400/60 group-hover:text-gold-300'}`}
         aria-hidden="true"
       >
         <Plus size={14} strokeWidth={1.5} />
@@ -132,7 +132,7 @@ const FaqRow = ({ n, open, onToggle, t, getContentStyle }: {
         >
           <p
             style={getContentStyle(`experience.faq.${n}.a`)}
-            className="pb-9 pr-12 md:pl-[4.5rem] text-moody-900/60 font-light leading-relaxed text-base md:text-lg"
+            className="pb-9 pr-12 md:pl-[4.5rem] text-white/60 font-light leading-relaxed text-base md:text-lg"
           >
             {t(`experience.faq.${n}.a`)}
           </p>
@@ -195,7 +195,7 @@ const Experience = () => {
 
 
   return (
-    <div className="bg-gold-50 overflow-hidden">
+    <div className="bg-moody-950 overflow-hidden">
       <div className="grain" aria-hidden="true" />
 
       {/* Reading progress — this page is long; the hairline tracks how far in you are */}
@@ -206,7 +206,7 @@ const Experience = () => {
       />
 
       {/* ── Page opener — editorial title block, no image hero ───────────── */}
-      <section className="relative bg-white pt-16 md:pt-24 pb-16 md:pb-24 px-6 sm:px-8 lg:px-16 overflow-hidden">
+      <section className="relative bg-moody-950 pt-16 md:pt-24 pb-16 md:pb-24 px-6 sm:px-8 lg:px-16 overflow-hidden">
         <div
           className="absolute inset-x-0 top-0 h-80 pointer-events-none"
           style={{ background: 'radial-gradient(ellipse 50% 60% at 50% 30%, rgba(166,134,93,0.10) 0%, transparent 70%)' }}
@@ -221,7 +221,7 @@ const Experience = () => {
           <h1
             style={getContentStyle('experience.hero.title')}
             aria-label={t('experience.hero.title')}
-            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-light text-moody-900 leading-[0.98] tracking-tight uppercase mb-5"
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-light text-white leading-[0.98] tracking-tight uppercase mb-5"
           >
             <WordReveal
               words={t('experience.hero.title').split(' ').filter(Boolean).map(w => ({ w }))}
@@ -234,7 +234,7 @@ const Experience = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.55, ease: EASE }}
             style={getContentStyle('experience.hero.subtitle')}
-            className="font-serif italic text-lg md:text-xl text-gold-600 mb-9"
+            className="font-serif italic text-lg md:text-xl text-gold-400 mb-9"
           >
             {t('experience.hero.subtitle')}
           </motion.p>
@@ -243,11 +243,11 @@ const Experience = () => {
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
             transition={{ duration: 1.1, delay: 0.7, ease: EASE }}
-            className="w-16 h-[1px] bg-gold-600/50 mx-auto mb-10"
+            className="w-16 h-[1px] bg-gold-400/50 mx-auto mb-10"
             aria-hidden="true"
           />
 
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-light text-moody-900 leading-[1.15] mb-7">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-light text-white leading-[1.15] mb-7">
             <WordReveal words={introWords} delay={0.5} />
           </h2>
 
@@ -257,7 +257,7 @@ const Experience = () => {
             viewport={{ once: true }}
             transition={{ duration: 1, delay: 0.8, ease: EASE }}
             style={getContentStyle('experience.intro.desc')}
-            className="text-moody-900/65 font-light text-base md:text-lg leading-relaxed max-w-2xl mx-auto"
+            className="text-white/60 font-light text-base md:text-lg leading-relaxed max-w-2xl mx-auto"
           >
             {t('experience.intro.desc')}
           </motion.p>
@@ -265,9 +265,9 @@ const Experience = () => {
       </section>
 
       {/* ── Benefit & Result — layered editorial diptych ─────────────────── */}
-      <section className="relative bg-gold-100/40 py-24 md:py-36 px-6 sm:px-8 lg:px-16 overflow-hidden">
+      <section className="relative bg-moody-950 py-24 md:py-36 px-6 sm:px-8 lg:px-16 overflow-hidden">
         <div
-          className="absolute -left-12 top-1/3 text-[15rem] lg:text-[22rem] font-script text-gold-600/[0.05] leading-none select-none pointer-events-none hidden md:block"
+          className="absolute -left-12 top-1/3 text-[15rem] lg:text-[22rem] font-script text-white/[0.035] leading-none select-none pointer-events-none hidden md:block"
           aria-hidden="true"
         >
           387
@@ -278,7 +278,7 @@ const Experience = () => {
           <div className="relative">
             <span
               aria-hidden="true"
-              className="absolute -top-14 md:-top-20 -left-2 text-[8rem] md:text-[12rem] font-serif leading-none text-gold-600/[0.09] select-none pointer-events-none"
+              className="absolute -top-14 md:-top-20 -left-2 text-[8rem] md:text-[12rem] font-serif leading-none text-white/[0.05] select-none pointer-events-none"
             >
               01
             </span>
@@ -292,28 +292,28 @@ const Experience = () => {
             >
               <h4
                 style={getContentStyle('experience.benefit.tag')}
-                className="text-[10px] tracking-[0.45em] uppercase text-gold-600 font-bold mb-5"
+                className="text-[10px] tracking-[0.45em] uppercase text-gold-300 font-bold mb-5"
               >
                 {t('experience.benefit.tag')}
               </h4>
-              <div className="w-12 h-[1px] bg-gold-600/50 mb-6 mx-auto md:mx-0" aria-hidden="true" />
+              <div className="w-12 h-[1px] bg-gold-400/50 mb-6 mx-auto md:mx-0" aria-hidden="true" />
               <p
                 style={getContentStyle('experience.benefit.desc')}
-                className="text-moody-900/80 font-serif font-light leading-relaxed text-xl md:text-2xl"
+                className="text-white/80 font-serif font-light leading-relaxed text-xl md:text-2xl"
               >
                 {t('experience.benefit.desc')}
               </p>
             </motion.div>
 
             <div className="relative">
-              <div className="absolute -top-5 -left-5 w-2/3 aspect-[4/5] border border-gold-600/30 pointer-events-none" aria-hidden="true" />
+              <div className="absolute -top-5 -left-5 w-2/3 aspect-[4/5] border border-gold-400/30 pointer-events-none" aria-hidden="true" />
               <ParallaxY from={26} to={-26}>
                 <RevealImage
                   src={benefit.src}
                   srcSet={benefit.srcSet}
                   sizes="(min-width: 768px) 45vw, 100vw"
                   alt={t('experience.benefit.tag')}
-                  className="aspect-[4/5] shadow-2xl shadow-moody-900/15"
+                  className="aspect-[4/5] shadow-2xl shadow-black/50"
                 />
               </ParallaxY>
             </div>
@@ -323,20 +323,20 @@ const Experience = () => {
           <div className="relative md:mt-36">
             <span
               aria-hidden="true"
-              className="absolute -top-14 md:-top-20 -right-2 text-[8rem] md:text-[12rem] font-serif leading-none text-gold-600/[0.09] select-none pointer-events-none"
+              className="absolute -top-14 md:-top-20 -right-2 text-[8rem] md:text-[12rem] font-serif leading-none text-white/[0.05] select-none pointer-events-none"
             >
               02
             </span>
 
             <div className="relative mb-10">
-              <div className="absolute -bottom-5 -right-5 w-2/3 aspect-[4/5] border border-gold-600/30 pointer-events-none" aria-hidden="true" />
+              <div className="absolute -bottom-5 -right-5 w-2/3 aspect-[4/5] border border-gold-400/30 pointer-events-none" aria-hidden="true" />
               <ParallaxY from={52} to={-24}>
                 <RevealImage
                   src={result.src}
                   srcSet={result.srcSet}
                   sizes="(min-width: 768px) 45vw, 100vw"
                   alt={t('experience.result.tag')}
-                  className="aspect-[4/5] shadow-2xl shadow-moody-900/15"
+                  className="aspect-[4/5] shadow-2xl shadow-black/50"
                 />
               </ParallaxY>
             </div>
@@ -350,14 +350,14 @@ const Experience = () => {
             >
               <h4
                 style={getContentStyle('experience.result.tag')}
-                className="text-[10px] tracking-[0.45em] uppercase text-gold-600 font-bold mb-5"
+                className="text-[10px] tracking-[0.45em] uppercase text-gold-300 font-bold mb-5"
               >
                 {t('experience.result.tag')}
               </h4>
               <div className="w-12 h-[1px] bg-gold-600/50 mb-6 mx-auto md:mx-0" aria-hidden="true" />
               <p
                 style={getContentStyle('experience.result.desc')}
-                className="text-moody-900/80 font-serif font-light leading-relaxed text-xl md:text-2xl"
+                className="text-white/80 font-serif font-light leading-relaxed text-xl md:text-2xl"
               >
                 {t('experience.result.desc')}
               </p>
@@ -430,13 +430,13 @@ const Experience = () => {
 
       {/* ── Social proof — right where the pricing decision is made.
              Renders only once the client adds reviews in Admin → Recenzije. ── */}
-      <Testimonials className="bg-white" />
+      <Testimonials className="bg-moody-950" />
 
       {/* ── FAQ — accordion ──────────────────────────────────────────────── */}
-      <section className="relative bg-gold-100/40 py-24 md:py-36 px-6 sm:px-8 lg:px-16 overflow-hidden">
+      <section className="relative bg-moody-950 py-24 md:py-36 px-6 sm:px-8 lg:px-16 overflow-hidden">
         <div className="relative max-w-3xl mx-auto">
           <div className="text-center mb-14 md:mb-20">
-            <h3 className="text-3xl sm:text-4xl md:text-5xl font-serif font-light text-moody-900 leading-tight tracking-tight">
+            <h3 className="text-3xl sm:text-4xl md:text-5xl font-serif font-light text-white leading-tight tracking-tight">
               <WordReveal
                 words={t('experience.faq.title').split(' ').filter(Boolean)
                   .map(w => ({ w, style: getContentStyle('experience.faq.title') }))}

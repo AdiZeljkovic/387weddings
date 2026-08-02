@@ -24,12 +24,12 @@ class ErrorBoundary extends React.Component<EBProps, EBState> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-white text-center px-6">
-          <p className="text-xs tracking-[0.3em] uppercase text-gold-500 mb-4">Something went wrong</p>
-          <h1 className="text-2xl font-light text-gray-800 mb-6">An unexpected error occurred</h1>
+        <div className="min-h-screen flex flex-col items-center justify-center bg-moody-950 text-center px-6">
+          <p className="text-xs tracking-[0.3em] uppercase text-gold-400 mb-4">Something went wrong</p>
+          <h1 className="text-2xl font-light text-white/85 mb-6">An unexpected error occurred</h1>
           <button
             onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
-            className="px-6 py-2.5 border border-gold-400 text-gold-600 text-xs tracking-widest uppercase hover:bg-gold-50 transition-colors"
+            className="px-6 py-2.5 border border-gold-500/50 text-gold-300 text-xs tracking-widest uppercase hover:bg-gold-600/10 transition-colors"
           >
             Reload page
           </button>
@@ -173,7 +173,7 @@ function AnalyticsInjector() {
 }
 
 const PublicLoadingFallback = (
-  <div className="h-screen w-full flex items-center justify-center bg-white">
+  <div className="h-screen w-full flex items-center justify-center bg-moody-950">
     <div className="w-12 h-[1px] bg-gold-300 animate-pulse" />
   </div>
 );
@@ -276,7 +276,7 @@ function App() {
               path="/*"
               element={
                 <ComingSoonGate>
-                <div className="relative min-h-screen bg-white">
+                <div className="relative min-h-screen bg-moody-950">
                   <div className="grain" />
                   <Navbar />
                   <main>

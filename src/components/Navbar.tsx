@@ -48,9 +48,10 @@ const Navbar = () => {
     if (location.pathname === path) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // The home hero is a dark full-bleed frame, so the header floats over it
-  // until the visitor scrolls, then settles into its solid state.
-  const overlay = location.pathname === '/' && !scrolled;
+  // The whole site is a dark editorial canvas now, so the header keeps the
+  // light-on-dark treatment everywhere; scrolling only solidifies the backdrop.
+  const onHome = location.pathname === '/';
+  const overlay = true;
 
   // Desktop nav item — gold rule grows from the centre on hover, stays for the
   // current page; the label widens a touch so the motion reads as intentional.
@@ -94,9 +95,9 @@ const Navbar = () => {
         className={cn(
           "top-0 left-0 right-0 z-[1000] transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] px-6 md:px-8 lg:px-16",
           // Home floats the bar over its dark hero; every other page keeps it in flow
-          location.pathname === '/' ? "fixed" : "sticky",
-          overlay ? "bg-transparent" : "bg-white/90 backdrop-blur-xl",
-          scrolled ? "py-3.5 md:py-4 shadow-[0_1px_24px_rgba(26,26,26,0.05)]" : "py-5 md:py-7"
+          onHome ? "fixed" : "sticky",
+          scrolled ? "bg-moody-950/85 backdrop-blur-xl" : "bg-transparent",
+          scrolled ? "py-3.5 md:py-4 shadow-[0_1px_24px_rgba(0,0,0,0.35)]" : "py-5 md:py-7"
         )}
       >
         {/* Hairline that fades out toward the edges — softer than a full border */}
@@ -104,14 +105,25 @@ const Navbar = () => {
           aria-hidden="true"
           className={cn(
             "absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent to-transparent transition-opacity duration-700",
-            overlay ? "via-white/20 opacity-100" : "via-gold-600/30",
-            !overlay && (scrolled ? "opacity-100" : "opacity-50")
+            // The bar floats over dark canvases — no line until it solidifies
+            cn("via-white/15", scrolled ? "opacity-100" : "opacity-0")
           )}
         />
 
         <div className="max-w-[1800px] mx-auto flex items-center justify-between">
-          {/* Left: Desktop links | Mobile: empty spacer */}
-          <div className="flex-1 flex items-center justify-end pr-4 lg:pr-10 xl:pr-16">
+          {/* Left: Desktop links | Mobile: hamburger */}
+          <div className="flex-1 flex items-center justify-end pr-4 lg:pr-10 xl:pl-0 xl:pr-16">
+            {/* Mobile hamburger — two rules that morph into a cross */}
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="lg:hidden mr-auto relative w-11 h-11 -ml-2 flex flex-col items-center justify-center gap-[7px] group"
+              aria-label="Open menu"
+              aria-expanded={isMobileMenuOpen}
+            >
+              <span className={cn("block w-6 h-[1.5px] transition-colors duration-500", overlay ? "bg-white group-hover:bg-gold-300" : "bg-moody-900 group-hover:bg-gold-600")} />
+              <span className={cn("block w-4 h-[1.5px] group-hover:w-6 transition-all duration-500", overlay ? "bg-white group-hover:bg-gold-300" : "bg-moody-900 group-hover:bg-gold-600")} />
+            </button>
+
             <div className="hidden lg:flex items-center gap-8 xl:gap-14">
               {leftLinks.map(link => (
                 <NavLink key={link.path} path={link.path} label={link.label} />
@@ -184,17 +196,9 @@ const Navbar = () => {
               </div>
             </div>
 
-            {/* Mobile hamburger — two rules that morph into a cross */}
+            {/* Mobile: invisible spacer that mirrors the hamburger, so the logo stays centred */}
             <div className="flex lg:hidden flex-1 justify-end">
-              <button
-                onClick={() => setIsMobileMenuOpen(true)}
-                className="relative w-11 h-11 -mr-2 flex flex-col items-center justify-center gap-[7px] group"
-                aria-label="Open menu"
-                aria-expanded={isMobileMenuOpen}
-              >
-                <span className={cn("block w-6 h-[1.5px] transition-colors duration-500", overlay ? "bg-white group-hover:bg-gold-300" : "bg-moody-900 group-hover:bg-gold-600")} />
-                <span className={cn("block w-4 h-[1.5px] group-hover:w-6 transition-all duration-500", overlay ? "bg-white group-hover:bg-gold-300" : "bg-moody-900 group-hover:bg-gold-600")} />
-              </button>
+              <span className="w-11 h-11" aria-hidden="true" />
             </div>
           </div>
         </div>
@@ -208,16 +212,16 @@ const Navbar = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }}
             transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-0 z-[1010] bg-gold-50 flex flex-col lg:hidden overflow-hidden"
+            className="fixed inset-0 z-[1010] bg-moody-950 flex flex-col lg:hidden overflow-hidden"
           >
             {/* Warm glow + oversized script mark */}
             <div
               className="absolute inset-0 pointer-events-none"
-              style={{ background: 'radial-gradient(ellipse 70% 50% at 50% 30%, rgba(166,134,93,0.13) 0%, transparent 70%)' }}
+              style={{ background: 'radial-gradient(ellipse 70% 50% at 50% 30%, rgba(166,134,93,0.14) 0%, transparent 70%)' }}
               aria-hidden="true"
             />
             <div
-              className="absolute -bottom-12 -right-6 text-[15rem] font-script text-moody-900/[0.035] leading-none select-none pointer-events-none"
+              className="absolute -bottom-12 -right-6 text-[15rem] font-script text-white/[0.035] leading-none select-none pointer-events-none"
               aria-hidden="true"
             >
               387
@@ -227,10 +231,10 @@ const Navbar = () => {
             <div className="relative flex items-center justify-between px-6 py-5 flex-shrink-0">
               <div className="flex-1" />
               <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="flex flex-col items-center">
-                <span className="text-[2rem] font-script text-moody-900 leading-none">
+                <span className="text-[2rem] font-script text-white leading-none">
                   3<span className="inline-block relative -top-[4px]">8</span>7 Cinematic
                 </span>
-                <span className="text-[9px] tracking-[0.75em] uppercase font-bold text-gold-600 mt-0.5">
+                <span className="text-[9px] tracking-[0.75em] uppercase font-bold text-gold-400 mt-0.5">
                   Weddings
                 </span>
               </Link>
@@ -244,7 +248,7 @@ const Navbar = () => {
                     initial={{ rotate: 0, opacity: 0 }}
                     animate={{ rotate: 45, opacity: 1 }}
                     transition={{ duration: 0.8, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                    className="absolute block w-6 h-[1.5px] bg-moody-900 group-hover:bg-gold-600 transition-colors duration-500"
+                    className="absolute block w-6 h-[1.5px] bg-white group-hover:bg-gold-300 transition-colors duration-500"
                   />
                   <motion.span
                     initial={{ rotate: 0, opacity: 0 }}
@@ -272,7 +276,7 @@ const Navbar = () => {
                         onClick={() => handleLinkClick(link.path)}
                         className={cn(
                           'group relative block text-center text-[2.75rem] sm:text-6xl font-serif font-light leading-tight transition-colors duration-500',
-                          active ? 'text-gold-600' : 'text-moody-900/80 hover:text-gold-600',
+                          active ? 'text-gold-300' : 'text-white/80 hover:text-gold-300',
                         )}
                       >
                         {link.label}
@@ -280,7 +284,7 @@ const Navbar = () => {
                         <span
                           aria-hidden="true"
                           className={cn(
-                            'block h-[1px] bg-gold-600 mx-auto mt-1 transition-all duration-500',
+                            'block h-[1px] bg-gold-400 mx-auto mt-1 transition-all duration-500',
                             active ? 'w-10' : 'w-0 group-hover:w-10',
                           )}
                         />
@@ -296,20 +300,20 @@ const Navbar = () => {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.75, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-              className="relative flex-shrink-0 border-t border-gold-600/15 px-8 pt-7 pb-10"
+              className="relative flex-shrink-0 border-t border-white/10 px-8 pt-7 pb-10"
             >
               {/* Language switcher */}
               <div className="flex items-center justify-center gap-5 mb-6">
                 {(['ENG', 'BOS'] as const).map((lang, i) => (
                   <React.Fragment key={lang}>
-                    {i > 0 && <span className="w-[1px] h-4 bg-moody-900/15" aria-hidden="true" />}
+                    {i > 0 && <span className="w-[1px] h-4 bg-white/15" aria-hidden="true" />}
                     <button
                       type="button"
                       onClick={() => setLanguage(lang)}
                       aria-pressed={language === lang}
                       className={cn(
                         'px-2 py-1 text-[12px] tracking-[0.35em] font-bold transition-colors duration-300',
-                        language === lang ? 'text-gold-600' : 'text-moody-900/35 hover:text-moody-900/70',
+                        language === lang ? 'text-gold-300' : 'text-white/40 hover:text-white/80',
                       )}
                     >
                       {lang}
@@ -321,12 +325,12 @@ const Navbar = () => {
               {/* Connect */}
               {email && (
                 <div className="space-y-2 text-center">
-                  <span className="text-[9px] tracking-[0.5em] uppercase font-bold text-gold-600 block">
+                  <span className="text-[9px] tracking-[0.5em] uppercase font-bold text-gold-400 block">
                     {language === 'ENG' ? 'Connect' : 'Kontakt'}
                   </span>
                   <a
                     href={`mailto:${email}`}
-                    className="inline-block text-moody-900/50 text-xs hover:text-gold-600 transition-colors duration-300"
+                    className="inline-block text-white/50 text-xs hover:text-gold-300 transition-colors duration-300"
                   >
                     {email}
                   </a>

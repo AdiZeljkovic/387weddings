@@ -98,9 +98,9 @@ const Portfolio = () => {
   }, [filteredItems, cols]);
 
   return (
-    <div className="bg-white overflow-hidden">
+    <div className="bg-moody-950 overflow-hidden">
       {/* ── Page opener (no image hero — gallery leads the page) ───────────── */}
-      <section className="bg-white pt-16 md:pt-24 pb-14 md:pb-20 px-6 sm:px-8 lg:px-16">
+      <section className="bg-moody-950 pt-16 md:pt-24 pb-14 md:pb-20 px-6 sm:px-8 lg:px-16">
         <div className="max-w-4xl mx-auto text-center">
           <SectionTag style={getContentStyle('portfolio.approach.title')} className="mb-7">
             {t('portfolio.approach.title')}
@@ -109,7 +109,7 @@ const Portfolio = () => {
           <h1
             style={getContentStyle('portfolio.hero.title')}
             aria-label={t('portfolio.hero.title')}
-            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-light text-moody-900 leading-[0.98] tracking-tight uppercase mb-5"
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-light text-white leading-[0.98] tracking-tight uppercase mb-5"
           >
             <WordReveal
               words={t('portfolio.hero.title').split(' ').filter(Boolean).map(w => ({ w }))}
@@ -122,7 +122,7 @@ const Portfolio = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.55, ease: EASE }}
             style={getContentStyle('portfolio.hero.subtitle')}
-            className="font-serif italic text-lg md:text-xl text-gold-600 mb-9"
+            className="font-serif italic text-lg md:text-xl text-gold-400 mb-9"
           >
             {t('portfolio.hero.subtitle')}
           </motion.p>
@@ -131,11 +131,11 @@ const Portfolio = () => {
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
             transition={{ duration: 1.1, delay: 0.7, ease: EASE }}
-            className="w-16 h-[1px] bg-gold-600/50 mx-auto mb-10"
+            className="w-16 h-[1px] bg-gold-400/50 mx-auto mb-10"
             aria-hidden="true"
           />
 
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-light text-moody-900 leading-[1.15] mb-7">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-light text-white leading-[1.15] mb-7">
             <WordReveal
               words={[
                 ...t('portfolio.approach.heading').split(' ').filter(Boolean).map(w => ({ w, style: getContentStyle('portfolio.approach.heading') })),
@@ -151,7 +151,7 @@ const Portfolio = () => {
             viewport={{ once: true }}
             transition={{ duration: 1, delay: 0.8, ease: EASE }}
             style={getContentStyle('portfolio.approach.desc')}
-            className="text-moody-900/65 font-light text-base md:text-lg leading-relaxed max-w-2xl mx-auto"
+            className="text-white/60 font-light text-base md:text-lg leading-relaxed max-w-2xl mx-auto"
           >
             {t('portfolio.approach.desc')}
           </motion.p>
@@ -159,24 +159,24 @@ const Portfolio = () => {
       </section>
 
       {/* ── Filter + masonry gallery ──────────────────────────────────────── */}
-      <section className="bg-gold-50/60 pt-4 pb-24 md:pb-32">
+      <section className="bg-moody-950 pt-4 pb-24 md:pb-32">
         <div className="px-6 sm:px-8 lg:px-16 max-w-[1700px] mx-auto">
           {/* Filters */}
-          <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 md:gap-x-14 border-b border-gold-600/15 pb-6 mb-12 md:mb-16">
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 md:gap-x-14 border-b border-white/10 pb-6 mb-12 md:mb-16">
             {categories.map(category => (
               <button
                 key={category}
                 onClick={() => setActiveFilter(category)}
                 aria-pressed={activeFilter === category}
                 className={`relative py-2 text-[10px] md:text-xs tracking-[0.4em] uppercase font-bold transition-colors duration-500 ${
-                  activeFilter === category ? 'text-gold-600' : 'text-moody-900/40 hover:text-moody-900'
+                  activeFilter === category ? 'text-gold-300' : 'text-white/40 hover:text-white'
                 }`}
               >
                 {t(CATEGORY_KEYS[category])}
                 {activeFilter === category && (
                   <motion.span
                     layoutId="activeFilter"
-                    className="absolute -bottom-[25px] left-0 right-0 h-[2px] bg-gold-600"
+                    className="absolute -bottom-[25px] left-0 right-0 h-[2px] bg-gold-400"
                     transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                   />
                 )}
@@ -190,12 +190,12 @@ const Portfolio = () => {
               {[...Array(8)].map((_, i) => (
                 <div
                   key={i}
-                  className={`${['aspect-[3/4]', 'aspect-square', 'aspect-[4/3]'][i % 3]} bg-moody-900/[0.06] animate-pulse`}
+                  className={`${['aspect-[3/4]', 'aspect-square', 'aspect-[4/3]'][i % 3]} bg-white/[0.05] animate-pulse`}
                 />
               ))}
             </div>
           ) : filteredItems.length === 0 ? (
-            <div className="text-center py-28 text-moody-900/35">
+            <div className="text-center py-28 text-white/35">
               <p style={getContentStyle('portfolio.empty')} className="text-lg font-serif font-light">
                 {t('portfolio.empty')}
               </p>
@@ -219,7 +219,7 @@ const Portfolio = () => {
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.35 } }}
                           transition={{ duration: 0.85, delay: Math.min(ii * 0.06, 0.35), ease: EASE }}
-                          className={`${ASPECT[item.layout] ?? ASPECT.TALL} relative overflow-hidden group m-0 bg-moody-900/5`}
+                          className={`${ASPECT[item.layout] ?? ASPECT.TALL} relative overflow-hidden group m-0 bg-white/[0.04]`}
                         >
                           <img
                             src={r.src}

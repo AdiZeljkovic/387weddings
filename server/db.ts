@@ -370,7 +370,16 @@ export async function initDB() {
          'Bezvremenske fotografije u savršenom ambijentu.', 4),
         ('home.collections.portraits.desc', 'Kartica Portreti: Opis', 'home', 'collections', 'textarea',
          'Portraits that reveal your character and emotion.',
-         'Portreti koji otkrivaju vašu jedinstvenost i emociju.', 5)
+         'Portreti koji otkrivaju vašu jedinstvenost i emociju.', 5),
+        ('home.featured.title', 'Istaknuti radovi: Naslov sekcije', 'home', 'featured', 'text',
+         'Featured works', 'Istaknuti radovi', 0),
+        ('home.featured.cta', 'Istaknuti radovi: Tekst gumba', 'home', 'featured', 'text',
+         'View all works', 'Pogledajte sve radove', 1),
+        ('home.features.title', 'Iskustvo (3 stavke): Naslov sekcije', 'home', 'process', 'text',
+         'The experience we provide', 'Iskustvo koje pružamo', 40),
+        ('home.about.caption', 'O nama: Script natpis uz malu sliku', 'home', 'about_section', 'text',
+         'your story — our inspiration', 'vaša priča — naša inspiracija', 8),
+        ('nav.home', 'Navigacija: Link "Početna"', 'footer', 'nav', 'text', 'Home', 'Početna', 0)
       ON CONFLICT (key) DO NOTHING
     `);
 

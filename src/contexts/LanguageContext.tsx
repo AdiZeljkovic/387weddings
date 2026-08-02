@@ -28,6 +28,11 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Home
     'home.scroll': 'Scroll to explore',
+    'nav.home': 'Home',
+    'home.featured.title': 'Featured works',
+    'home.featured.cta': 'View all works',
+    'home.features.title': 'The experience we provide',
+    'home.about.caption': 'your story — our inspiration',
     'home.collections.tag': 'Browse by',
     'home.collections.title': 'Collection',
     'home.collections.desc': 'Every story is unique. From weddings and studio sessions to portraits — we create memories that last forever.',
@@ -228,6 +233,11 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Home
     'home.scroll': 'Skrolujte za istraživanje',
+    'nav.home': 'Početna',
+    'home.featured.title': 'Istaknuti radovi',
+    'home.featured.cta': 'Pogledajte sve radove',
+    'home.features.title': 'Iskustvo koje pružamo',
+    'home.about.caption': 'vaša priča — naša inspiracija',
     'home.collections.tag': 'Pregledajte po',
     'home.collections.title': 'Kolekcijama',
     'home.collections.desc': 'Svaka priča je jedinstvena. Od vjenčanja i studijskih snimanja do portreta – stvaramo uspomene koje traju zauvijek.',

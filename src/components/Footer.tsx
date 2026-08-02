@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Instagram, Facebook, Twitter, Youtube, Music2, Mail, Phone, MapPin, ArrowUpRight } from 'lucide-react';
+import { Instagram, Facebook, Twitter, Youtube, Music2, Mail, Phone, MapPin, Clock, Heart, ArrowUpRight } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
 import { respImg } from '../lib/img';
@@ -47,6 +47,7 @@ const Footer = () => {
   ].filter(s => s.href && s.href !== '#');
 
   const navLinks = [
+    { to: '/',          label: t('nav.home'),       styleKey: 'nav.home' },
     { to: '/portfolio', label: t('nav.work'),       styleKey: 'nav.work' },
     { to: '/services',  label: t('nav.experience'), styleKey: 'nav.experience' },
     { to: '/about',     label: t('nav.stories'),    styleKey: 'nav.stories' },
@@ -147,34 +148,60 @@ const Footer = () => {
 
       {/* ── Footer core ───────────────────────────────────────────────────── */}
       <div className="relative max-w-[1800px] mx-auto px-6 sm:px-8 lg:px-16 pt-16 md:pt-24 pb-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 mb-14 md:mb-20 text-center lg:text-left">
-          {/* Brand */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-14 lg:gap-10 mb-16 md:mb-20 text-center lg:text-left">
+          {/* Brand — serif lockup with the 387 in gold */}
           <div className="lg:col-span-5 flex flex-col items-center lg:items-start">
-            <Link to="/" className="group inline-flex flex-col items-center lg:items-start mb-6">
-              <span className="text-[2.25rem] md:text-[2.5rem] font-script text-white group-hover:text-gold-400 transition-colors duration-500 leading-none">
-                3<span className="inline-block relative -top-[4px]">8</span>7 Cinematic
+            <Link to="/" className="group inline-block">
+              <span className="font-serif font-light text-4xl md:text-[2.75rem] leading-none">
+                <span className="text-gold-400 group-hover:text-gold-300 transition-colors duration-500">387</span>{' '}
+                <span className="text-white group-hover:text-white/85 transition-colors duration-500">Cinematic</span>
               </span>
-              <span className="text-[9px] md:text-[10px] tracking-[0.75em] uppercase font-bold mt-1 text-gold-500">
+              <span className="block text-[10px] md:text-[11px] tracking-[0.6em] uppercase font-bold text-gold-500 mt-3">
                 Weddings
               </span>
             </Link>
-            <p style={getContentStyle('footer.tagline')} className="text-white/35 max-w-sm font-light text-sm leading-relaxed italic">
+
+            <span className="block w-12 h-[2px] bg-gold-500/70 mt-7 mb-7 mx-auto lg:mx-0" aria-hidden="true" />
+
+            <p style={getContentStyle('footer.tagline')} className="text-white/50 max-w-sm font-light text-[15px] leading-loose italic">
               {t('footer.tagline')}
             </p>
+
+            {socials.length > 0 && (
+              <div className="flex gap-7 mt-9">
+                {socials.map(s => (
+                  <a
+                    key={s.label}
+                    href={s.href}
+                    aria-label={s.label}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gold-400 hover:text-white transition-colors duration-500"
+                  >
+                    {s.icon}
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Navigation */}
           <div className="lg:col-span-3 flex flex-col items-center lg:items-start">
-            <h4 style={getContentStyle('footer.navigation')} className="text-[10px] tracking-[0.5em] uppercase font-bold text-gold-500 mb-7">
+            <h4 style={getContentStyle('footer.navigation')} className="font-serif text-base md:text-lg tracking-[0.25em] uppercase text-gold-300">
               {t('footer.navigation')}
             </h4>
-            <ul className="space-y-4">
+            {/* Gold rule that fades out and ends on a dot */}
+            <div className="relative w-full max-w-[280px] h-[1px] bg-gradient-to-r from-gold-500/60 to-gold-500/10 mt-4 mb-9" aria-hidden="true">
+              <span className="absolute right-0 -top-[2.5px] w-1.5 h-1.5 rounded-full bg-gold-500/70" />
+            </div>
+
+            <ul className="space-y-5">
               {navLinks.map(l => (
                 <li key={l.to}>
                   <Link
                     to={l.to}
                     style={getContentStyle(l.styleKey)}
-                    className="text-white/40 hover:text-white text-[11px] tracking-[0.3em] uppercase font-bold transition-colors duration-500"
+                    className="text-white/45 hover:text-gold-300 text-[12px] tracking-[0.3em] uppercase font-bold transition-colors duration-500"
                   >
                     {l.label}
                   </Link>
@@ -183,59 +210,52 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Contact + socials */}
+          {/* Inquiries */}
           <div className="lg:col-span-4 flex flex-col items-center lg:items-start">
-            <h4 style={getContentStyle('contact.connect.tag')} className="text-[10px] tracking-[0.5em] uppercase font-bold text-gold-500 mb-7">
+            <h4 style={getContentStyle('contact.connect.tag')} className="font-serif text-base md:text-lg tracking-[0.25em] uppercase text-gold-300">
               {t('contact.connect.tag')}
             </h4>
-            <ul className="space-y-4 text-white/40 text-sm font-light">
+            <div className="relative w-full max-w-[340px] h-[1px] bg-gradient-to-r from-gold-500/60 to-gold-500/10 mt-4 mb-9" aria-hidden="true">
+              <span className="absolute right-0 -top-[2.5px] w-1.5 h-1.5 rounded-full bg-gold-500/70" />
+            </div>
+
+            <ul className="space-y-6 text-white/60 text-[15px] font-light">
               <li>
-                <a href={`mailto:${email}`} className="inline-flex items-center gap-3 hover:text-gold-400 transition-colors duration-300">
-                  <Mail size={14} className="text-gold-600 flex-shrink-0" aria-hidden="true" />
+                <a href={`mailto:${email}`} className="inline-flex items-center gap-4 hover:text-gold-300 transition-colors duration-300">
+                  <Mail size={18} strokeWidth={1.5} className="text-gold-400 flex-shrink-0" aria-hidden="true" />
                   {email}
                 </a>
               </li>
               {settings.phone && (
                 <li>
-                  <a href={`tel:${settings.phone.replace(/\s/g, '')}`} className="inline-flex items-center gap-3 hover:text-gold-400 transition-colors duration-300">
-                    <Phone size={14} className="text-gold-600 flex-shrink-0" aria-hidden="true" />
+                  <a href={`tel:${settings.phone.replace(/\s/g, '')}`} className="inline-flex items-center gap-4 hover:text-gold-300 transition-colors duration-300">
+                    <Phone size={18} strokeWidth={1.5} className="text-gold-400 flex-shrink-0" aria-hidden="true" />
                     {settings.phone}
                   </a>
                 </li>
               )}
               {settings.location && (
-                <li className="inline-flex items-center gap-3">
-                  <MapPin size={14} className="text-gold-600 flex-shrink-0" aria-hidden="true" />
+                <li className="inline-flex items-center gap-4">
+                  <MapPin size={18} strokeWidth={1.5} className="text-gold-400 flex-shrink-0" aria-hidden="true" />
                   {settings.location}
                 </li>
               )}
+              {settings.availability_text && (
+                <li className="inline-flex items-center gap-4">
+                  <Clock size={18} strokeWidth={1.5} className="text-gold-400 flex-shrink-0" aria-hidden="true" />
+                  {settings.availability_text}
+                </li>
+              )}
             </ul>
-
-            {socials.length > 0 && (
-              <div className="flex gap-4 mt-8">
-                {socials.map(s => (
-                  <a
-                    key={s.label}
-                    href={s.href}
-                    aria-label={s.label}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-11 h-11 rounded-full border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:border-gold-600/60 hover:bg-gold-600/15 transition-all duration-500"
-                  >
-                    {s.icon}
-                  </a>
-                ))}
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="pt-8 border-t border-white/[0.06] flex flex-col md:flex-row items-center justify-between gap-3 text-[9px] tracking-[0.35em] uppercase text-white/20 font-bold text-center">
-          <span style={getContentStyle('footer.rights')}>
+        {/* Bottom bar — hairline, a small gold heart, one quiet line */}
+        <div className="pt-10 border-t border-white/[0.08] flex flex-col items-center gap-4 text-center">
+          <Heart size={14} className="text-gold-500 fill-gold-500/80" aria-hidden="true" />
+          <span style={getContentStyle('footer.rights')} className="text-[13px] text-white/40 font-light">
             © {new Date().getFullYear()} 387 Cinematic Weddings. {t('footer.rights')}
           </span>
-          <span style={getContentStyle('footer.designed')}>{t('footer.designed')}</span>
         </div>
       </div>
     </footer>
