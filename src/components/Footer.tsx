@@ -1,26 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'motion/react';
-import { Instagram, Facebook, Twitter, Youtube, Music2, Mail, Phone, MapPin, Clock, Heart, ArrowUpRight } from 'lucide-react';
+import { Instagram, Facebook, Youtube, Mail, Phone, MapPin, Heart, ChevronDown } from 'lucide-react';
+import { cn } from '../lib/utils';
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
-import { respImg } from '../lib/img';
 
-const IG_FALLBACKS = [
-  'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=400',
-  'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=400',
-  'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=400',
-  'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=400',
-  'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=400',
-  'https://images.unsplash.com/photo-1544078751-58fee2d8a03b?auto=format&fit=crop&q=80&w=400',
-  'https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&q=80&w=400',
-  'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=400',
-];
+// Lucide carries no Pinterest glyph, so the brand mark is inlined
+const PinterestIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z" />
+  </svg>
+);
 
-// Instagram feed + footer merged into one dark, editorial closing block
 const Footer = () => {
   const { t, getContentStyle } = useLanguage();
   const [settings, setSettings] = useState<Record<string, string>>({});
+  // Phones collapse the two link columns, exactly as in the mockup
+  const [openPanel, setOpenPanel] = useState<'nav' | 'contact' | null>(null);
 
   useEffect(() => {
     loadSettings()
@@ -28,147 +24,138 @@ const Footer = () => {
       .catch(err => { console.warn('Footer: failed to load settings', err); });
   }, []);
 
-  const instagramUrl = settings.instagram && settings.instagram !== '#'
-    ? settings.instagram
-    : 'https://instagram.com/art387weddings';
-  const instagramHandle = settings.instagram_handle ? `@${settings.instagram_handle}` : '@art387weddings';
-  const email = settings.email || 'hello@387cinematicweddings.com';
-
-  const igImages = [1, 2, 3, 4, 5, 6, 7, 8].map(
-    (n, i) => settings[`img.instagram.${n}`] || IG_FALLBACKS[i]
-  );
+  const email = settings.email || '';
 
   const socials = [
     { icon: <Instagram size={17} strokeWidth={1.5} />, href: settings.instagram, label: 'Instagram' },
-    { icon: <Facebook size={17} strokeWidth={1.5} />, href: settings.facebook, label: 'Facebook' },
-    { icon: <Twitter size={17} strokeWidth={1.5} />, href: settings.twitter, label: 'Twitter / X' },
-    { icon: <Youtube size={17} strokeWidth={1.5} />, href: settings.youtube, label: 'YouTube' },
-    { icon: <Music2 size={17} strokeWidth={1.5} />, href: settings.tiktok, label: 'TikTok' },
+    { icon: <Facebook size={17} strokeWidth={1.5} />,  href: settings.facebook,  label: 'Facebook' },
+    { icon: <Youtube size={17} strokeWidth={1.5} />,   href: settings.youtube,   label: 'YouTube' },
+    { icon: <PinterestIcon />,                          href: settings.pinterest, label: 'Pinterest' },
   ].filter(s => s.href && s.href !== '#');
 
   const navLinks = [
-    { to: '/',          label: t('nav.home'),       styleKey: 'nav.home' },
-    { to: '/portfolio', label: t('nav.work'),       styleKey: 'nav.work' },
-    { to: '/services',  label: t('nav.experience'), styleKey: 'nav.experience' },
-    { to: '/about',     label: t('nav.stories'),    styleKey: 'nav.stories' },
-    { to: '/contact',   label: t('nav.inquire'),    styleKey: 'nav.inquire' },
+    { to: '/',         label: t('nav.home'),       styleKey: 'nav.home' },
+    { to: '/services', label: t('nav.experience'), styleKey: 'nav.experience' },
+    { to: '/about',    label: t('nav.stories'),    styleKey: 'nav.stories' },
+    { to: '/contact',  label: t('nav.inquire'),    styleKey: 'nav.inquire' },
   ];
 
-  return (
-    <footer className="relative bg-moody-950 overflow-hidden">
-      {/* Hairline gold divider at the very top */}
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold-600/50 to-transparent" aria-hidden="true" />
-      {/* Soft gold glow behind the heading */}
-      <div
-        className="absolute inset-x-0 top-0 h-[420px] pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse 55% 65% at 50% 0%, rgba(166,134,93,0.10) 0%, transparent 70%)' }}
-        aria-hidden="true"
-      />
-
-      {/* ── Instagram ─────────────────────────────────────────────────────── */}
-      <div className="relative pt-20 md:pt-28">
-        <div className="max-w-[1800px] mx-auto px-6 sm:px-8 lg:px-16 flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12 md:mb-16 text-center md:text-left">
-          <div>
-            <motion.span
-              initial={{ opacity: 0, y: 14 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.9 }}
-              className="text-[10px] md:text-[11px] tracking-[0.6em] uppercase text-gold-500 font-bold block mb-5"
-            >
-              {settings.instagram_section_tag || 'Social'}
-            </motion.span>
-            <motion.h2
-              initial={{ opacity: 0, y: 22 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.1, delay: 0.1 }}
-              className="text-4xl md:text-5xl lg:text-6xl font-serif font-light text-white leading-tight"
-            >
-              {settings.instagram_section_heading || 'Follow Our Journey'}
-            </motion.h2>
-          </div>
-
-          <motion.a
-            initial={{ opacity: 0, y: 14 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.9, delay: 0.2 }}
-            href={instagramUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Instagram ${instagramHandle}`}
-            className="inline-flex items-center gap-3.5 self-center md:self-end group"
+  const navList = (
+    <ul className="space-y-3.5">
+      {navLinks.map(l => (
+        <li key={l.to}>
+          <Link
+            to={l.to}
+            style={getContentStyle(l.styleKey)}
+            className="text-white/55 hover:text-white text-[12px] tracking-[0.18em] uppercase transition-colors duration-500"
           >
-            <span className="w-11 h-11 rounded-full border border-gold-600/40 flex items-center justify-center text-gold-500 group-hover:bg-gold-600 group-hover:border-gold-600 group-hover:text-white transition-all duration-500">
-              <Instagram size={17} aria-hidden="true" />
-            </span>
-            <span className="text-[11px] md:text-[12px] tracking-[0.35em] uppercase font-bold text-white/50 group-hover:text-white transition-colors duration-500">
-              {instagramHandle}
-            </span>
-            <ArrowUpRight size={14} className="text-gold-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-500" aria-hidden="true" />
-          </motion.a>
-        </div>
+            {l.label}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
 
-        {/* Full-bleed image grid */}
-        <div className="grid grid-cols-4 md:grid-cols-8 gap-[2px]">
-          {igImages.map((src, i) => (
-            <motion.a
-              key={i}
-              href={instagramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`Instagram photo ${i + 1}`}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: i * 0.06, ease: [0.16, 1, 0.3, 1] }}
-              className="relative aspect-square overflow-hidden group"
-            >
-              <img
-                src={respImg(src, [320, 480]).src}
-                srcSet={respImg(src, [320, 480]).srcSet}
-                sizes="(min-width: 768px) 12.5vw, 25vw"
-                alt=""
-                aria-hidden="true"
-                className="w-full h-full object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110"
-                loading="lazy"
-                decoding="async"
-                draggable={false}
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-moody-950/0 group-hover:bg-moody-950/45 transition-colors duration-700" aria-hidden="true" />
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500" aria-hidden="true">
-                <Instagram className="text-white" size={22} />
-              </div>
-            </motion.a>
-          ))}
+  const contactList = (
+    <ul className="space-y-4 text-white/55 text-[13px] font-light">
+      {settings.phone && (
+        <li>
+          <a
+            href={`tel:${settings.phone.replace(/\s/g, '')}`}
+            className="inline-flex items-center gap-3.5 hover:text-white transition-colors duration-300"
+          >
+            <Phone size={15} strokeWidth={1.5} className="text-white/45 flex-shrink-0" aria-hidden="true" />
+            {settings.phone}
+          </a>
+        </li>
+      )}
+      {email && (
+        <li>
+          <a
+            href={`mailto:${email}`}
+            className="inline-flex items-center gap-3.5 hover:text-white transition-colors duration-300"
+          >
+            <Mail size={15} strokeWidth={1.5} className="text-white/45 flex-shrink-0" aria-hidden="true" />
+            {email}
+          </a>
+        </li>
+      )}
+      {settings.location && (
+        <li className="inline-flex items-center gap-3.5">
+          <MapPin size={15} strokeWidth={1.5} className="text-white/45 flex-shrink-0" aria-hidden="true" />
+          {settings.location}
+        </li>
+      )}
+    </ul>
+  );
+
+  // Collapsible column — phones only; `md` and up renders the plain list
+  const Panel = ({ id, heading, styleKey, children }: {
+    id: 'nav' | 'contact';
+    heading: string;
+    styleKey: string;
+    children: React.ReactNode;
+  }) => {
+    const open = openPanel === id;
+    return (
+      <div>
+        {/* Phone: heading is a toggle with a hairline underneath */}
+        <button
+          type="button"
+          onClick={() => setOpenPanel(open ? null : id)}
+          aria-expanded={open}
+          className="md:hidden w-full flex items-center justify-between py-4 border-b border-white/10"
+        >
+          <span
+            style={getContentStyle(styleKey)}
+            className="text-[11px] tracking-[0.3em] uppercase font-semibold text-white"
+          >
+            {heading}
+          </span>
+          <ChevronDown
+            size={15}
+            className={cn('text-white/40 transition-transform duration-500', open && 'rotate-180')}
+            aria-hidden="true"
+          />
+        </button>
+        {open && <div className="md:hidden pt-5 pb-6">{children}</div>}
+
+        {/* Desktop column */}
+        <div className="hidden md:block">
+          <h4
+            style={getContentStyle(styleKey)}
+            className="text-[11px] tracking-[0.3em] uppercase font-semibold text-white mb-7"
+          >
+            {heading}
+          </h4>
+          {children}
         </div>
       </div>
+    );
+  };
 
-      {/* ── Footer core ───────────────────────────────────────────────────── */}
-      <div className="relative max-w-[1800px] mx-auto px-6 sm:px-8 lg:px-16 pt-16 md:pt-24 pb-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-14 lg:gap-10 mb-16 md:mb-20 text-center lg:text-left">
-          {/* Brand — serif lockup with the 387 in gold */}
-          <div className="lg:col-span-5 flex flex-col items-center lg:items-start">
-            <Link to="/" className="group inline-block">
-              <span className="font-serif font-light text-4xl md:text-[2.75rem] leading-none">
-                <span className="text-gold-400 group-hover:text-gold-300 transition-colors duration-500">387</span>{' '}
-                <span className="text-white group-hover:text-white/85 transition-colors duration-500">Cinematic</span>
-              </span>
-              <span className="block text-[10px] md:text-[11px] tracking-[0.6em] uppercase font-bold text-gold-500 mt-3">
+  return (
+    <footer className="relative bg-moody-900 text-white">
+      <div className="max-w-[1800px] mx-auto px-6 sm:px-8 lg:px-14 pt-14 md:pt-20 pb-8">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-x-10 gap-y-0 mb-10 md:mb-16">
+          {/* Brand */}
+          <div className="md:col-span-5 lg:col-span-6 mb-8 md:mb-0">
+            <Link to="/" className="inline-flex flex-col items-start leading-none" aria-label="387 Weddings">
+              <span className="font-serif font-light text-[2rem] md:text-[2.25rem] leading-none text-white">387</span>
+              <span className="text-[8px] md:text-[9px] tracking-[0.52em] uppercase font-semibold text-white/60 mt-1">
                 Weddings
               </span>
             </Link>
 
-            <span className="block w-12 h-[2px] bg-gold-500/70 mt-7 mb-7 mx-auto lg:mx-0" aria-hidden="true" />
-
-            <p style={getContentStyle('footer.tagline')} className="text-white/50 max-w-sm font-light text-[15px] leading-loose italic">
+            <p
+              style={getContentStyle('footer.tagline')}
+              className="text-white/50 max-w-xs font-light text-[13px] leading-[1.9] mt-6 whitespace-pre-line"
+            >
               {t('footer.tagline')}
             </p>
 
             {socials.length > 0 && (
-              <div className="flex gap-7 mt-9">
+              <div className="flex items-center gap-5 mt-7">
                 {socials.map(s => (
                   <a
                     key={s.label}
@@ -176,7 +163,7 @@ const Footer = () => {
                     aria-label={s.label}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-gold-400 hover:text-white transition-colors duration-500"
+                    className="text-white/60 hover:text-white transition-colors duration-500"
                   >
                     {s.icon}
                   </a>
@@ -186,75 +173,28 @@ const Footer = () => {
           </div>
 
           {/* Navigation */}
-          <div className="lg:col-span-3 flex flex-col items-center lg:items-start">
-            <h4 style={getContentStyle('footer.navigation')} className="font-serif text-base md:text-lg tracking-[0.25em] uppercase text-gold-300">
-              {t('footer.navigation')}
-            </h4>
-            {/* Gold rule that fades out and ends on a dot */}
-            <div className="relative w-full max-w-[280px] h-[1px] bg-gradient-to-r from-gold-500/60 to-gold-500/10 mt-4 mb-9" aria-hidden="true">
-              <span className="absolute right-0 -top-[2.5px] w-1.5 h-1.5 rounded-full bg-gold-500/70" />
-            </div>
-
-            <ul className="space-y-5">
-              {navLinks.map(l => (
-                <li key={l.to}>
-                  <Link
-                    to={l.to}
-                    style={getContentStyle(l.styleKey)}
-                    className="text-white/45 hover:text-gold-300 text-[12px] tracking-[0.3em] uppercase font-bold transition-colors duration-500"
-                  >
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+          <div className="md:col-span-3">
+            <Panel id="nav" heading={t('footer.navigation')} styleKey="footer.navigation">
+              {navList}
+            </Panel>
           </div>
 
-          {/* Inquiries */}
-          <div className="lg:col-span-4 flex flex-col items-center lg:items-start">
-            <h4 style={getContentStyle('contact.connect.tag')} className="font-serif text-base md:text-lg tracking-[0.25em] uppercase text-gold-300">
-              {t('contact.connect.tag')}
-            </h4>
-            <div className="relative w-full max-w-[340px] h-[1px] bg-gradient-to-r from-gold-500/60 to-gold-500/10 mt-4 mb-9" aria-hidden="true">
-              <span className="absolute right-0 -top-[2.5px] w-1.5 h-1.5 rounded-full bg-gold-500/70" />
-            </div>
-
-            <ul className="space-y-6 text-white/60 text-[15px] font-light">
-              <li>
-                <a href={`mailto:${email}`} className="inline-flex items-center gap-4 hover:text-gold-300 transition-colors duration-300">
-                  <Mail size={18} strokeWidth={1.5} className="text-gold-400 flex-shrink-0" aria-hidden="true" />
-                  {email}
-                </a>
-              </li>
-              {settings.phone && (
-                <li>
-                  <a href={`tel:${settings.phone.replace(/\s/g, '')}`} className="inline-flex items-center gap-4 hover:text-gold-300 transition-colors duration-300">
-                    <Phone size={18} strokeWidth={1.5} className="text-gold-400 flex-shrink-0" aria-hidden="true" />
-                    {settings.phone}
-                  </a>
-                </li>
-              )}
-              {settings.location && (
-                <li className="inline-flex items-center gap-4">
-                  <MapPin size={18} strokeWidth={1.5} className="text-gold-400 flex-shrink-0" aria-hidden="true" />
-                  {settings.location}
-                </li>
-              )}
-              {settings.availability_text && (
-                <li className="inline-flex items-center gap-4">
-                  <Clock size={18} strokeWidth={1.5} className="text-gold-400 flex-shrink-0" aria-hidden="true" />
-                  {settings.availability_text}
-                </li>
-              )}
-            </ul>
+          {/* Contact */}
+          <div className="md:col-span-4 lg:col-span-3">
+            <Panel id="contact" heading={t('footer.contact')} styleKey="footer.contact">
+              {contactList}
+            </Panel>
           </div>
         </div>
 
-        {/* Bottom bar — hairline, a small gold heart, one quiet line */}
-        <div className="pt-10 border-t border-white/[0.08] flex flex-col items-center gap-4 text-center">
-          <Heart size={14} className="text-gold-500 fill-gold-500/80" aria-hidden="true" />
-          <span style={getContentStyle('footer.rights')} className="text-[13px] text-white/40 font-light">
-            © {new Date().getFullYear()} 387 Cinematic Weddings. {t('footer.rights')}
+        {/* Bottom bar */}
+        <div className="pt-7 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+          <span style={getContentStyle('footer.rights')} className="text-[11px] text-white/40 font-light">
+            © {new Date().getFullYear()} 387 Weddings. {t('footer.rights')}
+          </span>
+          <span className="inline-flex items-center gap-2 text-[11px] text-white/40 font-light">
+            <span style={getContentStyle('footer.designed')}>{t('footer.designed')}</span>
+            <Heart size={11} strokeWidth={1.5} className="text-white/40" aria-hidden="true" />
           </span>
         </div>
       </div>

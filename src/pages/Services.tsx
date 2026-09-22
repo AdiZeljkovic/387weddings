@@ -57,7 +57,10 @@ const JourneyStep = ({ n, index, t, getContentStyle }: {
       {/* Node on the rail — a single clean disc, no badge */}
       <motion.div
         style={st({ scale: dot, opacity: o })}
-        className="relative z-10 mx-auto md:mx-0 mb-8 w-[72px] h-[72px] rounded-full bg-moody-950/70 backdrop-blur-sm border border-gold-400/40 shadow-lg shadow-black/40 flex items-center justify-center text-gold-400"
+        // No backdrop-blur here: this disc is scroll-scrubbed, and a blurred
+        // backdrop has to be re-sampled every frame it moves. A near-opaque
+        // fill reads the same over the plate and costs nothing.
+        className="relative z-10 mx-auto md:mx-0 mb-8 w-[72px] h-[72px] rounded-full bg-moody-950/92 border border-gold-400/40 shadow-lg shadow-black/40 flex items-center justify-center text-gold-400"
       >
         <Icon size={26} strokeWidth={1.1} aria-hidden="true" />
       </motion.div>
@@ -196,7 +199,8 @@ const Experience = () => {
 
   return (
     <div className="bg-moody-950 overflow-hidden">
-      <div className="grain" aria-hidden="true" />
+      {/* The public layout in App.tsx already lays the grain over every page —
+          a second full-viewport overlay only doubled the compositing cost. */}
 
       {/* Reading progress — this page is long; the hairline tracks how far in you are */}
       <motion.div

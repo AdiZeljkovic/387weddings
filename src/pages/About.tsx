@@ -84,7 +84,7 @@ const ExperienceStep = ({ n, index, t, getContentStyle }: {
           >
             {t(`about.step.${n}.num`)}
           </span>
-          <span className="inline-flex items-center justify-center w-14 h-14 rounded-full border border-gold-400/40 bg-moody-950/70 backdrop-blur-sm text-gold-400 shadow-lg shadow-black/40">
+          <span className="inline-flex items-center justify-center w-14 h-14 rounded-full border border-gold-400/40 bg-moody-950/92 text-gold-400 shadow-lg shadow-black/40">
             {icon}
           </span>
         </div>

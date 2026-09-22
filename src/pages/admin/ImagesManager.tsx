@@ -12,7 +12,7 @@ const SECTIONS = [
     page: 'home', label: 'Naslovna',
     groups: [
       {
-        label: 'Hero slideshow — Desktop (1–5 slajdova)', hint: 'Slike za desktop prikaz. Preporučeno: 2400×1600 px, pejzažna (horizontalna) orijentacija.',
+        label: 'Hero — Desktop', hint: 'Naslovna trenutno prikazuje samo Slajd 1. Preporučeno: 2400×1600 px, pejzažna (horizontalna) orijentacija. Slajdovi 2–5 se čuvaju za slideshow i trenutno se ne prikazuju.',
         images: [
           { key: 'img.home.hero.1', label: 'Slajd 1', fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
           { key: 'img.home.hero.2', label: 'Slajd 2', fallback: 'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=800' },
@@ -22,7 +22,7 @@ const SECTIONS = [
         ],
       },
       {
-        label: 'Hero slideshow — Mobilna verzija (1–5 slajdova)', hint: 'Slike za mobilni prikaz. Preporučeno: 900×1200 px, portretna (vertikalna) orijentacija. Ako se ostavi prazno, koriste se desktop slike.',
+        label: 'Hero — Mobilna verzija', hint: 'Naslovna na mobitelu prikazuje samo Mob slajd 1. Preporučeno: 900×1200 px, portretna (vertikalna) orijentacija. Ako se ostavi prazno, koristi se desktop slika.',
         images: [
           { key: 'img.home.hero.mobile.1', label: 'Mob slajd 1', fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
           { key: 'img.home.hero.mobile.2', label: 'Mob slajd 2', fallback: 'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=800' },
@@ -32,17 +32,17 @@ const SECTIONS = [
         ],
       },
       {
-        label: 'Editorijalna mreža (9 slika)', hint: '3×3 grid ispod intro sekcije. Preporučeno: 800×1100 px, portretna orijentacija.',
+        label: 'Istaknuti radovi — mozaik (9 slika)', hint: 'Mozaik uz naslov "Istaknuti radovi". Redovi 1 i 2 stoje desno od naslova, red 3 ide punom širinom. Preporučeno: 1400×1000 px, pejzažna orijentacija (slike se režu u okvir).',
         images: [
-          { key: 'img.home.grid.1', label: 'Kolona 1 — Red 1', fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.grid.2', label: 'Kolona 1 — Red 2', fallback: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.grid.3', label: 'Kolona 1 — Red 3', fallback: 'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.grid.4', label: 'Kolona 2 — Red 1', fallback: 'https://images.unsplash.com/photo-1544078751-58fee2d8a03b?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.grid.5', label: 'Kolona 2 — Red 2', fallback: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.grid.6', label: 'Kolona 2 — Red 3', fallback: 'https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.grid.7', label: 'Kolona 3 — Red 1', fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.grid.8', label: 'Kolona 3 — Red 2', fallback: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.grid.9', label: 'Kolona 3 — Red 3', fallback: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.grid.1', label: 'Red 1 — lijevo',   fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.grid.2', label: 'Red 1 — sredina',  fallback: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.grid.3', label: 'Red 1 — desno',    fallback: 'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.grid.4', label: 'Red 2 — lijevo (usko)', fallback: 'https://images.unsplash.com/photo-1544078751-58fee2d8a03b?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.grid.5', label: 'Red 2 — sredina (široko)', fallback: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.grid.6', label: 'Red 2 — desno',    fallback: 'https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.grid.7', label: 'Red 3 — lijevo',   fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.grid.8', label: 'Red 3 — sredina',  fallback: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.grid.9', label: 'Red 3 — desno',    fallback: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=800' },
         ],
       },
       {
@@ -54,10 +54,10 @@ const SECTIONS = [
         ],
       },
       {
-        label: 'Tim — portreti', hint: 'Portretne fotografije fotografa na dnu naslovne stranice. Preporučeno: 800×1067 px.',
+        label: 'Sekcija "O nama" na naslovnoj', hint: 'Dvije fotografije uz tekst "Više od fotografija". Velika je pejzažna (preporučeno 1600×1280 px), mala je portretna i preklapa njen donji lijevi ugao (preporučeno 600×800 px).',
         images: [
-          { key: 'img.home.team.aldin',  label: 'Fotograf 1 (lijevo)',  fallback: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.team.melisa', label: 'Fotograf 2 (desno)', fallback: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.team.aldin',  label: 'Velika fotografija',            fallback: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.team.melisa', label: 'Mala fotografija (sa 387 oznakom)', fallback: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=800' },
         ],
       },
     ],
@@ -115,12 +115,18 @@ const SECTIONS = [
     ],
   },
   {
-    page: 'contact', label: 'Upit',
+    page: 'contact', label: 'Kontakt',
     groups: [
       {
-        label: 'Hero pozadina', hint: 'Velika fotografija u pozadini header-a stranice "Upit". Preporučeno: 2400×1600 px, pejzažna orijentacija.',
+        label: 'Hero fotografija', hint: 'Fotografija uz naslov "Pošaljite nam poruku" — desno na desktopu, traka na vrhu na mobitelu. Preporučeno: 1600×1400 px, portretna do kvadratna orijentacija.',
         images: [
           { key: 'img.contact.hero', label: 'Hero', fallback: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800' },
+        ],
+      },
+      {
+        label: 'Ukrasna grančica (opciono)', hint: 'Ilustracija u gornjem lijevom uglu hero sekcije. Mora biti PNG ili SVG s prozirnom pozadinom, preporučeno 600×500 px. Ako se ostavi prazno, prikazuje se ugrađena maslinova grančica.',
+        images: [
+          { key: 'img.contact.ornament', label: 'Grančica', fallback: '' },
         ],
       },
     ],

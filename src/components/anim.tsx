@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, useScroll, useTransform } from 'motion/react';
+import { motion, useScroll, useTransform, useReducedMotion } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
 
 // Shared house easing — used across the whole site
@@ -28,10 +28,18 @@ export const ParallaxY = ({ children, from = 40, to = -40, className = '' }: {
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const isDesktop = useIsDesktop();
+  const reduced = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
   const y = useTransform(scrollYProgress, [0, 1], [from, to]);
+  const drifting = isDesktop && !reduced;
   return (
-    <motion.div ref={ref} style={isDesktop ? { y } : undefined} className={className}>
+    <motion.div
+      ref={ref}
+      style={drifting ? { y } : undefined}
+      // `parallax-layer` hands the drifting image its own compositor layer, so
+      // scrolling moves an existing layer instead of repainting it each frame.
+      className={`${drifting ? 'parallax-layer ' : ''}${className}`}
+    >
       {children}
     </motion.div>
   );

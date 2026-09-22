@@ -10,6 +10,11 @@ interface Submission {
   wedding_date: string | null;
   location: string | null;
   message: string | null;
+  phone: string | null;
+  guest_count: string | null;
+  coverage: string | null;
+  needs_video: string | null;
+  photo_locations: string | null;
   status: 'new' | 'read' | 'archived';
   created_at: string;
 }
@@ -129,10 +134,49 @@ export default function Submissions() {
 
                 {isExpanded && (
                   <div className="px-4 pb-4 border-t border-white/5 mt-0 pt-4 space-y-4">
+                    {/* Details from the inquiry form */}
+                    {(() => {
+                      const details = [
+                        ['Telefon',              item.phone],
+                        ['Datum vjenčanja',      item.wedding_date],
+                        ['Lokacija',             item.location],
+                        ['Broj gostiju',         item.guest_count],
+                        ['Trajanje angažmana',   item.coverage],
+                        ['Video',                item.needs_video],
+                      ].filter(([, v]) => v) as [string, string][];
+                      if (details.length === 0) return null;
+                      return (
+                        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
+                          {details.map(([label, value]) => (
+                            <div key={label} className="flex items-baseline gap-2 min-w-0">
+                              <dt className="text-white/25 text-[10px] tracking-[0.15em] uppercase flex-none">{label}</dt>
+                              <dd className="text-white/70 text-sm truncate">{value}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      );
+                    })()}
+
+                    {item.photo_locations && (
+                      <div>
+                        <span className="block text-white/25 text-[10px] tracking-[0.15em] uppercase mb-1.5">
+                          Mjesta fotografisanja
+                        </span>
+                        <p className="text-white/60 text-sm leading-relaxed bg-moody-900/50 rounded-sm p-4 whitespace-pre-line">
+                          {item.photo_locations}
+                        </p>
+                      </div>
+                    )}
+
                     {item.message && (
-                      <p className="text-white/60 text-sm leading-relaxed bg-moody-900/50 rounded-sm p-4">
-                        {item.message}
-                      </p>
+                      <div>
+                        <span className="block text-white/25 text-[10px] tracking-[0.15em] uppercase mb-1.5">
+                          Dodatne informacije
+                        </span>
+                        <p className="text-white/60 text-sm leading-relaxed bg-moody-900/50 rounded-sm p-4 whitespace-pre-line">
+                          {item.message}
+                        </p>
+                      </div>
                     )}
                     <div className="flex flex-wrap items-center gap-3">
                       <a

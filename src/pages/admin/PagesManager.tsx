@@ -68,6 +68,7 @@ const PAGE_PATHS: Record<string, string> = {
 
 const SECTION_LABELS: Record<string, string> = {
   hero:          'Hero sekcija',
+  featured:      'Istaknuti radovi (mozaik galerija)',
   intro:         'Uvod',
   collections:   'Kolekcije (kategorije)',
   process:       'Proces / Koraci',
@@ -88,17 +89,18 @@ const SECTION_LABELS: Record<string, string> = {
   filter:        'Filteri kategorija (ALL / Vjenčanja...)',
   brand:         'Brend & Tagline',
   nav:           'Navigacija',
+  contact:       'Kontakt kolona',
   legal:         'Copyright & Legal',
 };
 
 // Explicit section order per page (sections not listed appear at the end)
 const SECTION_ORDER: Record<string, string[]> = {
-  home:      ['hero', 'intro', 'process', 'testimonials', 'about_section'],
+  home:      ['hero', 'featured', 'about_section'],
   about:     ['hero', 'story', 'experience', 'cta'],
   services:  ['hero', 'intro', 'philosophy', 'journey', 'investment', 'promo', 'addons', 'faq', 'cta'],
   portfolio: ['hero', 'approach', 'filter', 'cta'],
   contact:   ['hero', 'connect', 'form'],
-  footer:    ['brand', 'nav', 'legal'],
+  footer:    ['brand', 'nav', 'contact', 'legal'],
 };
 
 export default function PagesManager() {

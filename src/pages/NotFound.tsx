@@ -8,7 +8,7 @@ const NotFound = () => {
 
   return (
     <div className="h-screen flex flex-col items-center justify-center bg-white px-8 text-center relative overflow-hidden">
-      <div className="grain opacity-[0.03]" aria-hidden="true" />
+      {/* Grain comes from the public layout in App.tsx */}
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}

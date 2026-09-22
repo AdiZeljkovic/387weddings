@@ -86,6 +86,13 @@ export async function initDB() {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
 
+      -- Inquiry form gained six fields with the 2026 contact redesign
+      ALTER TABLE contact_submissions ADD COLUMN IF NOT EXISTS phone           VARCHAR(50)  DEFAULT NULL;
+      ALTER TABLE contact_submissions ADD COLUMN IF NOT EXISTS guest_count     VARCHAR(50)  DEFAULT NULL;
+      ALTER TABLE contact_submissions ADD COLUMN IF NOT EXISTS coverage        VARCHAR(255) DEFAULT NULL;
+      ALTER TABLE contact_submissions ADD COLUMN IF NOT EXISTS needs_video     VARCHAR(255) DEFAULT NULL;
+      ALTER TABLE contact_submissions ADD COLUMN IF NOT EXISTS photo_locations TEXT         DEFAULT NULL;
+
       CREATE TABLE IF NOT EXISTS site_settings (
         key VARCHAR(100) PRIMARY KEY,
         value TEXT
@@ -116,6 +123,7 @@ export async function initDB() {
         ('instagram', '#'),
         ('instagram_handle', '387cinematicweddings'),
         ('facebook', '#'),
+        ('pinterest', '#'),
         ('twitter', '#'),
         ('youtube', '#'),
         ('tiktok', '#'),
@@ -151,6 +159,7 @@ export async function initDB() {
         ('img.services.cta', ''),
         ('img.portfolio.hero', ''),
         ('img.contact.hero', ''),
+        ('img.contact.ornament', ''),
         ('instagram_section_tag', 'Social'),
         ('instagram_section_heading', 'Follow Our Journey'),
         ('img.instagram.1', ''), ('img.instagram.2', ''), ('img.instagram.3', ''),
@@ -379,8 +388,128 @@ export async function initDB() {
          'The experience we provide', 'Iskustvo koje pružamo', 40),
         ('home.about.caption', 'O nama: Script natpis uz malu sliku', 'home', 'about_section', 'text',
          'your story — our inspiration', 'vaša priča — naša inspiracija', 8),
-        ('nav.home', 'Navigacija: Link "Početna"', 'footer', 'nav', 'text', 'Home', 'Početna', 0)
+        ('nav.home', 'Navigacija: Link "Početna"', 'footer', 'nav', 'text', 'Home', 'Početna', 0),
+
+        -- Naslovna, redizajn 2026: hero / istaknuti radovi / o nama
+        ('home.featured.heading.part1', 'Istaknuti radovi: Naslov — linija 1', 'home', 'featured', 'text',
+         'Moments.', 'Trenuci.', 2),
+        ('home.featured.heading.part2', 'Istaknuti radovi: Naslov — linija 2', 'home', 'featured', 'text',
+         'Emotion.', 'Emocija.', 3),
+        ('home.featured.heading.part3', 'Istaknuti radovi: Naslov — linija 3', 'home', 'featured', 'text',
+         'Forever.', 'Zauvijek.', 4),
+        ('home.about.tag', 'O nama: Tag iznad naslova', 'home', 'about_section', 'text',
+         'About us', 'O nama', 9),
+        ('home.about.heading.part1', 'O nama: Naslov — linija 1', 'home', 'about_section', 'text',
+         'More than photographs.', 'Više od fotografija.', 10),
+        ('home.about.heading.part2', 'O nama: Naslov — linija 2', 'home', 'about_section', 'text',
+         'It is your story.', 'To je vaša priča.', 11),
+        ('footer.contact', 'Footer: Naslov kontakt kolone', 'footer', 'contact', 'text',
+         'Contact', 'Kontakt', 0),
+
+        -- Kontakt, redizajn 2026: hero + prošireni obrazac
+        ('contact.hero.title.part1', 'Hero: Naslov — linija 1', 'contact', 'hero', 'text', 'Send us',   'Pošaljite',   2),
+        ('contact.hero.title.part2', 'Hero: Naslov — linija 2', 'contact', 'hero', 'text', 'a message', 'nam poruku',  3),
+        ('contact.hero.desc', 'Hero: Opis ispod naslova', 'contact', 'hero', 'textarea',
+         'Fill in the form and tell us the details of your wedding. We will get back to you as soon as possible.',
+         'Ispunite formu i javite nam detalje o vašem vjenčanju. Javićemo vam se u najkraćem mogućem roku.', 4),
+
+        ('contact.form.name',              'Polje: Ime — labela',      'contact', 'form', 'text', 'Full name',     'Ime i prezime',            0),
+        ('contact.form.name.placeholder',  'Polje: Ime — placeholder', 'contact', 'form', 'text', 'Enter your full name', 'Unesite vaše ime i prezime', 1),
+        ('contact.form.email',             'Polje: E-mail — labela',      'contact', 'form', 'text', 'Email address', 'E-mail adresa',        2),
+        ('contact.form.email.placeholder', 'Polje: E-mail — placeholder', 'contact', 'form', 'text', 'Enter your email address', 'Unesite e-mail adresu', 3),
+        ('contact.form.phone',             'Polje: Telefon — labela',      'contact', 'form', 'text', 'Phone number', 'Broj telefona',        4),
+        ('contact.form.phone.placeholder', 'Polje: Telefon — placeholder', 'contact', 'form', 'text', 'Enter phone number (optional)', 'Unesite broj telefona (opciono)', 5),
+        ('contact.form.date',                 'Polje: Datum — labela',      'contact', 'form', 'text', 'Wedding date',   'Datum vjenčanja',        6),
+        ('contact.form.date.placeholder',     'Polje: Datum — placeholder', 'contact', 'form', 'text', 'Choose a date',  'Odaberite datum',        7),
+        ('contact.form.location',             'Polje: Lokacija — labela',      'contact', 'form', 'text', 'Wedding location / city', 'Lokacija vjenčanja / grad', 7),
+        ('contact.form.location.placeholder', 'Polje: Lokacija — placeholder', 'contact', 'form', 'text', 'Enter location / city',   'Unesite lokaciju / grad',   8),
+        ('contact.form.story',                'Polje: Dodatne informacije — labela',      'contact', 'form', 'textarea', 'Additional information / your story', 'Dodatne informacije / vaša priča', 24),
+        ('contact.form.story.placeholder',    'Polje: Dodatne informacije — placeholder', 'contact', 'form', 'text',     'Tell us anything else you would like us to know', 'Napišite nam sve što želite da znamo', 25),
+        ('contact.form.guests',             'Polje: Broj gostiju — labela',      'contact', 'form', 'text', 'Approximate number of guests', 'Približan broj gostiju', 8),
+        ('contact.form.guests.placeholder', 'Polje: Broj gostiju — placeholder', 'contact', 'form', 'text', 'Enter number of guests', 'Unesite broj gostiju', 9),
+        ('contact.form.coverage',             'Polje: Trajanje angažmana — labela',      'contact', 'form', 'text', 'Approximate length of our coverage', 'Okvirno vrijeme trajanja našeg angažmana', 10),
+        ('contact.form.coverage.placeholder', 'Polje: Trajanje angažmana — placeholder', 'contact', 'form', 'text', 'Select duration', 'Odaberite trajanje', 11),
+        ('contact.form.coverage.opt.1', 'Trajanje: Opcija 1 (prazno = sakriveno)', 'contact', 'form', 'text', 'Up to 4 hours',  'Do 4 sata',        12),
+        ('contact.form.coverage.opt.2', 'Trajanje: Opcija 2 (prazno = sakriveno)', 'contact', 'form', 'text', '4–8 hours',      '4–8 sati',         13),
+        ('contact.form.coverage.opt.3', 'Trajanje: Opcija 3 (prazno = sakriveno)', 'contact', 'form', 'text', '8–12 hours',     '8–12 sati',        14),
+        ('contact.form.coverage.opt.4', 'Trajanje: Opcija 4 (prazno = sakriveno)', 'contact', 'form', 'text', 'Full day',       'Cijeli dan',       15),
+        ('contact.form.coverage.opt.5', 'Trajanje: Opcija 5 (prazno = sakriveno)', 'contact', 'form', 'text', 'Multiple days',  'Više dana',        16),
+        ('contact.form.video',             'Polje: Video — labela',      'contact', 'form', 'text', 'Do you need video?', 'Treba li vam video?', 17),
+        ('contact.form.video.placeholder', 'Polje: Video — placeholder', 'contact', 'form', 'text', 'Select an option',   'Odaberite opciju',    18),
+        ('contact.form.video.opt.1', 'Video: Opcija 1 (prazno = sakriveno)', 'contact', 'form', 'text', 'Yes',        'Da',            19),
+        ('contact.form.video.opt.2', 'Video: Opcija 2 (prazno = sakriveno)', 'contact', 'form', 'text', 'No',         'Ne',            20),
+        ('contact.form.video.opt.3', 'Video: Opcija 3 (prazno = sakriveno)', 'contact', 'form', 'text', 'Not sure yet', 'Još nisam siguran/na', 21),
+        ('contact.form.places',             'Polje: Mjesta fotografisanja — labela',      'contact', 'form', 'text', 'Photo locations (if already known)', 'Mjesta fotografisanja (ako su već poznata)', 22),
+        ('contact.form.places.placeholder', 'Polje: Mjesta fotografisanja — placeholder', 'contact', 'form', 'text', 'Write the locations', 'Napišite lokacije', 23),
+        ('contact.form.consent', 'Obrazac: Tekst uz kvačicu (saglasnost)', 'contact', 'form', 'textarea',
+         'I agree that my data may be used to respond to this inquiry.',
+         'Prihvatam da se moji podaci koriste u svrhu odgovora na upit.', 30),
+        ('contact.form.sending', 'Obrazac: Tekst dok se šalje', 'contact', 'form', 'text', 'Sending...', 'Šaljem...', 31),
+        ('contact.form.error',   'Obrazac: Poruka o grešci',   'contact', 'form', 'text',
+         'Something went wrong. Please try again or email us directly.',
+         'Nešto je pošlo po zlu. Pokušajte ponovo ili nam pišite direktno na e-mail.', 32)
       ON CONFLICT (key) DO NOTHING
+    `);
+
+    // Homepage redesign (client mockup) — only rewrites rows still sitting at an
+    // older seed default or empty, so anything edited in the admin is preserved.
+    await client.query(`
+      UPDATE page_content SET value_en = 'Your story.', value_bs = 'Vaša priča.'
+        WHERE key = 'hero.title.part1' AND value_bs IN ('Umjetnost u', '');
+      UPDATE page_content SET value_en = 'Our art.', value_bs = 'Naša umjetnost.'
+        WHERE key = 'hero.title.part2' AND value_bs IN ('Trenucima', '');
+      UPDATE page_content SET value_en = 'View our work', value_bs = 'Pogledajte radove'
+        WHERE key = 'hero.portfolio' AND value_bs IN ('Pogledajte Portfolio', '');
+      UPDATE page_content SET value_en = 'Scroll', value_bs = 'Skroluj'
+        WHERE key = 'home.scroll' AND value_bs IN ('Skrolaj za više', '');
+      UPDATE page_content SET value_en = 'View more work', value_bs = 'Pogledaj više radova'
+        WHERE key = 'home.featured.cta' AND value_bs IN ('Pogledajte sve radove', '');
+      UPDATE page_content
+        SET value_en = 'We are a team that believes the best photographs come from real emotion and honest moments. Our mission is to record your story in an authentic and timeless way.',
+            value_bs = 'Mi smo tim koji vjeruje da su najbolje fotografije one nastale iz stvarnih emocija i iskrenih trenutaka. Naša misija je da vašu priču zabilježimo na autentičan i bezvremenski način.'
+        WHERE key = 'home.about.desc.1'
+          AND value_bs IN ('Mi smo vjenčani fotografski tim iz Bosne, bilježimo priče ljubavi diljem Balkana i dalje.', '');
+      UPDATE page_content
+        SET value_en = 'From the first meeting to the final photograph, we are here to give you an experience full of trust, ease and professionalism.',
+            value_bs = 'Od prvog susreta do posljednje fotografije, tu smo da vam pružimo iskustvo puno povjerenja, opuštenosti i profesionalnosti.'
+        WHERE key = 'home.about.desc.2'
+          AND value_bs IN ('Kinematskim okom i dokumentarnim srcem pretvaramo prolazne trenutke u vječne slike.', '');
+      UPDATE page_content SET value_en = 'Services', value_bs = 'Usluge'
+        WHERE key = 'nav.experience' AND value_bs IN ('Iskustvo', '');
+      UPDATE page_content SET value_en = 'Contact', value_bs = 'Kontakt'
+        WHERE key = 'nav.inquire' AND value_bs IN ('Upit', '');
+      UPDATE page_content
+        SET value_en = 'We capture emotions that last when everything else has passed.',
+            value_bs = 'Zabilježimo emocije koje traju kada sve drugo prođe.'
+        WHERE key = 'footer.tagline'
+          AND value_bs IN ('Fine-art vjenčana fotografija koja dokumentuje ljubavne priče s fokusom na sirovu emociju i bezvremensku eleganciju.', '');
+      UPDATE page_content SET value_en = 'Design and build', value_bs = 'Dizajn i izrada'
+        WHERE key = 'footer.designed' AND value_bs IN ('Dizajnirano s namjerom.', '');
+    `);
+
+    // Contact redesign — these rows predate the new form and were seeded with
+    // older copy, so each update is guarded on the exact value it replaces.
+    await client.query(`
+      UPDATE page_content SET value_en = 'Full name', value_bs = 'Ime i prezime'
+        WHERE key = 'contact.form.name' AND value_bs IN ('Vaše Ime', '');
+      UPDATE page_content SET value_en = 'Enter your full name', value_bs = 'Unesite vaše ime i prezime'
+        WHERE key = 'contact.form.name.placeholder' AND value_bs IN ('Ime i Prezime', '');
+      UPDATE page_content SET value_en = 'Email address', value_bs = 'E-mail adresa'
+        WHERE key = 'contact.form.email' AND value_bs IN ('Email Adresa', '');
+      UPDATE page_content SET value_en = 'Wedding date', value_bs = 'Datum vjenčanja'
+        WHERE key = 'contact.form.date' AND value_bs IN ('Datum Vjenčanja', '');
+      UPDATE page_content SET value_en = 'Choose a date', value_bs = 'Odaberite datum'
+        WHERE key = 'contact.form.date.placeholder' AND value_bs IN ('DD/MM/YYYY', '');
+      UPDATE page_content SET value_en = 'Wedding location / city', value_bs = 'Lokacija vjenčanja / grad'
+        WHERE key = 'contact.form.location' AND value_bs IN ('Lokacija', '');
+      UPDATE page_content SET value_en = 'Enter location / city', value_bs = 'Unesite lokaciju / grad'
+        WHERE key = 'contact.form.location.placeholder' AND value_bs IN ('Sarajevo, BIH', '');
+      UPDATE page_content SET value_en = 'Additional information / your story', value_bs = 'Dodatne informacije / vaša priča'
+        WHERE key = 'contact.form.story' AND value_bs IN ('Vaša Priča', '');
+      UPDATE page_content SET value_en = 'Tell us anything else you would like us to know', value_bs = 'Napišite nam sve što želite da znamo'
+        WHERE key = 'contact.form.story.placeholder' AND value_bs IN ('Ispričajte nam o svojoj viziji...', '');
+      UPDATE page_content SET value_en = 'Send message', value_bs = 'Pošalji poruku'
+        WHERE key = 'contact.form.submit' AND value_bs IN ('Pošalji Upit', 'Pošaljite Upit', '');
     `);
 
     // Update promo section to Custom Package design (only if still at seed defaults)

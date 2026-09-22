@@ -29,6 +29,14 @@
   --color-moody-900: #1a1a1a;
   --color-moody-950: #0d0d0d;
 
+  /* Light editorial canvas — the homepage sections sit on paper, not on ink */
+  --color-canvas-50: #faf8f5;
+  --color-canvas-100: #f4f2ee;
+  --color-canvas-200: #e6e2db;
+  --color-ink-400: #8a8a8a;
+  --color-ink-500: #6b6b6b;
+  --color-ink-900: #1a1a1a;
+
   --color-sage-50: #f4f7f4;
   --color-sage-100: #e8eee8;
   --color-sage-200: #d1ddd1;
@@ -67,9 +75,15 @@
 }
 
 @layer components {
+  /* Full-viewport noise. Without its own compositor layer the browser repaints
+     the whole overlay on every scrolled frame, which is enough to drop frames —
+     translateZ + contain pin it to one layer that is only composited. */
   .grain {
     @apply fixed inset-0 pointer-events-none z-[9999] opacity-[0.03];
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+    transform: translateZ(0);
+    will-change: transform;
+    contain: strict;
   }
 
   .editorial-grid {
@@ -136,14 +150,23 @@
   }
 }
 
-/* ── Hero CTA pulse — soft expanding gold ring ──────────────────────────── */
-@keyframes ctaPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(166, 134, 93, 0.35); }
-  55%      { box-shadow: 0 0 0 14px rgba(166, 134, 93, 0); }
+/* ── Hero CTA pulse ─────────────────────────────────────────────────────────
+   Was an endlessly animated box-shadow on the CTA of three pages. Box-shadow
+   cannot be composited, so every frame repainted a large blurred ring — even
+   while the button sat off-screen — and it competed with scrolling for the
+   main thread. The buttons keep their static gold shadow instead. */
+.animate-\[ctaPulse_3s_ease-in-out_infinite\] {
+  animation: none;
+}
+
+/* Scroll-linked parallax: keep each drifting layer on the compositor */
+.parallax-layer {
+  will-change: transform;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-\[ctaPulse_3s_ease-in-out_infinite\] {
-    animation: none;
+  .parallax-layer {
+    will-change: auto;
+    transform: none !important;
   }
 }

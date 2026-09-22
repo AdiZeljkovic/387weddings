@@ -1,86 +1,92 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Camera, MapPin, Heart, Sparkles, Star, Film, Users, MessageSquare } from 'lucide-react';
+import { ArrowRight, Heart } from 'lucide-react';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
 import { respImg } from '../lib/img';
-import { EASE, ParallaxY, WordReveal } from '../components/anim';
+import { EASE } from '../components/anim';
 
-// Icons for the three feature columns — picked by the CMS icon keys
-const ICON_MAP: Record<string, React.ReactElement> = {
-  sparkles: <Sparkles      size={22} strokeWidth={1.2} />,
-  mappin:   <MapPin        size={22} strokeWidth={1.2} />,
-  heart:    <Heart         size={22} strokeWidth={1.2} />,
-  camera:   <Camera        size={22} strokeWidth={1.2} />,
-  star:     <Star          size={22} strokeWidth={1.2} />,
-  film:     <Film          size={22} strokeWidth={1.2} />,
-  users:    <Users         size={22} strokeWidth={1.2} />,
-  chat:     <MessageSquare size={22} strokeWidth={1.2} />,
-};
+const HERO_FALLBACK =
+  'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=2000';
 
-const FALLBACK_SLIDES = [
-  'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1200',
-  'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=1200',
-  'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&q=80&w=1200',
+// One fallback per mosaic slot, so the page never renders holes before the
+// client has uploaded their own nine frames in Admin → Fotografije.
+const MOSAIC_FALLBACKS = [
+  'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1000',
+  'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=1000',
+  'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=1000',
+  'https://images.unsplash.com/photo-1544078751-58fee2d8a03b?auto=format&fit=crop&q=80&w=1000',
+  'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=1000',
+  'https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&q=80&w=1000',
+  'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=1000',
+  'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=1000',
+  'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&q=80&w=1000',
 ];
 
-// Aspect rhythm for the featured masonry — mixes portrait and square frames
-const FEATURED_ASPECTS = [
-  'aspect-[3/4]', 'aspect-square', 'aspect-[4/5]', 'aspect-[3/4]',
-  'aspect-square', 'aspect-[3/4]', 'aspect-[4/5]', 'aspect-square',
+// The mosaic from the mockup. Phones flow it into two columns (one tile goes
+// full width to break the rhythm). Everything is plain auto-flow with column
+// spans — no explicit line placement — so a tile can never land off-grid.
+//
+// Six frames sit beside the heading on a 12-column inner grid:
+//   row 1 — 4 / 4 / 4      row 2 — 3 / 5 / 4 (narrow, wide, normal)
+const MOSAIC_TOP = [
+  { key: 'img.home.grid.1', span: 'col-span-1 md:col-span-4' },
+  { key: 'img.home.grid.2', span: 'col-span-1 md:col-span-4' },
+  { key: 'img.home.grid.3', span: 'col-span-1 md:col-span-4' },
+  { key: 'img.home.grid.4', span: 'col-span-1 md:col-span-3' },
+  { key: 'img.home.grid.5', span: 'col-span-2 md:col-span-5' },
+  { key: 'img.home.grid.6', span: 'col-span-2 md:col-span-4' },
 ];
-const ASPECT_WEIGHT = [1.33, 1, 1.25, 1.33, 1, 1.33, 1.25, 1];
 
-const featuredColsFor = (w: number) => (w < 640 ? 1 : w < 1024 ? 2 : 4);
+// Three more run the full width of the section underneath
+const MOSAIC_BOTTOM = [
+  { key: 'img.home.grid.7', span: 'col-span-1' },
+  { key: 'img.home.grid.8', span: 'col-span-1' },
+  { key: 'img.home.grid.9', span: 'col-span-2 md:col-span-1' },
+];
 
-// ── Centered rule heading — "— ISTAKNUTI RADOVI —" ───────────────────────────
-const RuleHeading = ({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) => (
-  <div className="flex items-center justify-center gap-5 md:gap-8">
-    <motion.span
-      initial={{ scaleX: 0 }}
-      whileInView={{ scaleX: 1 }}
-      viewport={{ once: true }}
-      transition={{ duration: 1, delay: 0.15, ease: EASE }}
-      className="w-12 md:w-24 h-[1px] bg-gold-500/40 origin-right"
-      aria-hidden="true"
-    />
-    <motion.h2
-      initial={{ opacity: 0, y: 12 }}
+// One frame of the mosaic — fills whatever grid cell it is handed
+const Frame = ({ src, index, span, eager }: {
+  src: string; index: number; span: string; eager?: boolean;
+}) => {
+  const r = respImg(src, [480, 640, 960]);
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.9, ease: EASE }}
-      style={style}
-      className="text-[10px] md:text-[11px] tracking-[0.5em] uppercase font-bold text-gold-300 text-center whitespace-nowrap"
+      viewport={{ once: true, amount: 0 }}
+      transition={{ duration: 0.85, delay: Math.min(index * 0.05, 0.3), ease: EASE }}
+      className={span}
     >
-      {children}
-    </motion.h2>
-    <motion.span
-      initial={{ scaleX: 0 }}
-      whileInView={{ scaleX: 1 }}
-      viewport={{ once: true }}
-      transition={{ duration: 1, delay: 0.15, ease: EASE }}
-      className="w-12 md:w-24 h-[1px] bg-gold-500/40 origin-left"
-      aria-hidden="true"
-    />
-  </div>
-);
+      <Link to="/portfolio" className="group block w-full h-full overflow-hidden bg-canvas-200">
+        <img
+          src={r.src}
+          srcSet={r.srcSet}
+          sizes="(min-width: 768px) 28vw, 50vw"
+          alt=""
+          aria-hidden="true"
+          className="w-full h-full object-cover transition-transform duration-[1400ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.06]"
+          loading={eager ? 'eager' : 'lazy'}
+          decoding="async"
+          draggable={false}
+          referrerPolicy="no-referrer"
+        />
+      </Link>
+    </motion.div>
+  );
+};
 
 const Home = () => {
   const { t, getContentStyle } = useLanguage();
   const [settings, setSettings] = useState<Record<string, string>>({});
-  const [galleryImages, setGalleryImages] = useState<string[]>([]);
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 1024);
-  const [featuredCols, setFeaturedCols] = useState(() =>
-    typeof window === 'undefined' ? 4 : featuredColsFor(window.innerWidth)
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < 1024,
   );
 
   useEffect(() => {
-    const handler = () => {
-      setIsMobile(window.innerWidth < 1024);
-      setFeaturedCols(featuredColsFor(window.innerWidth));
-    };
+    const handler = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener('resize', handler, { passive: true });
     return () => window.removeEventListener('resize', handler);
   }, []);
@@ -91,62 +97,20 @@ const Home = () => {
       .catch(err => console.warn('Home: settings load failed', err));
   }, []);
 
-  // Featured works are fed by the portfolio gallery, deduped
-  useEffect(() => {
-    fetch('/api/gallery')
-      .then(r => (r.ok ? r.json() : []))
-      .then((rows: { url?: string }[]) => {
-        if (!Array.isArray(rows)) return;
-        const urls = Array.from(new Set(
-          rows.map(r => r.url).filter((u): u is string => Boolean(u && u.trim()))
-        )).slice(0, 8);
-        setGalleryImages(urls);
-      })
-      .catch(() => {});
-  }, []);
-
-  // Hero frame — the mobile slot wins on phones when the client has set one
+  // The mobile hero slot wins on phones, but only when the client has set one
   const heroSrc =
     (isMobile ? settings['img.home.hero.mobile.1'] : '') ||
     settings['img.home.hero.1'] ||
-    FALLBACK_SLIDES[0];
+    HERO_FALLBACK;
   const heroImg = respImg(heroSrc, [768, 1280, 1920]);
 
-  // Hero title split into words for the per-word mask reveal
-  const titleWords = [
-    ...t('hero.title.part1').split(' ').filter(Boolean).map(w => ({ w, styleKey: 'hero.title.part1', italic: false })),
-    ...t('hero.title.part2').split(' ').filter(Boolean).map(w => ({ w, styleKey: 'hero.title.part2', italic: true })),
-  ];
-
-  // Featured masonry — greedy packing into the current column count
-  const featuredBase = galleryImages.length > 0 ? galleryImages : FALLBACK_SLIDES;
-  const featured = featuredCols === 1 ? featuredBase.slice(0, 3) : featuredBase;
-  const featuredColumns = useMemo(() => {
-    const buckets: { src: string; idx: number }[][] = Array.from({ length: featuredCols }, () => []);
-    const heights = new Array(featuredCols).fill(0);
-    featured.forEach((src, idx) => {
-      let shortest = 0;
-      for (let c = 1; c < featuredCols; c++) if (heights[c] < heights[shortest]) shortest = c;
-      buckets[shortest].push({ src, idx });
-      heights[shortest] += ASPECT_WEIGHT[idx % ASPECT_WEIGHT.length];
-    });
-    return buckets;
-  }, [featured, featuredCols]);
-
-  // About images — story slots with graceful fallbacks
-  const aboutMain = respImg(
-    settings['img.home.team.aldin'] || FALLBACK_SLIDES[1],
-    [480, 960, 1280],
-  );
-  const aboutSmall = respImg(
-    settings['img.home.team.melisa'] || FALLBACK_SLIDES[2],
-    [320, 640],
-  );
+  const aboutMain = respImg(settings['img.home.team.aldin'] || MOSAIC_FALLBACKS[1], [480, 960, 1280]);
+  const aboutPrint = respImg(settings['img.home.team.melisa'] || MOSAIC_FALLBACKS[6], [320, 640]);
 
   return (
-    <div className="bg-moody-950 overflow-hidden">
-      {/* ── Hero — full-bleed cinematic frame, statement anchored left ─────── */}
-      <section className="relative h-[88vh] min-h-[560px] overflow-hidden bg-moody-950">
+    <div className="bg-canvas-100">
+      {/* ── Hero — full-bleed frame, statement anchored left ────────────────── */}
+      <section className="relative h-[92vh] min-h-[560px] max-h-[900px] overflow-hidden bg-moody-950">
         <motion.img
           key={heroImg.src}
           src={heroImg.src}
@@ -154,9 +118,9 @@ const Home = () => {
           sizes="100vw"
           alt=""
           aria-hidden="true"
-          initial={{ scale: 1.12, opacity: 0 }}
+          initial={{ scale: 1.1, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 2.6, ease: EASE }}
+          transition={{ duration: 2.4, ease: EASE }}
           className="absolute inset-0 w-full h-full object-cover"
           loading="eager"
           fetchPriority="high"
@@ -165,468 +129,360 @@ const Home = () => {
           referrerPolicy="no-referrer"
         />
 
-        {/* Left-weighted scrim keeps the statement legible on any photo */}
-        <div className="absolute inset-0 bg-gradient-to-r from-moody-950 via-moody-950/70 to-moody-950/10" aria-hidden="true" />
-        <div className="absolute inset-0 bg-gradient-to-t from-moody-950 via-transparent to-moody-950/60" aria-hidden="true" />
-
-        {/* Vertical brand mark on the far left edge */}
+        {/* Left-weighted scrim keeps the statement legible on any photograph */}
         <div
-          className="hidden lg:flex absolute left-7 top-1/2 -translate-y-1/2 z-10 flex-col items-center gap-5"
+          className="absolute inset-0 bg-gradient-to-r from-moody-950/95 via-moody-950/55 to-transparent"
           aria-hidden="true"
-        >
-          <span className="w-[1px] h-16 bg-gradient-to-b from-transparent to-white/30" />
-          <span className="text-[11px] tracking-[0.5em] font-bold text-white/40 [writing-mode:vertical-rl] rotate-180">
-            387
-          </span>
-          <span className="w-[1px] h-16 bg-gradient-to-t from-transparent to-white/30" />
-        </div>
+        />
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-moody-950/80 via-transparent to-moody-950/35"
+          aria-hidden="true"
+        />
 
         <div className="relative z-10 h-full max-w-[1800px] mx-auto px-6 sm:px-8 lg:px-16 flex items-center">
           <div className="max-w-xl lg:max-w-2xl">
-            {/* Tag */}
-            <motion.p
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.5, ease: EASE }}
-              style={getContentStyle('hero.location')}
-              className="text-[10px] md:text-[11px] tracking-[0.5em] uppercase font-bold text-gold-300 mb-6 md:mb-8"
-            >
-              {t('hero.location')}
-            </motion.p>
-
-            {/* Title — each word rises through its own mask; a gold dash closes it */}
-            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-light text-white leading-[1.0] tracking-tight mb-7 md:mb-9">
-              <span className="flex flex-wrap items-center gap-x-[0.26em]">
-                {titleWords.map((tw, i) => (
-                  <span key={`${tw.w}-${i}`} className="inline-block overflow-hidden pb-[0.14em] -mb-[0.14em]">
-                    <motion.span
-                      initial={{ y: '112%' }}
-                      animate={{ y: '0%' }}
-                      transition={{ duration: 1.2, delay: 0.65 + i * 0.12, ease: EASE }}
-                      style={getContentStyle(tw.styleKey)}
-                      className={`inline-block ${tw.italic ? 'italic text-gold-400' : ''}`}
-                    >
-                      {tw.w}
-                    </motion.span>
-                  </span>
-                ))}
-                <motion.span
-                  initial={{ scaleX: 0 }}
-                  animate={{ scaleX: 1 }}
-                  transition={{ duration: 1, delay: 1.15, ease: EASE }}
-                  className="inline-block w-10 md:w-16 h-[1.5px] bg-gold-400/80 origin-left ml-2"
-                  aria-hidden="true"
-                />
-              </span>
+            <h1 className="text-[2.75rem] sm:text-6xl lg:text-7xl font-serif font-light text-white leading-[1.08] tracking-tight mb-7 md:mb-8">
+              {(['part1', 'part2'] as const).map((part, i) => (
+                <span key={part} className="block overflow-hidden pb-[0.1em] -mb-[0.1em]">
+                  <motion.span
+                    initial={{ y: '110%' }}
+                    animate={{ y: '0%' }}
+                    transition={{ duration: 1.15, delay: 0.35 + i * 0.14, ease: EASE }}
+                    style={getContentStyle(`hero.title.${part}`)}
+                    className="block"
+                  >
+                    {t(`hero.title.${part}`)}
+                  </motion.span>
+                </span>
+              ))}
             </h1>
 
-            {/* Short statement */}
             <motion.p
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 1.05, ease: EASE }}
+              transition={{ duration: 1, delay: 0.75, ease: EASE }}
               style={getContentStyle('hero.desc')}
-              className="text-white/70 font-light text-base md:text-lg leading-relaxed max-w-md mb-10 md:mb-12"
+              className="text-white/75 font-light text-[15px] md:text-[17px] leading-relaxed max-w-sm mb-10 md:mb-12 whitespace-pre-line"
             >
               {t('hero.desc')}
             </motion.p>
 
-            {/* CTAs — outlined rectangle + quiet text link */}
             <motion.div
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 1.25, ease: EASE }}
-              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-5 sm:gap-9"
+              transition={{ duration: 1, delay: 0.95, ease: EASE }}
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-7"
             >
-              {/* Primary — hairline frame, gold fill sweeps in from the left */}
+              {/* Primary — solid ink block, as in the mockup */}
               <Link
                 to="/portfolio"
-                className="group relative px-10 md:px-12 py-[1.1rem] whitespace-nowrap block overflow-hidden border border-white/25 hover:border-gold-500/60 transition-colors duration-700 text-center"
+                className="group relative block px-9 md:px-11 py-[1.15rem] whitespace-nowrap overflow-hidden bg-ink-900 border border-white/15 hover:border-white/35 transition-colors duration-500 text-center"
               >
                 <span
                   aria-hidden="true"
-                  className="absolute inset-0 bg-gold-600 -translate-x-full group-hover:translate-x-0 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                  className="absolute inset-0 bg-white/10 -translate-x-full group-hover:translate-x-0 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
                 />
                 <span
                   style={getContentStyle('hero.portfolio')}
-                  className="relative z-10 text-[10px] md:text-[11px] tracking-[0.45em] uppercase font-medium text-white flex items-center justify-center gap-4"
+                  className="relative z-10 text-[10px] md:text-[11px] tracking-[0.25em] uppercase font-medium text-white flex items-center justify-center gap-3"
                 >
                   {t('hero.portfolio')}
-                  <ArrowRight size={13} className="group-hover:translate-x-1.5 transition-transform duration-500" aria-hidden="true" />
+                  <ArrowRight
+                    size={13}
+                    className="group-hover:translate-x-1 transition-transform duration-500"
+                    aria-hidden="true"
+                  />
                 </span>
               </Link>
 
-              {/* Secondary — quiet text with a gold rule that draws across */}
+              {/* Secondary — quiet label, rule draws across on hover */}
               <Link to="/contact" className="group relative px-1 py-3 whitespace-nowrap text-center sm:text-left">
                 <span
                   style={getContentStyle('hero.inquire')}
-                  className="text-[10px] md:text-[11px] tracking-[0.45em] uppercase font-medium text-white/70 group-hover:text-gold-300 transition-colors duration-500"
+                  className="text-[10px] md:text-[11px] tracking-[0.25em] uppercase font-medium text-white/85 group-hover:text-white transition-colors duration-500 flex items-center justify-center sm:justify-start gap-3"
                 >
                   {t('hero.inquire')}
+                  <ArrowRight
+                    size={13}
+                    className="group-hover:translate-x-1 transition-transform duration-500"
+                    aria-hidden="true"
+                  />
                 </span>
-                <span className="relative block h-[1px] bg-white/20 mt-2.5 overflow-hidden" aria-hidden="true">
-                  <span className="absolute inset-0 bg-gold-400 -translate-x-full group-hover:translate-x-0 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]" />
+                <span className="relative block h-[1px] bg-white/25 mt-2 overflow-hidden" aria-hidden="true">
+                  <span className="absolute inset-0 bg-white -translate-x-full group-hover:translate-x-0 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]" />
                 </span>
               </Link>
             </motion.div>
           </div>
         </div>
-      </section>
 
-      {/* ── Featured works — framed masonry fed by the gallery ─────────────── */}
-      <section className="relative bg-moody-950 pt-16 md:pt-24 pb-20 md:pb-28 px-6 sm:px-8 lg:px-16">
-        <RuleHeading style={getContentStyle('home.featured.title')}>
-          {t('home.featured.title')}
-        </RuleHeading>
-
-        <div className="flex gap-4 md:gap-5 items-start max-w-[1500px] mx-auto mt-12 md:mt-16">
-          {featuredColumns.map((col, ci) => (
-            <div key={ci} className="flex-1 flex flex-col gap-4 md:gap-5">
-              {col.map(({ src, idx }) => {
-                const r = respImg(src, [480, 640, 960]);
-                return (
-                  <motion.div
-                    key={`${src}-${idx}`}
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: '-40px' }}
-                    transition={{ duration: 0.9, delay: Math.min(idx * 0.07, 0.4), ease: EASE }}
-                  >
-                    {/* Gallery frame: warm mat panel + inner hairline + gold corner ticks */}
-                    <Link
-                      to="/portfolio"
-                      className="group relative block p-2.5 md:p-3 bg-gradient-to-b from-white/[0.05] to-white/[0.015] border border-white/10 hover:border-gold-500/45 shadow-[0_16px_45px_rgba(0,0,0,0.4)] hover:shadow-[0_28px_70px_rgba(0,0,0,0.55)] hover:-translate-y-1.5 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
-                    >
-                      {/* Corner ticks — quietly gold, brighten on hover */}
-                      <span aria-hidden="true" className="pointer-events-none absolute -top-px -left-px w-3.5 h-3.5 border-t border-l border-gold-500/40 group-hover:border-gold-400 transition-colors duration-700" />
-                      <span aria-hidden="true" className="pointer-events-none absolute -top-px -right-px w-3.5 h-3.5 border-t border-r border-gold-500/40 group-hover:border-gold-400 transition-colors duration-700" />
-                      <span aria-hidden="true" className="pointer-events-none absolute -bottom-px -left-px w-3.5 h-3.5 border-b border-l border-gold-500/40 group-hover:border-gold-400 transition-colors duration-700" />
-                      <span aria-hidden="true" className="pointer-events-none absolute -bottom-px -right-px w-3.5 h-3.5 border-b border-r border-gold-500/40 group-hover:border-gold-400 transition-colors duration-700" />
-
-                      <span className={`relative block ${FEATURED_ASPECTS[idx % FEATURED_ASPECTS.length]} overflow-hidden border border-white/10 group-hover:border-gold-500/25 transition-colors duration-700`}>
-                        <img
-                          src={r.src}
-                          srcSet={r.srcSet}
-                          sizes="(min-width: 1024px) 24vw, (min-width: 640px) 48vw, 100vw"
-                          alt={`Wedding ${idx + 1}`}
-                          className="w-full h-full object-cover transition-transform duration-[1600ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.05]"
-                          loading={idx < 4 ? 'eager' : 'lazy'}
-                          decoding="async"
-                          draggable={false}
-                          referrerPolicy="no-referrer"
-                        />
-                        {/* Soft vignette evens out bright exposures; lifts away on hover */}
-                        <span
-                          aria-hidden="true"
-                          className="absolute inset-0 bg-gradient-to-t from-moody-950/35 via-transparent to-transparent opacity-70 group-hover:opacity-0 transition-opacity duration-700"
-                        />
-                      </span>
-                    </Link>
-                  </motion.div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-
+        {/* Scroll cue — mouse outline with a drifting dot */}
         <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1, delay: 0.25, ease: EASE }}
-          className="flex justify-center mt-12 md:mt-16"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, delay: 1.5, ease: EASE }}
+          className="absolute bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2.5"
+          aria-hidden="true"
         >
-          <Link
-            to="/portfolio"
-            className="group relative px-8 md:px-10 py-3.5 whitespace-nowrap block border border-gold-500/40 hover:border-gold-400 hover:bg-gold-600/10 transition-colors duration-500 text-center"
+          <span className="w-[22px] h-[34px] rounded-full border border-white/45 flex items-start justify-center pt-2">
+            <span className="w-[3px] h-[6px] rounded-full bg-white/80 animate-[scrollBounce_2s_ease-in-out_infinite]" />
+          </span>
+          <span
+            style={getContentStyle('home.scroll')}
+            className="text-[9px] tracking-[0.35em] uppercase font-medium text-white/60"
           >
-            <span
-              style={getContentStyle('home.featured.cta')}
-              className="text-[10px] md:text-[11px] tracking-[0.4em] uppercase font-semibold text-white/85 group-hover:text-white flex items-center justify-center gap-3 transition-colors duration-500"
-            >
-              {t('home.featured.cta')}
-              <ArrowRight size={14} className="group-hover:translate-x-1.5 transition-transform duration-500" aria-hidden="true" />
-            </span>
-          </Link>
+            {t('home.scroll')}
+          </span>
         </motion.div>
       </section>
 
-      {/* ── About — story left, layered photos right ───────────────────────── */}
-      <section className="relative bg-moody-950 py-20 md:py-32 px-6 sm:px-8 lg:px-16 overflow-hidden">
-        {/* Soft gold glow + oversized script mark */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 55% 60% at 30% 40%, rgba(166,134,93,0.10) 0%, transparent 70%)' }}
-          aria-hidden="true"
-        />
-        <div
-          className="absolute -right-10 top-1/2 -translate-y-1/2 text-[16rem] lg:text-[24rem] font-script text-white/[0.03] leading-none select-none pointer-events-none hidden md:block"
-          aria-hidden="true"
-        >
-          387
-        </div>
+      {/* ── Featured works — editorial mosaic on paper ──────────────────────── */}
+      <section className="bg-canvas-100 py-16 md:py-24 px-6 sm:px-8 lg:px-16">
+        <div className="max-w-[1500px] mx-auto">
+          {/* Heading beside the first two image rows */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-[6px] md:gap-2">
+            <div className="md:col-span-3 flex flex-col justify-center text-center md:text-left mb-8 md:mb-0 md:pr-6 lg:pr-10">
+              <motion.span
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0 }}
+                transition={{ duration: 0.9, ease: EASE }}
+                style={getContentStyle('home.featured.title')}
+                className="block text-[10px] lg:text-[11px] tracking-[0.4em] uppercase font-semibold text-ink-500 mb-5 md:mb-6"
+              >
+                {t('home.featured.title')}
+              </motion.span>
 
-        <div className="relative max-w-[1500px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-14 lg:gap-20 items-center">
+              <h2 className="text-[2rem] lg:text-[2.9rem] font-serif font-light text-ink-900 leading-[1.15] tracking-tight">
+                {(['part1', 'part2', 'part3'] as const).map((part, i) => (
+                  <motion.span
+                    key={part}
+                    initial={{ opacity: 0, y: 16 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0 }}
+                    transition={{ duration: 0.95, delay: 0.1 + i * 0.12, ease: EASE }}
+                    style={getContentStyle(`home.featured.heading.${part}`)}
+                    className="block"
+                  >
+                    {t(`home.featured.heading.${part}`)}
+                  </motion.span>
+                ))}
+              </h2>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true, amount: 0 }}
+                transition={{ duration: 1, delay: 0.5, ease: EASE }}
+                className="flex items-center justify-center md:justify-start gap-4 mt-6 md:mt-7"
+                aria-hidden="true"
+              >
+                <span className="hidden md:block w-10 lg:w-14 h-[1px] bg-ink-900/20" />
+                <Heart size={15} strokeWidth={1.3} className="text-ink-400" />
+              </motion.div>
+            </div>
+
+            <div className="md:col-span-9 grid grid-cols-2 md:grid-cols-12 gap-[6px] md:gap-2 auto-rows-[38vw] md:auto-rows-[clamp(150px,17.5vw,266px)]">
+              {MOSAIC_TOP.map((tile, i) => (
+                <Frame
+                  key={tile.key}
+                  src={settings[tile.key] || MOSAIC_FALLBACKS[i]}
+                  index={i}
+                  span={tile.span}
+                  eager={i < 3}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Full-width band underneath */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-[6px] md:gap-2 mt-[6px] md:mt-2 auto-rows-[38vw] md:auto-rows-[clamp(120px,14vw,212px)]">
+            {MOSAIC_BOTTOM.map((tile, i) => (
+              <Frame
+                key={tile.key}
+                src={settings[tile.key] || MOSAIC_FALLBACKS[i + 6]}
+                index={i + 6}
+                span={tile.span}
+              />
+            ))}
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.9, delay: 0.2, ease: EASE }}
+            className="flex justify-center mt-10 md:mt-14"
+          >
+            <Link
+              to="/portfolio"
+              className="group relative block px-10 md:px-12 py-[0.95rem] whitespace-nowrap overflow-hidden border border-ink-900/30 hover:border-ink-900 transition-colors duration-500 text-center"
+            >
+              <span
+                aria-hidden="true"
+                className="absolute inset-0 bg-ink-900 -translate-x-full group-hover:translate-x-0 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
+              />
+              <span
+                style={getContentStyle('home.featured.cta')}
+                className="relative z-10 text-[10px] md:text-[11px] tracking-[0.25em] uppercase font-medium text-ink-900 group-hover:text-white transition-colors duration-500 flex items-center justify-center gap-3"
+              >
+                {t('home.featured.cta')}
+                <ArrowRight
+                  size={13}
+                  className="group-hover:translate-x-1 transition-transform duration-500"
+                  aria-hidden="true"
+                />
+              </span>
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── About — story left, layered prints right ────────────────────────── */}
+      <section className="bg-canvas-50 py-16 md:py-24 lg:py-28 px-6 sm:px-8 lg:px-16 overflow-hidden">
+        <div className="max-w-[1500px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           {/* Text column */}
-          <div className="lg:col-span-5 text-center lg:text-left">
-            {/* Tag with a trailing hairline, mockup-style "O NAMA —" */}
+          <div className="lg:col-span-5">
             <motion.div
-              initial={{ opacity: 0, y: 14 }}
+              initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.9, ease: EASE }}
-              className="flex items-center justify-center lg:justify-start gap-5 mb-7"
+              className="flex items-center gap-4 mb-6"
             >
               <span
-                style={getContentStyle('about.artists')}
-                className="text-[10px] md:text-[11px] tracking-[0.5em] uppercase font-bold text-gold-400"
+                style={getContentStyle('home.about.tag')}
+                className="text-[10px] md:text-[11px] tracking-[0.4em] uppercase font-semibold text-ink-500"
               >
-                {t('about.artists')}
+                {t('home.about.tag')}
               </span>
-              <span className="w-10 md:w-16 h-[1px] bg-gold-400/40" aria-hidden="true" />
+              <span className="w-10 md:w-14 h-[1px] bg-ink-900/20" aria-hidden="true" />
             </motion.div>
 
-            <motion.h2
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.1, delay: 0.1, ease: EASE }}
-              className="text-4xl sm:text-5xl lg:text-6xl font-serif font-light text-white leading-[1.05] tracking-tight mb-8"
-            >
-              <span style={getContentStyle('home.about.title')}>{t('home.about.title')}</span>{' '}
-              <span style={getContentStyle('home.about.and')} className="italic text-gold-400">{t('home.about.and')}</span>
-            </motion.h2>
+            <h2 className="text-[1.9rem] sm:text-4xl lg:text-[2.75rem] font-serif font-light text-ink-900 leading-[1.15] tracking-tight mb-7 md:mb-8">
+              {(['part1', 'part2'] as const).map((part, i) => (
+                <motion.span
+                  key={part}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0 }}
+                  transition={{ duration: 0.95, delay: 0.1 + i * 0.12, ease: EASE }}
+                  style={getContentStyle(`home.about.heading.${part}`)}
+                  className="block"
+                >
+                  {t(`home.about.heading.${part}`)}
+                </motion.span>
+              ))}
+            </h2>
 
-            <motion.p
-              initial={{ opacity: 0, y: 18 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1, delay: 0.2, ease: EASE }}
-              style={getContentStyle('home.about.desc.1')}
-              className="font-serif text-lg md:text-xl text-white/85 leading-relaxed mb-6"
-            >
-              {t('home.about.desc.1')}
-            </motion.p>
+            {(['1', '2'] as const).map((n, i) => (
+              <motion.p
+                key={n}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.95, delay: 0.2 + i * 0.1, ease: EASE }}
+                style={getContentStyle(`home.about.desc.${n}`)}
+                className="text-ink-500 font-light text-[14px] md:text-[15px] leading-[1.9] mb-5 max-w-md"
+              >
+                {t(`home.about.desc.${n}`)}
+              </motion.p>
+            ))}
 
-            <motion.p
-              initial={{ opacity: 0, y: 18 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1, delay: 0.3, ease: EASE }}
-              style={getContentStyle('home.about.desc.2')}
-              className="text-base md:text-lg text-white/60 font-light leading-relaxed mb-5"
-            >
-              {t('home.about.desc.2')}
-            </motion.p>
-
-            <motion.p
-              initial={{ opacity: 0, y: 18 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1, delay: 0.4, ease: EASE }}
-              style={getContentStyle('home.about.desc.3')}
-              className="text-base md:text-lg text-white/60 font-light italic leading-relaxed mb-9"
-            >
-              {t('home.about.desc.3')}
-            </motion.p>
-
-            {/* Underlined text link, per the mockup */}
             <motion.div
               initial={{ opacity: 0, y: 14 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 1, delay: 0.5, ease: EASE }}
-              className="flex justify-center lg:justify-start"
+              transition={{ duration: 0.95, delay: 0.45, ease: EASE }}
+              className="mt-8 md:mt-9"
             >
-              <Link to="/about" className="group inline-block">
+              <Link
+                to="/about"
+                className="group relative inline-block px-9 md:px-10 py-[1.05rem] whitespace-nowrap overflow-hidden bg-ink-900 text-center"
+              >
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-0 bg-white/12 -translate-x-full group-hover:translate-x-0 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                />
                 <span
                   style={getContentStyle('home.about.cta')}
-                  className="text-[10px] md:text-[11px] tracking-[0.4em] uppercase font-semibold text-gold-300 group-hover:text-white transition-colors duration-500 flex items-center gap-3"
+                  className="relative z-10 text-[10px] md:text-[11px] tracking-[0.25em] uppercase font-medium text-white flex items-center justify-center gap-3"
                 >
                   {t('home.about.cta')}
-                  <ArrowRight size={14} className="group-hover:translate-x-1.5 transition-transform duration-500" aria-hidden="true" />
+                  <ArrowRight
+                    size={13}
+                    className="group-hover:translate-x-1 transition-transform duration-500"
+                    aria-hidden="true"
+                  />
                 </span>
-                <span className="block h-[1px] bg-gold-400/50 group-hover:bg-gold-400 mt-2 transition-colors duration-500" aria-hidden="true" />
               </Link>
             </motion.div>
           </div>
 
-          {/* Image column — big frame with a small overlapping print + caption */}
-          <div className="lg:col-span-7 relative mb-10 lg:mb-0">
-            <ParallaxY from={22} to={-22} className="w-[82%] md:w-[72%] ml-auto">
-              <motion.div
-                initial={{ opacity: 0, x: 40 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.3, ease: EASE }}
-                className="relative p-2.5 md:p-3 bg-gradient-to-b from-white/[0.05] to-white/[0.015] border border-white/10 shadow-[0_20px_55px_rgba(0,0,0,0.45)]"
-              >
-                <span aria-hidden="true" className="pointer-events-none absolute -top-px -left-px w-3.5 h-3.5 border-t border-l border-gold-500/40" />
-                <span aria-hidden="true" className="pointer-events-none absolute -top-px -right-px w-3.5 h-3.5 border-t border-r border-gold-500/40" />
-                <span aria-hidden="true" className="pointer-events-none absolute -bottom-px -left-px w-3.5 h-3.5 border-b border-l border-gold-500/40" />
-                <span aria-hidden="true" className="pointer-events-none absolute -bottom-px -right-px w-3.5 h-3.5 border-b border-r border-gold-500/40" />
-                <div className="aspect-[4/5] overflow-hidden border border-white/10">
-                  <img
-                    src={aboutMain.src}
-                    srcSet={aboutMain.srcSet}
-                    sizes="(min-width: 1024px) 42vw, 82vw"
-                    alt={t('about.artists')}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    decoding="async"
-                    draggable={false}
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-              </motion.div>
-            </ParallaxY>
-
-            {/* Small print overlapping the big frame's lower-left corner, caption above */}
-            <div className="absolute -bottom-10 left-[6%] md:left-[16%] w-[46%] sm:w-[36%] md:w-[27%]">
-              <ParallaxY from={50} to={-25}>
-                <motion.div
-                  initial={{ opacity: 0, y: 36 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 1.3, delay: 0.25, ease: EASE }}
-                >
-                  <span
-                    style={getContentStyle('home.about.caption')}
-                    className="block font-script text-2xl md:text-[1.75rem] text-gold-200 leading-snug -rotate-2 mb-4 [text-shadow:0_2px_16px_rgba(0,0,0,0.85)]"
-                  >
-                    {t('home.about.caption')}
-                  </span>
-
-                  <div className="border border-white/10 bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-1.5 md:p-2 shadow-2xl shadow-black/70">
-                    <div className="aspect-[3/4] overflow-hidden border border-white/10">
-                      <img
-                        src={aboutSmall.src}
-                        srcSet={aboutSmall.srcSet}
-                        sizes="(min-width: 1024px) 15vw, 36vw"
-                        alt=""
-                        aria-hidden="true"
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                        draggable={false}
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              </ParallaxY>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── The experience we provide — three quiet feature columns ────────── */}
-      <section className="relative bg-moody-950 pt-12 md:pt-16 pb-24 md:pb-32 px-6 sm:px-8 lg:px-16">
-        <RuleHeading style={getContentStyle('home.features.title')}>
-          {t('home.features.title')}
-        </RuleHeading>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8 lg:gap-12 max-w-5xl mx-auto mt-14 md:mt-20">
-          {(['01', '02', '03'] as const).map((num, i) => (
+          {/* Image column — main frame, offset outline, overlapping small print */}
+          <div className="lg:col-span-7 relative mt-4 lg:mt-0 pb-16 sm:pb-12 lg:pb-8">
             <motion.div
-              key={num}
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.2, ease: EASE }}
+              className="relative w-[86%] ml-auto"
+            >
+              {/* Hairline frame peeking out from behind, down and to the right */}
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 translate-x-4 translate-y-5 md:translate-x-6 md:translate-y-7 border border-ink-900/15"
+              />
+              <div className="relative aspect-[5/4] overflow-hidden bg-canvas-200">
+                <img
+                  src={aboutMain.src}
+                  srcSet={aboutMain.srcSet}
+                  sizes="(min-width: 1024px) 48vw, 86vw"
+                  alt={t('home.about.tag')}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                  draggable={false}
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            </motion.div>
+
+            {/* Small print overlapping the main frame's lower-left corner */}
+            <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 1, delay: i * 0.12, ease: EASE }}
-              className="flex flex-col items-center text-center"
+              transition={{ duration: 1.2, delay: 0.25, ease: EASE }}
+              className="absolute left-0 bottom-0 w-[32%] sm:w-[26%] lg:w-[23%]"
             >
-              <span className="w-12 h-12 border border-gold-500/40 rounded-sm flex items-center justify-center text-gold-400 mb-6" aria-hidden="true">
-                {ICON_MAP[t(`home.process.${num}.icon`)] ?? ICON_MAP['sparkles']}
-              </span>
-
-              <h3
-                style={getContentStyle(`home.process.${num}.title`)}
-                className="text-[11px] md:text-xs tracking-[0.35em] uppercase font-bold text-white mb-4"
-              >
-                {t(`home.process.${num}.title`)}
-              </h3>
-
-              <p
-                style={getContentStyle(`home.process.${num}.desc`)}
-                className="text-white/55 font-light text-sm leading-relaxed max-w-[17rem]"
-              >
-                {t(`home.process.${num}.desc`)}
-              </p>
+              <div className="relative aspect-[3/4] overflow-hidden bg-canvas-200 shadow-[0_18px_45px_rgba(0,0,0,0.22)]">
+                <img
+                  src={aboutPrint.src}
+                  srcSet={aboutPrint.srcSet}
+                  sizes="(min-width: 1024px) 14vw, 30vw"
+                  alt=""
+                  aria-hidden="true"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                  draggable={false}
+                  referrerPolicy="no-referrer"
+                />
+                {/* Brand mark sits on the print */}
+                <span className="absolute inset-0 bg-ink-900/25" aria-hidden="true" />
+                <span
+                  className="absolute inset-0 flex flex-col items-center justify-center text-white"
+                  aria-hidden="true"
+                >
+                  <span className="font-serif font-light text-2xl md:text-[1.9rem] leading-none">387</span>
+                  <span className="text-[6px] md:text-[7px] tracking-[0.4em] uppercase font-semibold mt-1.5 text-white/80">
+                    Weddings
+                  </span>
+                </span>
+              </div>
             </motion.div>
-          ))}
-        </div>
-
-      </section>
-
-      {/* ── Final CTA — full-bleed cinematic closer, shared with the site ──── */}
-      <section className="relative min-h-[70vh] flex items-center justify-center px-6 sm:px-8 py-28 md:py-40 text-center overflow-hidden bg-moody-950">
-        <ParallaxY from={-50} to={50} className="absolute inset-0">
-          {/* Bookends the page with the hero frame — already cached, costs nothing */}
-          <img
-            src={heroImg.src}
-            srcSet={heroImg.srcSet}
-            sizes="100vw"
-            alt=""
-            aria-hidden="true"
-            className="w-full h-[125%] object-cover opacity-40"
-            loading="lazy"
-            decoding="async"
-            draggable={false}
-            referrerPolicy="no-referrer"
-          />
-        </ParallaxY>
-        <div className="absolute inset-0 bg-gradient-to-b from-moody-950/85 via-moody-950/60 to-moody-950" aria-hidden="true" />
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 55% 60% at 50% 45%, rgba(166,134,93,0.22) 0%, transparent 70%)' }}
-          aria-hidden="true"
-        />
-
-        <div className="relative z-10 max-w-5xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, rotate: -90, scale: 0.5 }}
-            whileInView={{ opacity: 1, rotate: 0, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1.1, ease: EASE }}
-            className="flex justify-center mb-8"
-            aria-hidden="true"
-          >
-            <Sparkles size={22} strokeWidth={1.2} className="text-gold-400/80" />
-          </motion.div>
-
-          <h2 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-light text-white leading-[1.02] tracking-tight mb-12 md:mb-16">
-            <WordReveal
-              words={[
-                ...t('experience.cta.title.part1').split(' ').filter(Boolean)
-                  .map(w => ({ w, style: getContentStyle('experience.cta.title.part1') })),
-                ...t('experience.cta.title.part2').split(' ').filter(Boolean)
-                  .map(w => ({ w, style: getContentStyle('experience.cta.title.part2'), italic: true })),
-              ]}
-              delay={0.25}
-            />
-          </h2>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1, delay: 0.5, ease: EASE }}
-            className="flex justify-center"
-          >
-            <Link
-              to="/contact"
-              className="group relative inline-block px-14 md:px-16 py-5 overflow-hidden whitespace-nowrap bg-gold-600 hover:bg-gold-500 rounded-full text-center shadow-xl shadow-gold-600/30 animate-[ctaPulse_3s_ease-in-out_infinite] transition-colors duration-500"
-            >
-              <span
-                style={getContentStyle('experience.cta.button')}
-                className="relative z-10 text-[10px] md:text-[11px] tracking-[0.5em] uppercase font-semibold text-white flex items-center justify-center gap-3"
-              >
-                {t('experience.cta.button')}
-                <ArrowRight size={14} className="group-hover:translate-x-1.5 transition-transform duration-500" aria-hidden="true" />
-              </span>
-            </Link>
-          </motion.div>
+          </div>
         </div>
       </section>
     </div>

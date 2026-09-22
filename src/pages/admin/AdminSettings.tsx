@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Check, Loader2, Globe, Instagram, Facebook, Twitter, Youtube, Music2,
   Search, Languages, BarChart2, FileText, MapPin, ExternalLink, RefreshCw,
-  Tag, AlertCircle, Copy, CheckCheck, Phone, Mail, AtSign,
+  Tag, AlertCircle, Copy, CheckCheck, Phone, Mail, AtSign, Share2,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { invalidateSettingsCache } from '../../lib/settingsCache';
@@ -206,13 +206,18 @@ export default function AdminSettings() {
               value={settings['youtube'] ?? ''} onChange={v => set('youtube', v)} />
           </SocialGroup>
 
+          <SocialGroup icon={<Share2 size={15} />} label="Pinterest">
+            <Field label="URL profila" placeholder="https://pinterest.com/387weddings"
+              value={settings['pinterest'] ?? ''} onChange={v => set('pinterest', v)} />
+          </SocialGroup>
+
           <SocialGroup icon={<Music2 size={15} />} label="TikTok">
             <Field label="URL profila" placeholder="https://tiktok.com/@387cinematic"
               value={settings['tiktok'] ?? ''} onChange={v => set('tiktok', v)} />
           </SocialGroup>
 
           <div className="bg-moody-950/40 border border-white/5 rounded-sm px-4 py-3 text-[10px] text-white/25 leading-relaxed">
-            Instagram Feed slike i tekst sekcije upravljaju se u <strong className="text-white/40">Admin → Instagram</strong>.
+            U footeru se prikazuju samo <strong className="text-white/40">Instagram, Facebook, YouTube i Pinterest</strong> — i to samo oni kojima je upisan URL.
           </div>
         </div>
       )}
