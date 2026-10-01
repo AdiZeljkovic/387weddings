@@ -30,8 +30,8 @@
   --color-moody-950: #0d0d0d;
 
   /* Light editorial canvas — the homepage sections sit on paper, not on ink */
-  --color-canvas-50: #faf8f5;
-  --color-canvas-100: #f4f2ee;
+  --color-canvas-50: #ffffff;
+  --color-canvas-100: #f7f6f3;
   --color-canvas-200: #e6e2db;
   --color-ink-400: #8a8a8a;
   --color-ink-500: #6b6b6b;
@@ -54,7 +54,7 @@
     scroll-behavior: auto;
   }
   body {
-    @apply bg-moody-950 text-white font-sans antialiased selection:bg-gold-600 selection:text-white;
+    @apply bg-canvas-50 text-ink-900 font-sans antialiased selection:bg-gold-600 selection:text-white;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -121,11 +121,11 @@
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-moody-950;
+  @apply bg-canvas-100;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gold-200 rounded-full hover:bg-gold-300 transition-colors;
+  @apply bg-gold-400 rounded-full hover:bg-gold-500 transition-colors;
 }
 
 /* ── Hero filmstrip marquee ─────────────────────────────────────────────── */

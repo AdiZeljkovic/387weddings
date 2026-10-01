@@ -94,7 +94,7 @@ export const SectionTag = ({ children, style, className = '' }: {
       viewport={{ once: true }}
       transition={{ duration: 0.9, ease: EASE }}
       style={style}
-      className="block text-[10px] md:text-[11px] tracking-[0.5em] uppercase font-bold text-gold-300"
+      className="block text-[10px] md:text-[11px] tracking-[0.5em] uppercase font-bold text-gold-600"
     >
       {children}
     </motion.span>

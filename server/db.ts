@@ -447,7 +447,37 @@ export async function initDB() {
         ('contact.form.sending', 'Obrazac: Tekst dok se šalje', 'contact', 'form', 'text', 'Sending...', 'Šaljem...', 31),
         ('contact.form.error',   'Obrazac: Poruka o grešci',   'contact', 'form', 'text',
          'Something went wrong. Please try again or email us directly.',
-         'Nešto je pošlo po zlu. Pokušajte ponovo ili nam pišite direktno na e-mail.', 32)
+         'Nešto je pošlo po zlu. Pokušajte ponovo ili nam pišite direktno na e-mail.', 32),
+
+        -- O nama, redizajn 2026: lična sekcija "nekoliko sitnica"
+        ('about.facts.tag',          'Sitnice: Tag iznad naslova',   'about', 'facts', 'text', 'Up close',            'Izbliza',             0),
+        ('about.facts.title.part1',  'Sitnice: Naslov — linija 1',   'about', 'facts', 'text', 'A few small things',  'Nekoliko sitnica',    1),
+        ('about.facts.title.part2',  'Sitnice: Naslov — linija 2',   'about', 'facts', 'text', 'about the two of us.','o nama dvoje.',       2),
+        ('about.facts.1.label', 'Sitnica 1: Naslov', 'about', 'facts', 'text', 'The first thing we ask', 'Prvo što pitamo', 3),
+        ('about.facts.1.text',  'Sitnica 1: Tekst (prazno = sakriveno)', 'about', 'facts', 'textarea',
+         'How you met. The answer usually sets the tone for the whole day.',
+         'Kako ste se upoznali. Odgovor na to pitanje obično odredi ton cijelog dana.', 4),
+        ('about.facts.2.label', 'Sitnica 2: Naslov', 'about', 'facts', 'text', 'Favourite part of the day', 'Najdraži dio dana', 5),
+        ('about.facts.2.text',  'Sitnica 2: Tekst (prazno = sakriveno)', 'about', 'facts', 'textarea',
+         'The ten minutes before sunset, when everyone settles and the light turns gold.',
+         'Onih deset minuta pred zalazak, kada se svi smire a svjetlo postane zlatno.', 6),
+        ('about.facts.3.label', 'Sitnica 3: Naslov', 'about', 'facts', 'text', 'Always in the bag', 'Uvijek u torbi', 7),
+        ('about.facts.3.text',  'Sitnica 3: Tekst (prazno = sakriveno)', 'about', 'facts', 'textarea',
+         'Two cameras, spare batteries and a pack of tissues. The third one usually runs out first.',
+         'Dva fotoaparata, rezervne baterije i paket maramica. Treće se obično prvo potroši.', 8),
+        ('about.facts.4.label', 'Sitnica 4: Naslov', 'about', 'facts', 'text', 'We never direct', 'Ne režiramo', 9),
+        ('about.facts.4.text',  'Sitnica 4: Tekst (prazno = sakriveno)', 'about', 'facts', 'textarea',
+         'The laughter, the tears, and the looks you exchange when you think nobody is watching.',
+         'Smijeh, suze i poglede koje razmijenite kad mislite da niko ne gleda.', 10),
+        ('about.facts.5.label', 'Sitnica 5: Naslov', 'about', 'facts', 'text', 'We love rain', 'Volimo kišu', 11),
+        ('about.facts.5.text',  'Sitnica 5: Tekst (prazno = sakriveno)', 'about', 'facts', 'textarea',
+         'Honestly. Some of the best frames we have ever made happened under an umbrella.',
+         'Ozbiljno. Neke od najboljih fotografija koje smo napravili nastale su pod kišobranom.', 12),
+        ('about.facts.6.label', 'Sitnica 6: Naslov', 'about', 'facts', 'text', 'After it all', 'Poslije svega', 13),
+        ('about.facts.6.text',  'Sitnica 6: Tekst (prazno = sakriveno)', 'about', 'facts', 'textarea',
+         'We stay for the last song. We have never left before the end.',
+         'Ostanemo na zadnjoj pjesmi. Nikad nismo otišli prije kraja.', 14),
+        ('about.facts.signoff', 'Sitnice: Potpis (script font)', 'about', 'facts', 'text', 'Melisa & Aldin', 'Melisa & Aldin', 15)
       ON CONFLICT (key) DO NOTHING
     `);
 

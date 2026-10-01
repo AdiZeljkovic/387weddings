@@ -173,8 +173,8 @@ function AnalyticsInjector() {
 }
 
 const PublicLoadingFallback = (
-  <div className="h-screen w-full flex items-center justify-center bg-moody-950">
-    <div className="w-12 h-[1px] bg-gold-300 animate-pulse" />
+  <div className="h-screen w-full flex items-center justify-center bg-canvas-50">
+    <div className="w-12 h-[1px] bg-gold-600 animate-pulse" />
   </div>
 );
 
@@ -276,7 +276,7 @@ function App() {
               path="/*"
               element={
                 <ComingSoonGate>
-                <div className="relative min-h-screen bg-moody-950">
+                <div className="relative min-h-screen bg-canvas-50">
                   <div className="grain" />
                   <Navbar />
                   <main>

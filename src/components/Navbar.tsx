@@ -69,10 +69,10 @@ const Navbar = () => {
   }, [isMobileMenuOpen]);
 
   const links = [
-    { path: '/',         label: t('nav.home'),       styleKey: 'nav.home' },
-    { path: '/services', label: t('nav.experience'), styleKey: 'nav.experience' },
-    { path: '/about',    label: t('nav.stories'),    styleKey: 'nav.stories' },
-    { path: '/contact',  label: t('nav.inquire'),    styleKey: 'nav.inquire' },
+    { path: '/',          label: t('nav.home'),    styleKey: 'nav.home' },
+    { path: '/portfolio', label: t('nav.work'),    styleKey: 'nav.work' },
+    { path: '/about',     label: t('nav.stories'), styleKey: 'nav.stories' },
+    { path: '/contact',   label: t('nav.inquire'), styleKey: 'nav.inquire' },
   ];
 
   const handleLinkClick = (path: string) => {
@@ -80,10 +80,11 @@ const Navbar = () => {
     if (location.pathname === path) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Home opens on a dark hero and then scrolls onto paper, so its solid state is
-  // light; every other page is a dark canvas and keeps the dark bar.
+  // The site is paper everywhere now. The only dark surface the bar ever floats
+  // over is the home hero photograph, so that is the one case it goes white.
   const onHome = location.pathname === '/';
-  const lightBar = onHome && isScrolled;
+  const overHero = onHome && !isScrolled;
+  const lightBar = !overHero;
 
   // Desktop nav item — hairline rule under the current page, drawn on hover
   const NavLink = ({ path, label, styleKey }: { path: string; label: string; styleKey: string }) => {
@@ -98,7 +99,7 @@ const Navbar = () => {
           'group relative py-1 text-[11px] xl:text-[12px] tracking-[0.22em] uppercase font-medium transition-colors duration-500',
           lightBar
             ? active ? 'text-ink-900' : 'text-ink-500 hover:text-ink-900'
-            : active ? 'text-white' : 'text-white/70 hover:text-white',
+            : active ? 'text-ink-900' : 'text-ink-500 hover:text-ink-900',
         )}
       >
         {label}
@@ -157,11 +158,11 @@ const Navbar = () => {
           onHome ? 'fixed' : 'sticky',
           // A near-opaque bar reads the same as a frosted one but skips the
           // full-width backdrop-filter, which re-blurs on every scrolled frame.
-          !isScrolled
+          overHero
             ? 'bg-transparent py-5 md:py-7'
-            : lightBar
+            : isScrolled
               ? 'bg-canvas-50/97 py-3.5 md:py-4 shadow-[0_1px_20px_rgba(0,0,0,0.07)]'
-              : 'bg-moody-950/97 py-3.5 md:py-4 shadow-[0_1px_24px_rgba(0,0,0,0.35)]',
+              : 'bg-canvas-50 py-5 md:py-7',
         )}
       >
         <div className="max-w-[1800px] mx-auto flex items-center justify-between gap-4">
@@ -209,10 +210,10 @@ const Navbar = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }}
             transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-0 z-[1010] bg-moody-950 flex flex-col lg:hidden overflow-hidden"
+            className="fixed inset-0 z-[1010] bg-canvas-50 flex flex-col lg:hidden overflow-hidden"
           >
             <div
-              className="absolute -bottom-12 -right-6 text-[15rem] font-serif text-white/[0.035] leading-none select-none pointer-events-none"
+              className="absolute -bottom-12 -right-6 text-[15rem] font-serif text-ink-900/[0.04] leading-none select-none pointer-events-none"
               aria-hidden="true"
             >
               387
@@ -221,7 +222,7 @@ const Navbar = () => {
             {/* Top bar — mirrors the header so the logo never appears to move */}
             <div className="relative flex items-center justify-between px-6 py-5 flex-shrink-0">
               <Link to="/" onClick={() => setIsMobileMenuOpen(false)} aria-label="387 Weddings">
-                <Wordmark />
+                <Wordmark dark />
               </Link>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -232,13 +233,13 @@ const Navbar = () => {
                   initial={{ rotate: 0, opacity: 0 }}
                   animate={{ rotate: 45, opacity: 1 }}
                   transition={{ duration: 0.7, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                  className="absolute block w-6 h-[1.5px] bg-white"
+                  className="absolute block w-6 h-[1.5px] bg-ink-900"
                 />
                 <motion.span
                   initial={{ rotate: 0, opacity: 0 }}
                   animate={{ rotate: -45, opacity: 1 }}
                   transition={{ duration: 0.7, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                  className="absolute block w-6 h-[1.5px] bg-white"
+                  className="absolute block w-6 h-[1.5px] bg-ink-900"
                 />
               </button>
             </div>
@@ -259,14 +260,14 @@ const Navbar = () => {
                         onClick={() => handleLinkClick(link.path)}
                         className={cn(
                           'group relative block text-center text-[2.5rem] sm:text-5xl font-serif font-light leading-tight transition-colors duration-500',
-                          active ? 'text-white' : 'text-white/70 hover:text-white',
+                          active ? 'text-ink-900' : 'text-ink-500 hover:text-ink-900',
                         )}
                       >
                         {link.label}
                         <span
                           aria-hidden="true"
                           className={cn(
-                            'block h-[1px] bg-white mx-auto mt-1 transition-all duration-500',
+                            'block h-[1px] bg-ink-900 mx-auto mt-1 transition-all duration-500',
                             active ? 'w-10' : 'w-0 group-hover:w-10',
                           )}
                         />
@@ -282,17 +283,17 @@ const Navbar = () => {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.7, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-              className="relative flex-shrink-0 border-t border-white/10 px-8 pt-7 pb-10"
+              className="relative flex-shrink-0 border-t border-canvas-200 px-8 pt-7 pb-10"
             >
               <div className="flex items-center justify-center mb-6">
-                <LangSwitch dark={false} />
+                <LangSwitch dark />
               </div>
 
               {email && (
                 <div className="text-center">
                   <a
                     href={`mailto:${email}`}
-                    className="inline-block text-white/50 text-xs hover:text-white transition-colors duration-300"
+                    className="inline-block text-ink-500 text-xs hover:text-ink-900 transition-colors duration-300"
                   >
                     {email}
                   </a>

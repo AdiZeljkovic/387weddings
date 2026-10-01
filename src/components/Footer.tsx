@@ -35,7 +35,7 @@ const Footer = () => {
 
   const navLinks = [
     { to: '/',         label: t('nav.home'),       styleKey: 'nav.home' },
-    { to: '/services', label: t('nav.experience'), styleKey: 'nav.experience' },
+    { to: '/portfolio', label: t('nav.work'),       styleKey: 'nav.work' },
     { to: '/about',    label: t('nav.stories'),    styleKey: 'nav.stories' },
     { to: '/contact',  label: t('nav.inquire'),    styleKey: 'nav.inquire' },
   ];
