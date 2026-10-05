@@ -73,7 +73,10 @@ const SECTION_LABELS: Record<string, string> = {
   collections:   'Kolekcije (kategorije)',
   process:       'Proces / Koraci',
   story:         'Priča',
-  facts:         'Sitnice o nama',
+  bio:           'Biografije (Melisa i Aldin)',
+  press:         'Pisali su o nama',
+  invite:        'Poziv na kontakt',
+  facts:         'Sitnice o nama (ne prikazuje se)',
   philosophy:    'Filozofija',
   investment:    'Investicija & Paketi',
   promo:         'Promocija',
@@ -97,7 +100,7 @@ const SECTION_LABELS: Record<string, string> = {
 // Explicit section order per page (sections not listed appear at the end)
 const SECTION_ORDER: Record<string, string[]> = {
   home:      ['hero', 'featured', 'about_section'],
-  about:     ['hero', 'story', 'facts', 'experience'],
+  about:     ['bio', 'press', 'invite'],
   services:  ['hero', 'intro', 'philosophy', 'journey', 'faq'],
   portfolio: ['hero', 'approach', 'filter'],
   contact:   ['hero', 'connect', 'form'],

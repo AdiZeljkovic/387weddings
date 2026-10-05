@@ -101,15 +101,18 @@ const SECTIONS = [
     page: 'about', label: 'O nama',
     groups: [
       {
-        label: 'Hero pozadina', hint: 'Velika fotografija u pozadini header-a stranice "O nama". Preporučeno: 2400×1600 px.',
+        label: 'Portreti uz biografije', hint: 'Po jedan portret uz svaku biografiju. Prikazuju se crno-bijelo (sajt ih sam prebacuje), pa boja originala nije bitna. Preporučeno: 1100×1375 px, portretna orijentacija.',
         images: [
-          { key: 'img.about.hero', label: 'Hero', fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.about.melisa', label: 'Portret uz biografiju 1', fallback: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.about.aldin',  label: 'Portret uz biografiju 2', fallback: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800' },
         ],
       },
       {
-        label: 'Priča — fotografija tima', hint: 'Fotografija uz tekstualni blok u sekciji "Naša priča". Preporučeno: 1200×900 px.',
+        label: 'Poziv na kontakt — tri fotografije', hint: 'Fotografije oko završnog bloka "Želimo čuti vašu priču". Prikazuju se samo na širim ekranima. Preporučeno: 900×1200 px, portretna orijentacija.',
         images: [
-          { key: 'img.about.story', label: 'Tim', fallback: 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.about.cta.1', label: 'Lijevo — velika',  fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.about.cta.2', label: 'Lijevo — mala',    fallback: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.about.cta.3', label: 'Desno',            fallback: 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&q=80&w=800' },
         ],
       },
     ],

@@ -1,443 +1,306 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { motion, useScroll, useSpring, useTransform, useReducedMotion } from 'motion/react';
+import React, { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { Camera, Film, MessageSquare, Star, Image as ImageIcon, Heart, Users, Sparkles, ArrowRight } from 'lucide-react';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
 import { respImg } from '../lib/img';
-import { EASE, ParallaxY, RevealImage, SectionTag, WordReveal } from '../components/anim';
+import { EASE } from '../components/anim';
 
-const ICON_MAP: Record<string, React.ReactElement> = {
-  chat:   <MessageSquare size={26} strokeWidth={1} />,
-  star:   <Star          size={26} strokeWidth={1} />,
-  camera: <Camera        size={26} strokeWidth={1} />,
-  image:  <ImageIcon     size={26} strokeWidth={1} />,
-  heart:  <Heart         size={26} strokeWidth={1} />,
-  film:   <Film          size={26} strokeWidth={1} />,
-  users:  <Users         size={26} strokeWidth={1} />,
-};
+const FALLBACK_MELISA = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=1200';
+const FALLBACK_ALDIN  = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=1200';
+const FALLBACK_CTA    = [
+  'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=900',
+  'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=700',
+  'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&q=80&w=900',
+];
 
-const FALLBACK_HERO  = 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1600';
-const FALLBACK_STORY = 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&q=80&w=1200';
+// A CMS line that was never filled in resolves to its own key — treat that as empty
+const filled = (value: string, key: string) => Boolean(value) && !value.startsWith(key.split('.')[0] + '.');
 
-// ── Scroll-scrubbed experience step ──────────────────────────────────────────
-// Each step is driven by scroll position (scrub, not trigger): the block slides
-// in from its own side of the gold spine, the node dot pops on the line, and the
-// ghost number drifts in behind. Scrolling back rewinds the choreography.
-const ExperienceStep = ({ n, index, t, getContentStyle }: {
-  n: 1 | 2 | 3 | 4;
-  index: number;
-  t: (key: string) => string;
-  getContentStyle: (key: string) => React.CSSProperties;
-}) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const reduced = useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start 0.95', 'start 0.4'] });
-  const p = useSpring(scrollYProgress, { stiffness: 90, damping: 22, mass: 0.6 });
-
-  const left = index % 2 === 0;   // even steps sit left of the spine
-  const dir  = left ? -1 : 1;
-
-  const x     = useTransform(p, [0, 1], [dir * 100, 0]);
-  const o     = useTransform(p, [0, 0.65], [0, 1]);
-  const numX  = useTransform(p, [0, 1], [dir * 70, 0]);
-  const numO  = useTransform(p, [0, 1], [0, 1]);
-  const dot   = useTransform(p, [0.25, 1], [0, 1]);
-  const ruleX = useTransform(p, [0.2, 1], [0, 1]);
-
-  // Respect prefers-reduced-motion — render the scene static
-  const st = (styles: Record<string, unknown>) => (reduced ? undefined : styles);
-
-  const icon = ICON_MAP[t(`about.step.${n}.icon`)] ?? ICON_MAP['camera'];
+// ── One biography — tag, two-line display heading, justified columns of copy ──
+const Bio = ({ n, portrait, flip }: { n: 1 | 2; portrait: { src: string; srcSet?: string }; flip?: boolean }) => {
+  const { t, getContentStyle } = useLanguage();
+  const base = `about.bio.${n}`;
 
   return (
-    <div ref={ref} className="relative md:grid md:grid-cols-[1fr_3rem_1fr] md:items-center md:gap-4 lg:gap-10">
-      {/* Node on the spine */}
-      <div className="hidden md:flex md:col-start-2 md:row-start-1 justify-center" aria-hidden="true">
-        <motion.span
-          style={st({ scale: dot })}
-          className="w-3 h-3 rounded-full bg-gold-600 ring-8 ring-gold-400/10 shadow-lg shadow-gold-600/30"
-        />
-      </div>
-
-      {/* Content block — slides in from its own side */}
+    <div className="max-w-[1150px] mx-auto grid lg:grid-cols-2 gap-10 lg:gap-20 items-center">
+      {/* Portrait — black and white, as in the reference */}
       <motion.div
-        style={st({ x, opacity: o })}
-        className={`relative border-l border-gold-600/25 pl-6 md:border-l-0 md:pl-0 md:row-start-1 ${
-          left ? 'md:col-start-1 md:text-right md:pr-6 lg:pr-10' : 'md:col-start-3 md:text-left md:pl-6 lg:pl-10'
-        }`}
+        initial={{ opacity: 0, y: 26 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0 }}
+        transition={{ duration: 1, ease: EASE }}
+        className={`order-1 ${flip ? 'lg:order-1' : 'lg:order-2'}`}
       >
-        {/* Ghost number drifting in behind */}
+        <div className="aspect-[4/5] overflow-hidden bg-canvas-200">
+          <img
+            src={portrait.src}
+            srcSet={portrait.srcSet}
+            sizes="(min-width: 1024px) 42vw, 100vw"
+            alt={t(`${base}.title.part2`)}
+            className="w-full h-full object-cover grayscale"
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      </motion.div>
+
+      {/* Copy */}
+      <div className={`order-2 ${flip ? 'lg:order-2' : 'lg:order-1'}`}>
         <motion.span
-          style={st({ x: numX, opacity: numO })}
-          aria-hidden="true"
-          className={`absolute -top-10 md:-top-16 ${left ? 'right-0' : 'right-0 md:left-0'} text-[5.5rem] md:text-[9rem] lg:text-[11rem] font-serif leading-none text-ink-400 select-none pointer-events-none`}
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0 }}
+          transition={{ duration: 0.85, ease: EASE }}
+          style={getContentStyle(`${base}.tag`)}
+          className="block text-[10px] tracking-[0.3em] uppercase font-semibold text-ink-500 mb-5"
         >
-          {t(`about.step.${n}.num`)}
+          {t(`${base}.tag`)}
         </motion.span>
 
-        <div className={`relative flex items-center gap-4 mb-6 ${left ? 'md:justify-end' : ''}`}>
-          <span
-            style={getContentStyle(`about.step.${n}.num`)}
-            className="text-3xl md:text-4xl font-serif font-light text-gold-600/60 leading-none"
-          >
-            {t(`about.step.${n}.num`)}
-          </span>
-          <span className="inline-flex items-center justify-center w-14 h-14 rounded-full border border-gold-600/40 bg-canvas-50/92 text-gold-600 shadow-lg shadow-black/40">
-            {icon}
-          </span>
+        <h2 className="font-serif font-light text-ink-900 uppercase text-[2.1rem] sm:text-[2.6rem] lg:text-[3.3rem] leading-[1.08] tracking-[0.04em] mb-8">
+          {(['part1', 'part2'] as const).map((part, i) => (
+            <motion.span
+              key={part}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0 }}
+              transition={{ duration: 0.95, delay: 0.08 + i * 0.1, ease: EASE }}
+              style={getContentStyle(`${base}.title.${part}`)}
+              className="block"
+            >
+              {t(`${base}.title.${part}`)}
+            </motion.span>
+          ))}
+        </h2>
+
+        <div className="max-w-[30rem]">
+          {(['p1', 'p2', 'p3'] as const).map((p, i) => {
+            const key = `${base}.${p}`;
+            const value = t(key);
+            if (!filled(value, key)) return null;
+            return (
+              <motion.p
+                key={p}
+                initial={{ opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0 }}
+                transition={{ duration: 0.9, delay: 0.15 + i * 0.08, ease: EASE }}
+                style={getContentStyle(key)}
+                className="text-ink-500 font-light text-[13px] md:text-[13.5px] leading-[2.05] text-justify mb-5 last:mb-0"
+              >
+                {value}
+              </motion.p>
+            );
+          })}
         </div>
-
-        <h3
-          style={getContentStyle(`about.step.${n}.title`)}
-          className="relative text-2xl md:text-3xl lg:text-4xl font-serif font-light text-ink-900 leading-tight mb-5"
-        >
-          {t(`about.step.${n}.title`)}
-        </h3>
-
-        <motion.div
-          style={st({ scaleX: ruleX })}
-          aria-hidden="true"
-          className={`w-12 h-[1px] bg-gold-600/50 mb-6 ${left ? 'md:ml-auto md:origin-right' : 'origin-left'}`}
-        />
-
-        <p
-          style={getContentStyle(`about.step.${n}.desc`)}
-          className={`relative text-ink-500 font-light leading-relaxed text-[15px] md:text-base max-w-md ${left ? 'md:ml-auto' : ''}`}
-        >
-          {t(`about.step.${n}.desc`)}
-        </p>
-      </motion.div>
+      </div>
     </div>
   );
 };
 
 const About = () => {
   const { t, getContentStyle } = useLanguage();
-  const reduced = useReducedMotion();
   const [imgs, setImgs] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    loadSettings().then(setImgs).catch(err => console.warn('About: settings load failed', err));
+    loadSettings()
+      .then(setImgs)
+      .catch(err => console.warn('About: settings load failed', err));
   }, []);
 
-  // ── Experience spine — the gold line draws itself down the section ─────────
-  const spineRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress: spineProgress } = useScroll({ target: spineRef, offset: ['start 0.8', 'end 0.55'] });
-  const spineScale = useSpring(spineProgress, { stiffness: 80, damping: 24, mass: 0.6 });
+  const melisa = respImg(imgs['img.about.melisa'] || FALLBACK_MELISA, [480, 768, 1100]);
+  const aldin  = respImg(imgs['img.about.aldin']  || FALLBACK_ALDIN,  [480, 768, 1100]);
+  const cta = [1, 2, 3].map((n, i) =>
+    respImg(imgs[`img.about.cta.${n}`] || FALLBACK_CTA[i], [320, 640, 900])
+  );
 
-  const st = (styles: Record<string, unknown>) => (reduced ? undefined : styles);
-
-  const heroSrc  = imgs['img.about.hero']  || FALLBACK_HERO;
-  const storySrc = imgs['img.about.story'] || FALLBACK_STORY;
-  const hero  = respImg(heroSrc,  [768, 1280, 1920]);
-  const story = respImg(storySrc, [640, 1024, 1440]);
-  const inset = respImg(heroSrc,  [320, 640]);
-
-  const heroWords    = t('about.hero.title').split(' ').filter(Boolean)
-    .map(w => ({ w, style: getContentStyle('about.hero.title') }));
-  const storyWords   = t('about.title').split(' ').filter(Boolean)
-    .map(w => ({ w, style: getContentStyle('about.title') }));
-  const expWords     = t('about.experience.title').split(' ').filter(Boolean)
-    .map(w => ({ w, style: getContentStyle('about.experience.title') }));
-  const ctaWords     = [
-    ...t('stories.ready').split(' ').filter(Boolean).map(w => ({ w, style: getContentStyle('stories.ready') })),
-    ...t('stories.yourOwn').split(' ').filter(Boolean).map(w => ({ w, style: getContentStyle('stories.yourOwn'), italic: true })),
-  ];
+  // Publications are optional — a blank slot simply disappears
+  const press = [1, 2, 3, 4, 5]
+    .map(n => t(`about.press.${n}`))
+    .filter(v => filled(v, 'about.press.1'));
 
   return (
-    <div className="bg-canvas-50 overflow-hidden">
-      {/* ── Page opener — editorial title block, no image hero ──────────────── */}
-      <section className="relative bg-canvas-50 pt-16 md:pt-24 pb-4 md:pb-8 px-6 sm:px-8 lg:px-16 overflow-hidden">
-        <div
-          className="absolute inset-x-0 top-0 h-80 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 50% 60% at 50% 30%, rgba(166,134,93,0.10) 0%, transparent 70%)' }}
-          aria-hidden="true"
-        />
-
-        <div className="relative max-w-4xl mx-auto text-center">
-          <SectionTag style={getContentStyle('about.artists')} className="mb-7">
-            {t('about.artists')}
-          </SectionTag>
-
-          <h1
-            style={getContentStyle('about.hero.title')}
-            aria-label={t('about.hero.title')}
-            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-light text-ink-900 leading-[0.98] tracking-tight uppercase mb-5"
-          >
-            <WordReveal words={heroWords} delay={0.15} />
-          </h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.55, ease: EASE }}
-            style={getContentStyle('about.hero.subtitle')}
-            className="font-serif italic text-lg md:text-xl text-gold-600"
-          >
-            {t('about.hero.subtitle')}
-          </motion.p>
-
-          <motion.div
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ duration: 1.1, delay: 0.7, ease: EASE }}
-            className="w-16 h-[1px] bg-gold-600/50 mx-auto mt-9"
-            aria-hidden="true"
-          />
-        </div>
+    <div className="bg-canvas-50">
+      {/* ── Biography one — on a soft band ─────────────────────────────────── */}
+      <section className="bg-canvas-100 py-16 md:py-24 lg:py-28 px-6 sm:px-8 lg:px-16">
+        <Bio n={1} portrait={melisa} />
       </section>
 
-      {/* ── Story — layered editorial composition ───────────────────────────── */}
-      <section className="relative bg-canvas-50 pt-16 md:pt-24 pb-32 md:pb-48 px-6 sm:px-8 lg:px-16 overflow-hidden">
-        {/* Script watermark */}
-        <div
-          className="absolute -left-10 top-24 text-[15rem] lg:text-[22rem] font-script text-ink-400 leading-none select-none pointer-events-none hidden md:block"
-          aria-hidden="true"
-        >
-          387
-        </div>
-
-        <div className="max-w-[1500px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-20 items-center relative">
-          {/* Layered images */}
-          <div className="lg:col-span-6 relative mb-20 lg:mb-0">
-            {/* Offset gold frame for depth */}
-            <div className="absolute -top-5 -left-5 w-2/3 aspect-[4/5] border border-gold-600/30 pointer-events-none" aria-hidden="true" />
-
-            <ParallaxY from={26} to={-26} className="w-[84%]">
-              <RevealImage
-                src={story.src}
-                srcSet={story.srcSet}
-                sizes="(min-width: 1024px) 42vw, 84vw"
-                alt={t('about.title')}
-                className="w-full aspect-[4/5] shadow-2xl shadow-black/50"
-              />
-            </ParallaxY>
-
-            {/* Overlapping inset portrait — faster drift for depth */}
-            <div className="absolute -bottom-14 right-0 w-[46%]">
-              <ParallaxY from={64} to={-32}>
-                <motion.div
-                  initial={{ opacity: 0, y: 46 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 1.3, delay: 0.3, ease: EASE }}
-                  className="w-full aspect-[3/4] overflow-hidden border-[6px] md:border-8 border-white shadow-xl shadow-black/15"
-                >
-                  <img
-                    src={inset.src}
-                    srcSet={inset.srcSet}
-                    sizes="(min-width: 1024px) 23vw, 46vw"
-                    alt={t('about.artists')}
-                    className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-1000"
-                    loading="lazy"
-                    decoding="async"
-                    draggable={false}
-                    referrerPolicy="no-referrer"
-                  />
-                </motion.div>
-              </ParallaxY>
-            </div>
-          </div>
-
-          {/* Text column */}
-          <div className="lg:col-span-6 lg:pl-6 text-center lg:text-left">
-            {/* The tag lives in the page opener now — a rule alone leads the heading */}
-            <motion.span
-              initial={{ scaleX: 0 }}
-              whileInView={{ scaleX: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1, ease: EASE }}
-              className="block w-12 md:w-20 h-[1px] bg-gold-600/40 mb-7 mx-auto lg:mx-0 origin-left"
-              aria-hidden="true"
-            />
-
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-light text-ink-900 leading-[1.05] tracking-tight mb-8">
-              <WordReveal words={storyWords} className="lg:justify-start" delay={0.15} />
-            </h2>
-
-            <motion.div
-              initial={{ opacity: 0, scaleX: 0 }}
-              whileInView={{ opacity: 1, scaleX: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1, delay: 0.25, ease: EASE }}
-              className="w-16 h-[1px] bg-gold-600/50 mb-9 mx-auto lg:mx-0 origin-left"
-              aria-hidden="true"
-            />
-
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1, delay: 0.3, ease: EASE }}
-              style={getContentStyle('about.desc.1')}
-              className="text-left font-serif text-lg md:text-xl text-ink-900 leading-relaxed mb-7 first-letter:text-6xl first-letter:leading-[0.85] first-letter:font-serif first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:text-gold-600"
-            >
-              {t('about.desc.1')}
-            </motion.p>
-
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1, delay: 0.4, ease: EASE }}
-              style={getContentStyle('about.desc.2')}
-              className="text-left text-base md:text-lg text-ink-500 font-light leading-relaxed mb-8"
-            >
-              {t('about.desc.2')}
-            </motion.p>
-
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1, delay: 0.5, ease: EASE }}
-              style={getContentStyle('about.desc.3')}
-              className="text-left text-base md:text-lg text-ink-500 font-light italic leading-relaxed border-l-2 border-gold-600/30 pl-6 py-1 mb-10"
-            >
-              {t('about.desc.3')}
-            </motion.p>
-
-            {/* Signature */}
-            <motion.div
-              initial={{ opacity: 0, y: 14 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.4, delay: 0.7, ease: EASE }}
-              className="flex items-center justify-center lg:justify-start gap-6"
-            >
-              <span className="text-4xl md:text-5xl font-script text-gold-600/80 leading-none">Melisa &amp; Aldin</span>
-              <span className="hidden sm:block w-16 h-[1px] bg-gold-600/25" aria-hidden="true" />
-            </motion.div>
-          </div>
-        </div>
+      {/* ── Biography two — mirrored, on paper ─────────────────────────────── */}
+      <section className="bg-canvas-50 py-16 md:py-24 lg:py-28 px-6 sm:px-8 lg:px-16">
+        <Bio n={2} portrait={aldin} flip />
       </section>
 
-
-      {/* ── A few things about us — the personal beat between story and process */}
-      <section className="relative bg-canvas-100 py-20 md:py-28 px-6 sm:px-8 lg:px-16">
-        <div className="max-w-[1200px] mx-auto">
-          <div className="text-center mb-14 md:mb-20">
+      {/* ── As seen in ─────────────────────────────────────────────────────── */}
+      {press.length > 0 && (
+        <section className="bg-canvas-50 pb-16 md:pb-24 px-6 sm:px-8 lg:px-16">
+          <div className="max-w-4xl mx-auto text-center">
             <motion.span
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
               viewport={{ once: true, amount: 0 }}
               transition={{ duration: 0.9, ease: EASE }}
-              style={getContentStyle('about.facts.tag')}
-              className="block text-[10px] md:text-[11px] tracking-[0.4em] uppercase font-semibold text-ink-500 mb-6"
+              style={getContentStyle('about.press.tag')}
+              className="block text-[10px] tracking-[0.3em] uppercase font-semibold text-ink-500 mb-9"
             >
-              {t('about.facts.tag')}
+              {t('about.press.tag')}
             </motion.span>
 
-            <h2 className="font-serif font-light text-ink-900 text-[1.9rem] sm:text-4xl lg:text-[2.75rem] leading-[1.2] tracking-tight">
+            <div className="flex flex-wrap items-center justify-center gap-x-10 md:gap-x-14 gap-y-6">
+              {press.map((name, i) => (
+                <motion.span
+                  key={name}
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0 }}
+                  transition={{ duration: 0.8, delay: Math.min(i * 0.07, 0.35), ease: EASE }}
+                  className="font-serif font-light uppercase text-ink-400 text-base md:text-xl tracking-[0.12em]"
+                >
+                  {name}
+                </motion.span>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Closing invitation, framed by photographs ──────────────────────── */}
+      <section className="bg-canvas-50 pb-20 md:pb-28 px-6 sm:px-8 lg:px-16 overflow-hidden">
+        <div className="max-w-[1250px] mx-auto grid lg:grid-cols-[1fr_1.5fr_1fr] gap-10 lg:gap-8 items-center">
+          {/* Left cluster — a tall frame with a smaller print overlapping it */}
+          <div className="hidden lg:block relative pb-14">
+            <motion.div
+              initial={{ opacity: 0, y: 26 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0 }}
+              transition={{ duration: 1, ease: EASE }}
+              className="w-[82%] aspect-[3/4] overflow-hidden bg-canvas-200"
+            >
+              <img
+                src={cta[0].src}
+                srcSet={cta[0].srcSet}
+                sizes="20vw"
+                alt=""
+                aria-hidden="true"
+                className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
+                draggable={false}
+                referrerPolicy="no-referrer"
+              />
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0 }}
+              transition={{ duration: 1, delay: 0.18, ease: EASE }}
+              className="absolute right-0 bottom-0 w-[54%] aspect-[3/4] overflow-hidden bg-canvas-200 border-[6px] border-white shadow-xl shadow-black/10"
+            >
+              <img
+                src={cta[1].src}
+                srcSet={cta[1].srcSet}
+                sizes="12vw"
+                alt=""
+                aria-hidden="true"
+                className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
+                draggable={false}
+                referrerPolicy="no-referrer"
+              />
+            </motion.div>
+          </div>
+
+          {/* Centre — the invitation */}
+          <div className="text-center">
+            <h2 className="font-serif font-light text-ink-900 uppercase text-[1.8rem] sm:text-[2.2rem] lg:text-[2.6rem] leading-[1.15] tracking-[0.05em] mb-8">
               {(['part1', 'part2'] as const).map((part, i) => (
                 <motion.span
                   key={part}
                   initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0 }}
-                  transition={{ duration: 0.95, delay: 0.1 + i * 0.12, ease: EASE }}
-                  style={getContentStyle(`about.facts.title.${part}`)}
+                  transition={{ duration: 0.95, delay: 0.08 + i * 0.1, ease: EASE }}
+                  style={getContentStyle(`about.invite.title.${part}`)}
                   className="block"
                 >
-                  {t(`about.facts.title.${part}`)}
+                  {t(`about.invite.title.${part}`)}
                 </motion.span>
               ))}
             </h2>
-          </div>
 
-          {/* Six small confessions, hairline-ruled like an index */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-9 md:gap-y-12">
-            {([1, 2, 3, 4, 5, 6] as const).map((n, i) => {
-              const label = t(`about.facts.${n}.label`);
-              const text = t(`about.facts.${n}.text`);
-              // A blank entry simply disappears, so the client can run fewer
-              if (label.startsWith('about.facts.') && text.startsWith('about.facts.')) return null;
+            {(['p1', 'p2'] as const).map((p, i) => {
+              const key = `about.invite.${p}`;
+              const value = t(key);
+              if (!filled(value, key)) return null;
               return (
-                <motion.div
-                  key={n}
-                  initial={{ opacity: 0, y: 20 }}
+                <motion.p
+                  key={p}
+                  initial={{ opacity: 0, y: 14 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0 }}
-                  transition={{ duration: 0.8, delay: Math.min(i * 0.07, 0.4), ease: EASE }}
-                  className="relative pt-6 border-t border-canvas-200"
+                  transition={{ duration: 0.9, delay: 0.15 + i * 0.08, ease: EASE }}
+                  style={getContentStyle(key)}
+                  className="text-ink-500 font-light text-[13px] md:text-[13.5px] leading-[2.05] max-w-sm mx-auto mb-5 last:mb-0"
                 >
-                  <span className="absolute -top-[9px] left-0 bg-canvas-100 pr-3 text-[10px] tracking-[0.3em] font-semibold text-gold-600">
-                    {String(n).padStart(2, '0')}
-                  </span>
-
-                  <h3
-                    style={getContentStyle(`about.facts.${n}.label`)}
-                    className="text-[11px] tracking-[0.25em] uppercase font-semibold text-ink-900 mb-3"
-                  >
-                    {label}
-                  </h3>
-                  <p
-                    style={getContentStyle(`about.facts.${n}.text`)}
-                    className="text-ink-500 font-light text-[14px] leading-[1.9]"
-                  >
-                    {text}
-                  </p>
-                </motion.div>
+                  {value}
+                </motion.p>
               );
             })}
+
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0 }}
+              transition={{ duration: 0.9, delay: 0.35, ease: EASE }}
+              className="flex justify-center mt-9"
+            >
+              <Link
+                to="/contact"
+                className="group relative inline-block px-11 py-3.5 overflow-hidden whitespace-nowrap border border-ink-900/30 hover:border-ink-900 transition-colors duration-500 text-center"
+              >
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-0 bg-ink-900 -translate-x-full group-hover:translate-x-0 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                />
+                <span
+                  style={getContentStyle('about.invite.button')}
+                  className="relative z-10 text-[10px] md:text-[11px] tracking-[0.25em] uppercase font-medium text-ink-900 group-hover:text-white transition-colors duration-500"
+                >
+                  {t('about.invite.button')}
+                </span>
+              </Link>
+            </motion.div>
           </div>
 
+          {/* Right — a single tall frame */}
           <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
+            initial={{ opacity: 0, y: 26 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0 }}
-            transition={{ duration: 1, delay: 0.3, ease: EASE }}
-            className="flex items-center justify-center gap-5 mt-16 md:mt-20"
+            transition={{ duration: 1, delay: 0.12, ease: EASE }}
+            className="hidden lg:block aspect-[3/4] overflow-hidden bg-canvas-200"
           >
-            <span className="w-10 md:w-16 h-[1px] bg-gold-600/30" aria-hidden="true" />
-            <span
-              style={getContentStyle('about.facts.signoff')}
-              className="font-script text-2xl md:text-3xl text-gold-600/85 leading-none"
-            >
-              {t('about.facts.signoff')}
-            </span>
-            <span className="w-10 md:w-16 h-[1px] bg-gold-600/30" aria-hidden="true" />
+            <img
+              src={cta[2].src}
+              srcSet={cta[2].srcSet}
+              sizes="20vw"
+              alt=""
+              aria-hidden="true"
+              className="w-full h-full object-cover"
+              loading="lazy"
+              decoding="async"
+              draggable={false}
+              referrerPolicy="no-referrer"
+            />
           </motion.div>
         </div>
       </section>
-
-      {/* ── Experience — timeline on a warm plate, before the dark closer ───── */}
-      <section className="relative bg-canvas-50 py-24 md:py-36 px-6 sm:px-8 lg:px-16 overflow-hidden">
-        <div
-          className="absolute inset-x-0 top-0 h-96 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 55% 60% at 50% 0%, rgba(166,134,93,0.10) 0%, transparent 70%)' }}
-          aria-hidden="true"
-        />
-
-        <div className="relative z-10 max-w-[1400px] mx-auto">
-          <div className="text-center mb-20 md:mb-28">
-            <SectionTag style={getContentStyle('about.experience.tag')} className="mb-7">
-              {t('about.experience.tag')}
-            </SectionTag>
-            <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-serif font-light text-ink-900 leading-[1.05] tracking-tight">
-              <WordReveal words={expWords} delay={0.2} />
-            </h2>
-          </div>
-
-          {/* Spine + steps */}
-          <div ref={spineRef} className="relative">
-            <motion.div
-              style={reduced ? undefined : { scaleY: spineScale }}
-              className="hidden md:block absolute left-1/2 -translate-x-1/2 top-2 bottom-2 w-[1px] bg-gradient-to-b from-transparent via-gold-400/45 to-transparent origin-top"
-              aria-hidden="true"
-            />
-
-            <div className="space-y-24 md:space-y-32 lg:space-y-40 relative">
-              {([1, 2, 3, 4] as const).map((n, index) => (
-                <ExperienceStep key={n} n={n} index={index} t={t} getContentStyle={getContentStyle} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
     </div>
   );
 };

@@ -155,6 +155,8 @@ export async function initDB() {
         ('img.home.process.1', ''), ('img.home.process.2', ''), ('img.home.process.3', ''),
         ('img.home.team.aldin', ''), ('img.home.team.melisa', ''),
         ('img.about.hero', ''), ('img.about.story', ''),
+        ('img.about.melisa', ''), ('img.about.aldin', ''),
+        ('img.about.cta.1', ''), ('img.about.cta.2', ''), ('img.about.cta.3', ''),
         ('img.services.hero', ''), ('img.services.pkg.1', ''), ('img.services.pkg.2', ''),
         ('img.services.cta', ''),
         ('img.portfolio.hero', ''),
@@ -477,7 +479,51 @@ export async function initDB() {
         ('about.facts.6.text',  'Sitnica 6: Tekst (prazno = sakriveno)', 'about', 'facts', 'textarea',
          'We stay for the last song. We have never left before the end.',
          'Ostanemo na zadnjoj pjesmi. Nikad nismo otišli prije kraja.', 14),
-        ('about.facts.signoff', 'Sitnice: Potpis (script font)', 'about', 'facts', 'text', 'Melisa & Aldin', 'Melisa & Aldin', 15)
+        ('about.facts.signoff', 'Sitnice: Potpis (script font)', 'about', 'facts', 'text', 'Melisa & Aldin', 'Melisa & Aldin', 15),
+
+        -- O nama, verzija po klijentovoj referenci: dvije biografije + poziv
+        ('about.bio.1.tag',         'Biografija 1: Tag',             'about', 'bio', 'text', 'Behind the lens', 'Iza objektiva', 0),
+        ('about.bio.1.title.part1', 'Biografija 1: Naslov linija 1', 'about', 'bio', 'text', 'Meet',            'Upoznajte',     1),
+        ('about.bio.1.title.part2', 'Biografija 1: Naslov linija 2', 'about', 'bio', 'text', 'Melisa',          'Melisu',        2),
+        ('about.bio.1.p1', 'Biografija 1: Paragraf 1 (prazno = sakriveno)', 'about', 'bio', 'textarea',
+         'Photography has been part of my life for as long as I can remember. I grew up among people who believed the most important things cannot be put into words, and somewhere in there came the need to record them in pictures.',
+         'Fotografija je dio mog života otkad znam za sebe. Odrasla sam među ljudima koji su vjerovali da se najvažnije stvari ne daju ispričati riječima, i negdje tu se rodila potreba da ih zabilježim slikom.', 3),
+        ('about.bio.1.p2', 'Biografija 1: Paragraf 2 (prazno = sakriveno)', 'about', 'bio', 'textarea',
+         'Over the years I learned to be quiet at weddings. To take a step back, wait, and let the moment happen on its own. Patience became a tool as important as the camera.',
+         'Godinama sam učila da budem tiha na vjenčanjima. Da stanem korak unazad, sačekam i pustim da se trenutak dogodi sam. Strpljenje mi je postalo alat jednako važan kao i fotoaparat.', 4),
+        ('about.bio.1.p3', 'Biografija 1: Paragraf 3 (prazno = sakriveno)', 'about', 'bio', 'textarea',
+         'I am not after the perfect frame but the honest one. The warmth, the joy and the love that radiate through your day, because those are the moments you will keep long after the celebration ends.',
+         'Ne tražim savršen kadar nego iskren. Toplinu, radost i ljubav koja zrači kroz vaš dan, jer to su trenuci koje ćete čuvati dugo nakon što proslava prođe.', 5),
+
+        ('about.bio.2.tag',         'Biografija 2: Tag',             'about', 'bio', 'text', 'Behind our films', 'Iza kamere', 6),
+        ('about.bio.2.title.part1', 'Biografija 2: Naslov linija 1', 'about', 'bio', 'text', 'Meet',             'Upoznajte',  7),
+        ('about.bio.2.title.part2', 'Biografija 2: Naslov linija 2', 'about', 'bio', 'text', 'Aldin',            'Aldina',     8),
+        ('about.bio.2.p1', 'Biografija 2: Paragraf 1 (prazno = sakriveno)', 'about', 'bio', 'textarea',
+         'Film won me over long before I ever shot a wedding. I was fascinated by the idea that a moving image can tell a story without a single word, and that led me exactly here.',
+         'Film me osvojio davno prije nego što sam prvi put snimao vjenčanje. Fascinirala me ideja da se pokretnom slikom može ispričati priča bez ijedne riječi, i to me je dovelo tačno ovdje.', 9),
+        ('about.bio.2.p2', 'Biografija 2: Paragraf 2 (prazno = sakriveno)', 'about', 'bio', 'textarea',
+         'Before weddings I shot music videos and commercials. That school taught me to watch rhythm, light and detail, and I bring the same into every film we make.',
+         'Prije vjenčanja snimao sam muzičke spotove i reklame. Ta škola me naučila da pazim na ritam, svjetlo i detalj, a danas to isto unosim u svaki film koji napravimo.', 10),
+        ('about.bio.2.p3', 'Biografija 2: Paragraf 3 (prazno = sakriveno)', 'about', 'bio', 'textarea',
+         'The greatest reward is when a couple plays their film a year later and feels exactly what they felt that day. A sound, a glance, someone laughing in the background: things a photograph cannot keep, but a film can.',
+         'Najveća nagrada mi je kada par nakon godinu dana pusti svoj film i ponovo osjeti isto što i tog dana. Zvuk, pogled, nečiji smijeh u pozadini: stvari koje fotografija ne može sačuvati, a film može.', 11),
+
+        ('about.press.tag', 'Pisali o nama: Tag', 'about', 'press', 'text', 'As seen in', 'Pisali su o nama', 0),
+        ('about.press.1', 'Pisali o nama: Naziv 1 (prazno = sakriveno)', 'about', 'press', 'text', '', '', 1),
+        ('about.press.2', 'Pisali o nama: Naziv 2 (prazno = sakriveno)', 'about', 'press', 'text', '', '', 2),
+        ('about.press.3', 'Pisali o nama: Naziv 3 (prazno = sakriveno)', 'about', 'press', 'text', '', '', 3),
+        ('about.press.4', 'Pisali o nama: Naziv 4 (prazno = sakriveno)', 'about', 'press', 'text', '', '', 4),
+        ('about.press.5', 'Pisali o nama: Naziv 5 (prazno = sakriveno)', 'about', 'press', 'text', '', '', 5),
+
+        ('about.invite.title.part1', 'Poziv: Naslov linija 1', 'about', 'invite', 'text', 'We would love to hear', 'Želimo čuti', 0),
+        ('about.invite.title.part2', 'Poziv: Naslov linija 2', 'about', 'invite', 'text', 'from you',              'vašu priču',  1),
+        ('about.invite.p1', 'Poziv: Paragraf 1 (prazno = sakriveno)', 'about', 'invite', 'textarea',
+         'We believe the best stories begin with an honest conversation. That is why we never rush, we want to know you first.',
+         'Vjerujemo da najbolje priče počinju iskrenim razgovorom. Zato ne žurimo, prvo želimo upoznati vas.', 2),
+        ('about.invite.p2', 'Poziv: Paragraf 2 (prazno = sakriveno)', 'about', 'invite', 'textarea',
+         'Write to us and tell us how you imagined your day. We reply within 24 to 48 hours.',
+         'Javite nam se i ispričajte kako ste zamislili svoj dan. Odgovaramo u roku od 24 do 48 sati.', 3),
+        ('about.invite.button', 'Poziv: Tekst gumba', 'about', 'invite', 'text', 'Get in touch', 'Javite nam se', 4)
       ON CONFLICT (key) DO NOTHING
     `);
 
