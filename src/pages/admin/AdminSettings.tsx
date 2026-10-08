@@ -13,7 +13,6 @@ type Tab = 'contact' | 'general' | 'social' | 'seo' | 'technical';
 const SEO_PAGES = [
   { key: 'home',      label: 'Naslovna', path: '/',          defaultTitle: 'Art in the Moments | 387 Cinematic Weddings' },
   { key: 'about',     label: 'O nama',   path: '/about',     defaultTitle: 'About Us | 387 Cinematic Weddings' },
-  { key: 'services',  label: 'Usluge',   path: '/services',  defaultTitle: 'Experience | 387 Cinematic Weddings' },
   { key: 'portfolio', label: 'Portfolio', path: '/portfolio', defaultTitle: 'Portfolio | 387 Cinematic Weddings' },
   { key: 'contact',   label: 'Kontakt',  path: '/contact',   defaultTitle: 'Inquire | 387 Cinematic Weddings' },
 ];
@@ -103,7 +102,7 @@ export default function AdminSettings() {
             <div className="flex items-center gap-2 text-white/40 text-[10px] font-bold tracking-widest uppercase">
               <Mail size={13} /> Kontakt podaci
             </div>
-            <Field label="Email adresa" placeholder="hello@387cinematicweddings.com"
+            <Field label="Email adresa" placeholder="hello@387weddings.ba"
               value={settings['email'] ?? ''} onChange={v => set('email', v)} />
             <Field label="Telefon" placeholder="+387 61 000 000"
               value={settings['phone'] ?? ''} onChange={v => set('phone', v)} />
@@ -168,7 +167,7 @@ export default function AdminSettings() {
           </div>
 
           <div className="bg-moody-950/60 border border-white/5 rounded-sm p-6 space-y-5">
-            <Field label="Email adresa" placeholder="hello@387cinematicweddings.com"
+            <Field label="Email adresa" placeholder="hello@387weddings.ba"
               value={settings['email'] ?? ''} onChange={v => set('email', v)} />
             <Field label="Telefon" placeholder="+387 61 000 000"
               value={settings['phone'] ?? ''} onChange={v => set('phone', v)} />
@@ -233,7 +232,7 @@ export default function AdminSettings() {
             <Field label="Ime sajta" placeholder="387 Cinematic Weddings"
               value={settings['seo.site_name'] ?? ''} onChange={v => set('seo.site_name', v)}
               hint="Dodaje se na kraj svakog meta naslova koji nije ručno postavljen." />
-            <Field label="OG slika — podrazumijevana (URL)" placeholder="https://387cinematicweddings.com/og-image.jpg"
+            <Field label="OG slika — podrazumijevana (URL)" placeholder="https://387weddings.ba/og-image.jpg"
               value={settings['seo.og_image'] ?? ''} onChange={v => set('seo.og_image', v)}
               hint="Slika koja se prikazuje pri dijeljenju na Facebooku, Instagramu, Viberu... Preporučeno: 1200×630 px JPG." />
           </div>
@@ -355,19 +354,19 @@ export default function AdminSettings() {
             {settings['analytics.gsc_verification'] && (
               <MetaTagPreview code={settings['analytics.gsc_verification']} />
             )}
-            <GscLinks baseUrl={settings['sitemap.base_url'] || 'https://387cinematicweddings.com'} />
+            <GscLinks baseUrl={settings['sitemap.base_url'] || 'https://387weddings.ba'} />
           </TechGroup>
 
           {/* Sitemap */}
           <TechGroup icon={<MapPin size={14} />} label="Sitemap">
             <Field
               label="URL sajta (osnova za sitemap)"
-              placeholder="https://387cinematicweddings.com"
+              placeholder="https://387weddings.ba"
               value={settings['sitemap.base_url'] ?? ''}
               onChange={v => set('sitemap.base_url', v)}
               hint="Koristi se za generisanje sitemap.xml i robots.txt. Bez trailing slash-a."
             />
-            <SitemapPreview baseUrl={settings['sitemap.base_url'] || 'https://387cinematicweddings.com'} />
+            <SitemapPreview baseUrl={settings['sitemap.base_url'] || 'https://387weddings.ba'} />
           </TechGroup>
 
           {/* Robots.txt */}
@@ -382,14 +381,14 @@ export default function AdminSettings() {
                 rows={8}
                 spellCheck={false}
                 className="w-full bg-moody-900 border border-white/10 rounded-sm px-4 py-3 text-white/80 text-xs font-mono focus:outline-none focus:border-gold-600/40 transition-colors resize-y leading-relaxed"
-                placeholder={`User-agent: *\nAllow: /\nDisallow: /admin/\n\nSitemap: https://387cinematicweddings.com/sitemap.xml`}
+                placeholder={`User-agent: *\nAllow: /\nDisallow: /admin/\n\nSitemap: https://387weddings.ba/sitemap.xml`}
               />
               <p className="text-white/20 text-[10px] mt-1.5 leading-relaxed">
                 Direktivom <span className="text-white/40 font-mono">Disallow: /admin/</span> spriječavaš indeksiranje admin panela.
                 Izmjene su vidljive odmah na <span className="text-white/40">/robots.txt</span>.
               </p>
             </div>
-            <RobotsLinks baseUrl={settings['sitemap.base_url'] || 'https://387cinematicweddings.com'} />
+            <RobotsLinks baseUrl={settings['sitemap.base_url'] || 'https://387weddings.ba'} />
           </TechGroup>
 
           <p className="text-white/20 text-[10px] leading-relaxed pt-1">

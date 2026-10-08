@@ -4,68 +4,41 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
+import Logo from './Logo';
 
-// Brand lockup — serif numeral over a letterspaced wordmark
-const Wordmark = ({ dark = false, compact = false }: { dark?: boolean; compact?: boolean }) => (
-  <span className="flex flex-col items-start leading-none">
-    <span
-      className={cn(
-        'font-serif font-light leading-none transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]',
-        dark ? 'text-ink-900' : 'text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.35)]',
-        compact ? 'text-[1.7rem] md:text-[1.85rem]' : 'text-[1.9rem] md:text-[2.15rem]',
-      )}
-    >
-      387
-    </span>
-    <span
-      className={cn(
-        'uppercase font-semibold mt-1 transition-all duration-700',
-        dark ? 'text-ink-500' : 'text-white/70',
-        compact ? 'text-[7px] tracking-[0.5em]' : 'text-[8px] md:text-[9px] tracking-[0.52em]',
-      )}
-    >
-      Weddings
-    </span>
-  </span>
+const InstagramGlyph = ({ size = 16, stroke = 'currentColor' }: { size?: number; stroke?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.6" aria-hidden="true">
+    <rect x="3" y="3" width="18" height="18" rx="5" />
+    <circle cx="12" cy="12" r="4" />
+    <circle cx="17.2" cy="6.8" r=".8" fill={stroke} />
+  </svg>
 );
 
 const Navbar = () => {
   const { t, language, setLanguage, getContentStyle } = useLanguage();
-  const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [email, setEmail] = useState('');
+  const [settings, setSettings] = useState<Record<string, string>>({});
   const location = useLocation();
 
   useEffect(() => {
-    // Coalesce scroll events into one rAF — the header only cares about a
-    // single threshold, so reacting per event is wasted main-thread work.
-    let frame = 0;
-    const onScroll = () => {
-      if (frame) return;
-      frame = requestAnimationFrame(() => {
-        frame = 0;
-        setIsScrolled(window.scrollY > 50);
-      });
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
+    loadSettings().then(setSettings).catch(() => {});
+  }, []);
+
+  useEffect(() => { setIsMobileMenuOpen(false); }, [location]);
+
+  // Close on Escape and keep the page behind the open menu from scrolling
+  useEffect(() => {
+    if (!isMobileMenuOpen) {
+      document.body.style.overflow = '';
+      return;
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsMobileMenuOpen(false); };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
     return () => {
-      window.removeEventListener('scroll', onScroll);
-      if (frame) cancelAnimationFrame(frame);
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
     };
-  }, []);
-
-  useEffect(() => {
-    loadSettings().then(s => setEmail(s['email'] || '')).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [location]);
-
-  // Lock body scroll when menu open
-  useEffect(() => {
-    document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
   }, [isMobileMenuOpen]);
 
   const links = [
@@ -75,54 +48,31 @@ const Navbar = () => {
     { path: '/contact',   label: t('nav.inquire'), styleKey: 'nav.inquire' },
   ];
 
+  // The mockup lays the header over the home hero, where it scrolls away with
+  // it. Every other page keeps it stuck to the top on a near-opaque cream bar.
+  const overHero = location.pathname === '/';
+
   const handleLinkClick = (path: string) => {
     setIsMobileMenuOpen(false);
     if (location.pathname === path) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // The site is paper everywhere now. The only dark surface the bar ever floats
-  // over is the home hero photograph, so that is the one case it goes white.
-  const onHome = location.pathname === '/';
-  const overHero = onHome && !isScrolled;
-  const lightBar = !overHero;
+  const instagramHandle = settings.instagram_handle || '387.weddings';
+  const instagramUrl = settings.instagram && settings.instagram !== '#'
+    ? settings.instagram
+    : `https://instagram.com/${instagramHandle}`;
 
-  // Desktop nav item — hairline rule under the current page, drawn on hover
-  const NavLink = ({ path, label, styleKey }: { path: string; label: string; styleKey: string }) => {
-    const active = location.pathname === path;
-    return (
-      <Link
-        to={path}
-        onClick={() => handleLinkClick(path)}
-        aria-current={active ? 'page' : undefined}
-        style={getContentStyle(styleKey)}
-        className={cn(
-          'group relative py-1 text-[11px] xl:text-[12px] tracking-[0.22em] uppercase font-medium transition-colors duration-500',
-          lightBar
-            ? active ? 'text-ink-900' : 'text-ink-500 hover:text-ink-900'
-            : active ? 'text-ink-900' : 'text-ink-500 hover:text-ink-900',
-        )}
-      >
-        {label}
-        <span
-          aria-hidden="true"
-          className={cn(
-            'absolute inset-x-0 -bottom-1 h-[1px] origin-center transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]',
-            lightBar ? 'bg-ink-900' : 'bg-white',
-            active ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100',
-          )}
-        />
-      </Link>
-    );
-  };
-
-  const LangSwitch = ({ dark }: { dark: boolean }) => (
-    <div className="flex items-center gap-3">
+  const LangSwitch = ({ light, size = 12 }: { light?: boolean; size?: number }) => (
+    <span
+      className="flex items-center gap-[7px] leading-none"
+      style={{ fontSize: size, letterSpacing: '0.16em' }}
+    >
       {(['ENG', 'BOS'] as const).map((lang, i) => (
         <React.Fragment key={lang}>
           {i > 0 && (
             <span
-              className={cn('w-[1px] h-3', dark ? 'bg-ink-900/20' : 'bg-white/30')}
               aria-hidden="true"
+              className={cn('w-px h-[10px]', light ? 'bg-white/50' : 'bg-ink-900/[0.28]')}
             />
           )}
           <button
@@ -130,176 +80,165 @@ const Navbar = () => {
             onClick={() => setLanguage(lang)}
             aria-pressed={language === lang}
             className={cn(
-              'text-[11px] tracking-[0.2em] font-medium transition-colors duration-500 cursor-pointer',
+              'cursor-pointer transition-colors duration-250 py-2',
               language === lang
-                ? dark ? 'text-ink-900' : 'text-white'
-                : dark ? 'text-ink-400 hover:text-ink-900' : 'text-white/50 hover:text-white',
+                ? light ? 'text-white font-semibold' : 'text-ink-900 font-semibold'
+                : light ? 'text-white/65 hover:text-white' : 'text-ink-500 hover:text-ink-900',
             )}
           >
             {lang}
           </button>
         </React.Fragment>
       ))}
-    </div>
+    </span>
   );
 
   return (
     <>
-      <motion.nav
-        initial={{ opacity: 0, y: -14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+      <header
         className={cn(
-          // Only padding/colour/shadow transition — `transition-all` on a fixed
-          // bar animates layout properties the browser must re-solve each frame.
-          'top-0 left-0 right-0 z-[1000] px-6 md:px-8 lg:px-14',
-          'transition-[padding,background-color,box-shadow] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]',
-          // Home floats the bar over its hero; every other page keeps it in flow
-          onHome ? 'fixed' : 'sticky',
-          // A near-opaque bar reads the same as a frosted one but skips the
-          // full-width backdrop-filter, which re-blurs on every scrolled frame.
+          'left-0 right-0 z-30 flex items-center justify-between gap-6',
+          'px-5 sm:px-8 lg:px-24',
           overHero
-            ? 'bg-transparent py-5 md:py-7'
-            : isScrolled
-              ? 'bg-canvas-50/97 py-3.5 md:py-4 shadow-[0_1px_20px_rgba(0,0,0,0.07)]'
-              : 'bg-canvas-50 py-5 md:py-7',
+            ? 'absolute top-0 pt-4 lg:pt-9 pb-0 text-white'
+            : 'sticky top-0 pt-3 lg:pt-[22px] pb-[10px] text-ink-900 bg-cream/[0.94] backdrop-blur-[10px] border-b border-ink-900/[0.07]',
         )}
       >
-        <div className="max-w-[1800px] mx-auto flex items-center justify-between gap-4">
-          {/* Logo — left */}
-          <Link to="/" onClick={() => handleLinkClick('/')} className="flex-none group" aria-label="387 Weddings">
-            <Wordmark dark={lightBar} compact={isScrolled} />
-          </Link>
+        <Link
+          to="/"
+          onClick={() => handleLinkClick('/')}
+          aria-label="387 Weddings"
+          className="flex-none"
+        >
+          <Logo size={22} className="lg:hidden" color="currentColor" />
+          <Logo size={38} className="hidden lg:block" color="currentColor" />
+        </Link>
 
-          {/* Desktop — links, hairline, language */}
-          <div className="hidden lg:flex items-center gap-9 xl:gap-12">
-            {links.map(link => (
-              <NavLink key={link.path} path={link.path} label={link.label} styleKey={link.styleKey} />
-            ))}
+        {/* Desktop navigation */}
+        <nav className="hidden lg:flex items-center gap-y-2 gap-x-11">
+          {links.map(link => {
+            const active = location.pathname === link.path;
+            return (
+              <Link
+                key={link.path}
+                to={link.path}
+                onClick={() => handleLinkClick(link.path)}
+                aria-current={active ? 'page' : undefined}
+                style={getContentStyle(link.styleKey)}
+                className={cn(
+                  'py-[14px] text-[12px] uppercase tracking-[0.22em] transition-colors duration-250',
+                  'hover:shadow-[inset_0_-1px_0_var(--color-gold-600)]',
+                  active
+                    ? overHero
+                      ? 'text-white font-medium border-b border-gold-600'
+                      : 'text-ink-900 font-semibold border-b border-gold-600'
+                    : overHero
+                      ? 'text-[#e8e1d6] font-medium hover:text-white'
+                      : 'text-ink-700 font-medium hover:text-ink-900',
+                )}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
 
-            <span
-              className={cn('w-[1px] h-4 transition-colors duration-700', lightBar ? 'bg-ink-900/20' : 'bg-white/25')}
-              aria-hidden="true"
-            />
+          <span
+            aria-hidden="true"
+            className={cn('w-px h-5 flex-none', overHero ? 'bg-white/40' : 'bg-[#c8bba8]')}
+          />
+          <LangSwitch light={overHero} />
+        </nav>
 
-            <LangSwitch dark={lightBar} />
-          </div>
-
-          {/* Mobile — language + hamburger */}
-          <div className="flex lg:hidden items-center gap-5">
-            <LangSwitch dark={lightBar} />
-            <button
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="relative w-9 h-9 -mr-1 flex flex-col items-center justify-center gap-[6px] group"
-              aria-label="Open menu"
-              aria-expanded={isMobileMenuOpen}
-            >
-              <span className={cn('block w-6 h-[1.5px] transition-colors duration-500', lightBar ? 'bg-ink-900' : 'bg-white')} />
-              <span className={cn('block w-6 h-[1.5px] transition-colors duration-500', lightBar ? 'bg-ink-900' : 'bg-white')} />
-              <span className={cn('block w-6 h-[1.5px] transition-colors duration-500', lightBar ? 'bg-ink-900' : 'bg-white')} />
-            </button>
-          </div>
+        {/* Mobile: language sits left of the hamburger, on every page */}
+        <div className="flex lg:hidden items-center gap-[14px]">
+          <LangSwitch light={overHero} size={11} />
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(true)}
+            aria-label="Meni"
+            aria-expanded={isMobileMenuOpen}
+            className="flex flex-col items-end gap-[7px] px-1 py-3 min-w-11 min-h-11 justify-center"
+          >
+            <span className={cn('block w-[26px] h-px', overHero ? 'bg-white' : 'bg-ink-900')} />
+            <span className={cn('block w-[26px] h-px', overHero ? 'bg-white' : 'bg-ink-900')} />
+            <span className={cn('block w-[18px] h-px', overHero ? 'bg-white' : 'bg-ink-900')} />
+          </button>
         </div>
-      </motion.nav>
+      </header>
 
       {/* ── Full-screen mobile menu ─────────────────────────────────────────── */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -14 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }}
-            transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-0 z-[1010] bg-canvas-50 flex flex-col lg:hidden overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.25 } }}
+            transition={{ duration: 0.3, ease: [0.2, 0.6, 0.2, 1] }}
+            className="fixed inset-0 z-[1010] bg-cream flex flex-col lg:hidden overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Meni"
           >
-            <div
-              className="absolute -bottom-12 -right-6 text-[15rem] font-serif text-ink-900/[0.04] leading-none select-none pointer-events-none"
-              aria-hidden="true"
-            >
-              387
-            </div>
-
-            {/* Top bar — mirrors the header so the logo never appears to move */}
-            <div className="relative flex items-center justify-between px-6 py-5 flex-shrink-0">
+            <div className="flex items-center justify-between px-5 pt-3 pb-[10px] border-b border-ink-900/[0.07]">
               <Link to="/" onClick={() => setIsMobileMenuOpen(false)} aria-label="387 Weddings">
-                <Wordmark dark />
+                <Logo size={22} color="currentColor" />
               </Link>
-              <button
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="relative w-11 h-11 -mr-2 flex items-center justify-center group"
-                aria-label="Close menu"
-              >
-                <motion.span
-                  initial={{ rotate: 0, opacity: 0 }}
-                  animate={{ rotate: 45, opacity: 1 }}
-                  transition={{ duration: 0.7, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                  className="absolute block w-6 h-[1.5px] bg-ink-900"
-                />
-                <motion.span
-                  initial={{ rotate: 0, opacity: 0 }}
-                  animate={{ rotate: -45, opacity: 1 }}
-                  transition={{ duration: 0.7, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                  className="absolute block w-6 h-[1.5px] bg-ink-900"
-                />
-              </button>
+              <div className="flex items-center gap-[14px]">
+                <LangSwitch size={11} />
+                <button
+                  type="button"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  aria-label="Zatvori"
+                  className="relative w-11 h-11 flex items-center justify-center"
+                >
+                  <span className="absolute w-[26px] h-px bg-ink-900 rotate-45" />
+                  <span className="absolute w-[26px] h-px bg-ink-900 -rotate-45" />
+                </button>
+              </div>
             </div>
 
-            {/* Nav links — each rises through its own mask */}
-            <nav className="relative flex-1 flex flex-col items-center justify-center px-8">
-              {links.map((link, i) => {
+            <nav aria-label="Glavni meni" className="flex-1 flex flex-col items-center justify-center gap-1 pb-5">
+              {links.map(link => {
                 const active = location.pathname === link.path;
                 return (
-                  <div key={link.path} className="overflow-hidden py-1.5">
-                    <motion.div
-                      initial={{ y: '110%' }}
-                      animate={{ y: '0%' }}
-                      transition={{ delay: 0.25 + i * 0.11, duration: 1.05, ease: [0.16, 1, 0.3, 1] }}
-                    >
-                      <Link
-                        to={link.path}
-                        onClick={() => handleLinkClick(link.path)}
-                        className={cn(
-                          'group relative block text-center text-[2.5rem] sm:text-5xl font-serif font-light leading-tight transition-colors duration-500',
-                          active ? 'text-ink-900' : 'text-ink-500 hover:text-ink-900',
-                        )}
-                      >
-                        {link.label}
-                        <span
-                          aria-hidden="true"
-                          className={cn(
-                            'block h-[1px] bg-ink-900 mx-auto mt-1 transition-all duration-500',
-                            active ? 'w-10' : 'w-0 group-hover:w-10',
-                          )}
-                        />
-                      </Link>
-                    </motion.div>
-                  </div>
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    onClick={() => handleLinkClick(link.path)}
+                    aria-current={active ? 'page' : undefined}
+                    style={getContentStyle(link.styleKey)}
+                    className={cn(
+                      'flex flex-col items-center py-4 font-serif text-[40px] leading-[1.1] text-ink-900 transition-opacity duration-250 hover:opacity-60',
+                      active && 'italic',
+                    )}
+                  >
+                    {link.label}
+                    <span
+                      aria-hidden="true"
+                      className={cn('w-7 h-px bg-gold-600 mt-3', active ? 'opacity-100' : 'opacity-0')}
+                    />
+                  </Link>
                 );
               })}
             </nav>
 
-            {/* Bottom bar */}
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-              className="relative flex-shrink-0 border-t border-canvas-200 px-8 pt-7 pb-10"
-            >
-              <div className="flex items-center justify-center mb-6">
-                <LangSwitch dark />
+            <div className="px-6 pb-10 text-center">
+              {/* Ornament: rule, red diamond, rule */}
+              <div className="flex items-center justify-center gap-3 mb-7" aria-hidden="true">
+                <span className="w-11 h-px bg-gold-600" />
+                <span className="w-1.5 h-1.5 bg-love rotate-45" />
+                <span className="w-11 h-px bg-gold-600" />
               </div>
-
-              {email && (
-                <div className="text-center">
-                  <a
-                    href={`mailto:${email}`}
-                    className="inline-block text-ink-500 text-xs hover:text-ink-900 transition-colors duration-300"
-                  >
-                    {email}
-                  </a>
-                </div>
-              )}
-            </motion.div>
+              <a
+                href={instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-3 text-ink-900 text-[10px] tracking-[0.24em] uppercase transition-opacity duration-250 hover:opacity-60"
+              >
+                <InstagramGlyph stroke="#151311" />
+                @{instagramHandle}
+              </a>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

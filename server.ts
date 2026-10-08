@@ -18,6 +18,7 @@ import settingsRoutes from './server/routes/settingsRoutes.js';
 import contentRoutes from './server/routes/contentRoutes.js';
 import seoRoutes from './server/routes/seoRoutes.js';
 import imageRoutes from './server/routes/imageRoutes.js';
+import storyRoutes from './server/routes/storyRoutes.js';
 
 dotenv.config();
 
@@ -77,9 +78,26 @@ async function startServer() {
     crossOriginEmbedderPolicy: false, // needed for fonts/images from external CDNs
   }));
 
+  // ── Canonical host ─────────────────────────────────────────────────────────
+  // The site answered on two domains, which split the SEO signal. Everything
+  // that is not the canonical host gets a permanent redirect to it.
+  if (isProd) {
+    app.set('trust proxy', 1);
+    const canonicalHost = (() => {
+      try { return new URL(process.env.SITE_URL || 'https://387weddings.ba').host; }
+      catch { return '387weddings.ba'; }
+    })();
+    app.use((req, res, next) => {
+      const host = req.headers.host;
+      // Health checks hit the container directly, so never bounce them
+      if (!host || req.path === '/api/health' || host === canonicalHost) return next();
+      res.redirect(301, `https://${canonicalHost}${req.originalUrl}`);
+    });
+  }
+
   // ── CORS ───────────────────────────────────────────────────────────────────
   const allowedOrigins = isProd
-    ? [process.env.SITE_URL || 'https://387cinematicweddings.com']
+    ? [process.env.SITE_URL || 'https://387weddings.ba']
     : ['http://localhost:3000', 'http://localhost:5173'];
 
   app.use(cors({
@@ -118,6 +136,7 @@ async function startServer() {
   // ── API Routes ─────────────────────────────────────────────────────────────
   app.use('/api/auth', authLimiter, authRoutes);
   app.use('/api/gallery', galleryRoutes);
+  app.use('/api/stories', storyRoutes);
   app.use('/api/packages', packageRoutes);
   app.use('/api/testimonials', testimonialRoutes);
   app.use('/api/contact', contactLimiter, contactRoutes);
@@ -142,8 +161,22 @@ async function startServer() {
       immutable: true,
       index: false,
     }));
-    app.get('*', (_req, res) => {
-      res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
+    // A single-page app answered 200 for every URL, so unknown pages looked
+    // like real pages to crawlers (soft 404) and /favicon.ico returned HTML.
+    // Known routes still get the shell; anything else gets a real 404.
+    const KNOWN_ROUTES = new Set(['/', '/portfolio', '/about', '/contact', '/privacy']);
+    const isKnownRoute = (p: string) =>
+      KNOWN_ROUTES.has(p.replace(/\/$/, '') || '/') || p.startsWith('/admin') || p.startsWith('/prica/');
+
+    app.get('*', (req, res) => {
+      // Anything with a file extension that reached this point does not exist
+      if (path.extname(req.path)) {
+        res.status(404).type('text/plain').send('Not found');
+        return;
+      }
+      res
+        .status(isKnownRoute(req.path) ? 200 : 404)
+        .sendFile(path.join(process.cwd(), 'dist', 'index.html'));
     });
   }
 

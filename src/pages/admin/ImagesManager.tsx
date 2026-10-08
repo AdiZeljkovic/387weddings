@@ -74,30 +74,6 @@ const SECTIONS = [
     ],
   },
   {
-    page: 'services', label: 'Iskustvo',
-    groups: [
-      {
-        label: 'Hero pozadina', hint: 'Fotografija u pozadini header-a stranice "Iskustvo". Preporučeno: 2400×1600 px.',
-        images: [
-          { key: 'img.services.hero', label: 'Hero', fallback: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800' },
-        ],
-      },
-      {
-        label: 'Prikaz rada — dvije fotografije', hint: 'Dvije fotografije u sekciji uz opis benefita. Preporučeno: 1200×1500 px.',
-        images: [
-          { key: 'img.services.pkg.1', label: 'Lijeva fotografija',  fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.services.pkg.2', label: 'Desna fotografija', fallback: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=800' },
-        ],
-      },
-      {
-        label: 'Naša podrška — fotografija sekcije', hint: 'Horizontalna fotografija u sekciji "Naša podrška" (dno stranice Iskustvo). Preporučeno: 1600×900 px.',
-        images: [
-          { key: 'img.services.cta', label: 'Fotografija sekcije', fallback: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=800' },
-        ],
-      },
-    ],
-  },
-  {
     page: 'about', label: 'O nama',
     groups: [
       {
@@ -121,9 +97,10 @@ const SECTIONS = [
     page: 'contact', label: 'Kontakt',
     groups: [
       {
-        label: 'Hero fotografija', hint: 'Fotografija uz naslov "Pošaljite nam poruku" — desno na desktopu, traka na vrhu na mobitelu. Preporučeno: 1600×1400 px, portretna do kvadratna orijentacija.',
+        label: 'Hero fotografija', hint: 'Desktop verzija stoji desno od naslova (preporučeno 1400×950 px, pejzažna). Mobilna je zasebna da možeš izabrati uži kadar (preporučeno 800×900 px); ako je ostaviš praznu, koristi se desktop slika.',
         images: [
           { key: 'img.contact.hero', label: 'Hero', fallback: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.contact.hero.mobile', label: 'Hero — mobitel', fallback: '' },
         ],
       },
       {

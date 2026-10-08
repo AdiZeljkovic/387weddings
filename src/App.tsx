@@ -43,7 +43,7 @@ class ErrorBoundary extends React.Component<EBProps, EBState> {
 // Public pages
 const Home = lazy(() => import('./pages/Home'));
 const Portfolio = lazy(() => import('./pages/Portfolio'));
-const Experience = lazy(() => import('./pages/Services'));
+const Story = lazy(() => import('./pages/Story'));
 const About = lazy(() => import('./pages/About'));
 const Contact = lazy(() => import('./pages/Contact'));
 const NotFound = lazy(() => import('./pages/NotFound'));
@@ -52,6 +52,7 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 const AdminLogin = lazy(() => import('./pages/admin/Login'));
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
 const GalleryManager = lazy(() => import('./pages/admin/GalleryManager'));
+const StoriesManager = lazy(() => import('./pages/admin/StoriesManager'));
 const PackagesManager = lazy(() => import('./pages/admin/PackagesManager'));
 const TestimonialsManager = lazy(() => import('./pages/admin/TestimonialsManager'));
 const Submissions = lazy(() => import('./pages/admin/Submissions'));
@@ -94,7 +95,7 @@ function PageMetadata({ title, description, pageKey }: { title: string; descript
         setMeta('meta[name="twitter:image"]', ogImage);
       }
 
-      const baseUrl = (s['sitemap.base_url']?.trim() || 'https://387cinematicweddings.com').replace(/\/$/, '');
+      const baseUrl = (s['sitemap.base_url']?.trim() || 'https://387weddings.ba').replace(/\/$/, '');
       const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
       if (canonical) canonical.href = `${baseUrl}${pathname}`;
     });
@@ -173,7 +174,7 @@ function AnalyticsInjector() {
 }
 
 const PublicLoadingFallback = (
-  <div className="h-screen w-full flex items-center justify-center bg-canvas-50">
+  <div className="h-screen w-full flex items-center justify-center bg-cream">
     <div className="w-12 h-[1px] bg-gold-600 animate-pulse" />
   </div>
 );
@@ -259,6 +260,7 @@ function App() {
                         <Route path="/pages" element={<PagesManager />} />
                         <Route path="/images" element={<ImagesManager />} />
                         <Route path="/instagram" element={<InstagramManager />} />
+                        <Route path="/stories" element={<StoriesManager />} />
                         <Route path="/gallery" element={<GalleryManager />} />
                         <Route path="/packages" element={<PackagesManager />} />
                         <Route path="/testimonials" element={<TestimonialsManager />} />
@@ -276,8 +278,7 @@ function App() {
               path="/*"
               element={
                 <ComingSoonGate>
-                <div className="relative min-h-screen bg-canvas-50">
-                  <div className="grain" />
+                <div className="relative min-h-screen bg-cream">
                   <Navbar />
                   <main>
                     <Suspense fallback={PublicLoadingFallback}>
@@ -294,10 +295,10 @@ function App() {
                             <Portfolio />
                           </>
                         } />
-                        <Route path="/services" element={
+                        <Route path="/prica/:slug" element={
                           <>
-                            <PageMetadata title="Experience" description="Learn about our collaborative dialogue between high-end editorial fashion and raw emotion." pageKey="services" />
-                            <Experience />
+                            <PageMetadata title="Priča" description="Priča jednog para." pageKey="story" />
+                            <Story />
                           </>
                         } />
                         <Route path="/about" element={

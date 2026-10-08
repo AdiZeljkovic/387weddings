@@ -1,487 +1,396 @@
 import React, { useEffect, useState } from 'react';
-import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Heart } from 'lucide-react';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
 import { respImg } from '../lib/img';
-import { EASE } from '../components/anim';
+import { OliveBranch, SectionLabel } from '../components/ornaments';
 
-const HERO_FALLBACK =
-  'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=2000';
-
-// One fallback per mosaic slot, so the page never renders holes before the
-// client has uploaded their own nine frames in Admin → Fotografije.
-const MOSAIC_FALLBACKS = [
-  'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1000',
-  'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=1000',
-  'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=1000',
-  'https://images.unsplash.com/photo-1544078751-58fee2d8a03b?auto=format&fit=crop&q=80&w=1000',
-  'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=1000',
-  'https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&q=80&w=1000',
-  'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=1000',
-  'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=1000',
-  'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&q=80&w=1000',
+const FALLBACK = [
+  'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1800',
+  'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=1800',
+  'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=1800',
+  'https://images.unsplash.com/photo-1544078751-58fee2d8a03b?auto=format&fit=crop&q=80&w=1800',
+  'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=1800',
+  'https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&q=80&w=1200',
+  'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=1200',
+  'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=1200',
+  'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&q=80&w=1200',
 ];
 
-// The mosaic from the mockup. Phones flow it into two columns (one tile goes
-// full width to break the rhythm). Everything is plain auto-flow with column
-// spans — no explicit line placement — so a tile can never land off-grid.
-//
-// Six frames sit beside the heading on a 12-column inner grid:
-//   row 1 — 4 / 4 / 4      row 2 — 3 / 5 / 4 (narrow, wide, normal)
+// The mosaic from the mockup: six frames on a four-column grid, then a band of
+// three underneath. Column and flex ratios are taken straight from the board.
 const MOSAIC_TOP = [
-  { key: 'img.home.grid.1', span: 'col-span-1 md:col-span-4' },
-  { key: 'img.home.grid.2', span: 'col-span-1 md:col-span-4' },
-  { key: 'img.home.grid.3', span: 'col-span-1 md:col-span-4' },
-  { key: 'img.home.grid.4', span: 'col-span-1 md:col-span-3' },
-  { key: 'img.home.grid.5', span: 'col-span-2 md:col-span-5' },
-  { key: 'img.home.grid.6', span: 'col-span-2 md:col-span-4' },
+  { key: 'img.home.grid.1', area: 'col-start-1 col-end-3 row-start-1' },
+  { key: 'img.home.grid.2', area: 'col-start-3 row-start-1 row-end-3' },
+  { key: 'img.home.grid.3', area: 'col-start-4 row-start-1' },
+  { key: 'img.home.grid.4', area: 'col-start-1 row-start-2' },
+  { key: 'img.home.grid.5', area: 'col-start-2 row-start-2' },
+  { key: 'img.home.grid.6', area: 'col-start-4 row-start-2' },
 ];
-
-// Three more run the full width of the section underneath
 const MOSAIC_BOTTOM = [
-  { key: 'img.home.grid.7', span: 'col-span-1' },
-  { key: 'img.home.grid.8', span: 'col-span-1' },
-  { key: 'img.home.grid.9', span: 'col-span-2 md:col-span-1' },
+  { key: 'img.home.grid.7', grow: 1.5 },
+  { key: 'img.home.grid.8', grow: 0.667 },
+  { key: 'img.home.grid.9', grow: 1.5 },
 ];
 
-// One frame of the mosaic — fills whatever grid cell it is handed
-const Frame = ({ src, index, span, eager }: {
-  src: string; index: number; span: string; eager?: boolean;
+// Phones get the same nine frames in two columns, wide ones spanning both
+const MOSAIC_PHONE = [
+  { key: 'img.home.grid.1', span: true,  ratio: '3 / 2' },
+  { key: 'img.home.grid.2', span: false, ratio: '3 / 4' },
+  { key: 'img.home.grid.3', span: false, ratio: '3 / 4' },
+  { key: 'img.home.grid.4', span: false, ratio: '3 / 4' },
+  { key: 'img.home.grid.5', span: false, ratio: '3 / 4' },
+  { key: 'img.home.grid.7', span: true,  ratio: '3 / 2' },
+  { key: 'img.home.grid.6', span: false, ratio: '3 / 4' },
+  { key: 'img.home.grid.8', span: false, ratio: '3 / 4' },
+  { key: 'img.home.grid.9', span: true,  ratio: '3 / 2' },
+];
+
+const SLIDE_MS = 6000;
+const SLIDES = 5;
+
+const Frame = ({ src, alt, className = '', style, sizes = '50vw', eager = false }: {
+  src: string; alt: string; className?: string; style?: React.CSSProperties; sizes?: string; eager?: boolean;
 }) => {
-  const r = respImg(src, [480, 640, 960]);
+  const r = respImg(src, [480, 768, 1280]);
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0 }}
-      transition={{ duration: 0.85, delay: Math.min(index * 0.05, 0.3), ease: EASE }}
-      className={span}
-    >
-      <Link to="/portfolio" className="group block w-full h-full overflow-hidden bg-canvas-200">
-        <img
-          src={r.src}
-          srcSet={r.srcSet}
-          sizes="(min-width: 768px) 28vw, 50vw"
-          alt=""
-          aria-hidden="true"
-          className="w-full h-full object-cover transition-transform duration-[1400ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.06]"
-          loading={eager ? 'eager' : 'lazy'}
-          decoding="async"
-          draggable={false}
-          referrerPolicy="no-referrer"
-        />
-      </Link>
-    </motion.div>
+    <div className={`overflow-hidden bg-rule ${className}`} style={style}>
+      <img
+        src={r.src}
+        srcSet={r.srcSet}
+        sizes={sizes}
+        alt={alt}
+        className="w-full h-full object-cover"
+        loading={eager ? 'eager' : 'lazy'}
+        decoding="async"
+        draggable={false}
+        referrerPolicy="no-referrer"
+      />
+    </div>
   );
 };
 
 const Home = () => {
   const { t, getContentStyle } = useLanguage();
   const [settings, setSettings] = useState<Record<string, string>>({});
-  const [isMobile, setIsMobile] = useState(
-    () => typeof window !== 'undefined' && window.innerWidth < 1024,
+  const [slide, setSlide] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    loadSettings().then(setSettings).catch(err => console.warn('Home: settings load failed', err));
+  }, []);
+
+  // Five frames cross-fade on their own; hovering the hero holds the current one
+  useEffect(() => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || paused) return;
+    const id = setInterval(() => setSlide(p => (p + 1) % SLIDES), SLIDE_MS);
+    return () => clearInterval(id);
+  }, [paused]);
+
+  const heroSlides = Array.from({ length: SLIDES }, (_, i) =>
+    settings[`img.home.hero.${i + 1}`] || FALLBACK[i]
   );
+  const mosaicSrc = (key: string, i: number) => settings[key] || FALLBACK[i % FALLBACK.length];
 
-  useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < 1024);
-    window.addEventListener('resize', handler, { passive: true });
-    return () => window.removeEventListener('resize', handler);
-  }, []);
+  const aboutMain = respImg(settings['img.home.team.aldin'] || FALLBACK[1], [480, 768, 1100]);
+  const aboutDetail = respImg(settings['img.home.team.melisa'] || FALLBACK[6], [320, 640]);
 
-  useEffect(() => {
-    loadSettings()
-      .then(setSettings)
-      .catch(err => console.warn('Home: settings load failed', err));
-  }, []);
-
-  // The mobile hero slot wins on phones, but only when the client has set one
-  const heroSrc =
-    (isMobile ? settings['img.home.hero.mobile.1'] : '') ||
-    settings['img.home.hero.1'] ||
-    HERO_FALLBACK;
-  const heroImg = respImg(heroSrc, [768, 1280, 1920]);
-
-  const aboutMain = respImg(settings['img.home.team.aldin'] || MOSAIC_FALLBACKS[1], [480, 960, 1280]);
-  const aboutPrint = respImg(settings['img.home.team.melisa'] || MOSAIC_FALLBACKS[6], [320, 640]);
+  const heroWords = [
+    ...t('hero.title.part1').split(' ').filter(Boolean).map(w => ({ w, italic: false })),
+    ...t('hero.title.part2').split(' ').filter(Boolean).map(w => ({ w, italic: true })),
+  ];
+  const breakAt = t('hero.title.part1').split(' ').filter(Boolean).length;
 
   return (
-    <div className="bg-canvas-100">
-      {/* ── Hero — full-bleed frame, statement anchored left ────────────────── */}
-      <section className="relative h-[92vh] min-h-[560px] max-h-[900px] overflow-hidden bg-moody-950">
-        <motion.img
-          key={heroImg.src}
-          src={heroImg.src}
-          srcSet={heroImg.srcSet}
-          sizes="100vw"
-          alt=""
-          aria-hidden="true"
-          initial={{ scale: 1.1, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 2.4, ease: EASE }}
-          className="absolute inset-0 w-full h-full object-cover"
-          loading="eager"
-          fetchPriority="high"
-          decoding="async"
-          draggable={false}
-          referrerPolicy="no-referrer"
-        />
+    <div className="bg-cream">
+      {/* ── Hero — five frames cross-fading behind the statement ───────────── */}
+      <section
+        className="relative flex flex-col overflow-hidden bg-[#26221e] text-white min-h-[740px] lg:min-h-[900px]"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+      >
+        {heroSlides.map((src, i) => {
+          const r = respImg(src, [768, 1280, 1920]);
+          return (
+            <img
+              key={src + i}
+              src={r.src}
+              srcSet={r.srcSet}
+              sizes="100vw"
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-[1200ms] ease-in-out motion-reduce:transition-none"
+              style={{ opacity: i === slide ? 1 : 0 }}
+              loading={i === 0 ? 'eager' : 'lazy'}
+              fetchPriority={i === 0 ? 'high' : 'low'}
+              decoding="async"
+              draggable={false}
+              referrerPolicy="no-referrer"
+            />
+          );
+        })}
 
-        {/* Left-weighted scrim keeps the statement legible on any photograph */}
+        {/* Scrim — sideways on desktop, upward on phones */}
         <div
-          className="absolute inset-0 bg-gradient-to-r from-moody-950/95 via-moody-950/55 to-transparent"
           aria-hidden="true"
+          className="absolute inset-0 bg-[linear-gradient(180deg,rgba(14,12,10,.5)_0%,rgba(14,12,10,.15)_38%,rgba(14,12,10,.82)_100%)] lg:bg-[linear-gradient(90deg,rgba(14,12,10,.82)_0%,rgba(14,12,10,.38)_55%,rgba(14,12,10,.12)_100%)]"
         />
-        <div
-          className="absolute inset-0 bg-gradient-to-t from-moody-950/80 via-transparent to-moody-950/35"
-          aria-hidden="true"
-        />
+        <div aria-hidden="true" className="absolute inset-2.5 lg:inset-4 border border-white/[0.16] pointer-events-none" />
 
-        <div className="relative z-10 h-full max-w-[1800px] mx-auto px-6 sm:px-8 lg:px-16 flex items-center">
-          <div className="max-w-xl lg:max-w-2xl">
-            <h1 className="text-[2.75rem] sm:text-6xl lg:text-7xl font-serif font-light text-white leading-[1.08] tracking-tight mb-7 md:mb-8">
-              {(['part1', 'part2'] as const).map((part, i) => (
-                <span key={part} className="block overflow-hidden pb-[0.1em] -mb-[0.1em]">
-                  <motion.span
-                    initial={{ y: '110%' }}
-                    animate={{ y: '0%' }}
-                    transition={{ duration: 1.15, delay: 0.35 + i * 0.14, ease: EASE }}
-                    style={getContentStyle(`hero.title.${part}`)}
-                    className="block"
-                  >
-                    {t(`hero.title.${part}`)}
-                  </motion.span>
-                </span>
-              ))}
-            </h1>
-
-            <motion.p
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.75, ease: EASE }}
-              style={getContentStyle('hero.desc')}
-              className="text-white/75 font-light text-[15px] md:text-[17px] leading-relaxed max-w-sm mb-10 md:mb-12 whitespace-pre-line"
-            >
-              {t('hero.desc')}
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.95, ease: EASE }}
-              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-7"
-            >
-              {/* Primary — solid ink block, as in the mockup */}
-              <Link
-                to="/portfolio"
-                className="group relative block px-9 md:px-11 py-[1.15rem] whitespace-nowrap overflow-hidden bg-ink-900 border border-white/15 hover:border-white/35 transition-colors duration-500 text-center"
-              >
+        <div className="relative z-[2] flex-1 flex flex-col justify-center lg:justify-end items-center lg:items-start text-center lg:text-left px-7 lg:px-24 pt-28 pb-24 lg:pb-30 max-w-[1100px] box-border">
+          <h1 className="font-serif font-normal text-[42px] lg:text-[104px] leading-[1.08] lg:leading-[1.02] lg:tracking-[-0.01em] m-0 mb-6 lg:mb-8">
+            {heroWords.map((hw, i) => (
+              <React.Fragment key={`${hw.w}-${i}`}>
+                {i === breakAt && <br />}
                 <span
-                  aria-hidden="true"
-                  className="absolute inset-0 bg-white/10 -translate-x-full group-hover:translate-x-0 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
-                />
-                <span
-                  style={getContentStyle('hero.portfolio')}
-                  className="relative z-10 text-[10px] md:text-[11px] tracking-[0.25em] uppercase font-medium text-white flex items-center justify-center gap-3"
+                  className="inline-block opacity-0 animate-[wordUp_1.1s_cubic-bezier(.2,.6,.2,1)_both] motion-reduce:opacity-100 motion-reduce:animate-none"
+                  style={{
+                    animationDelay: `${0.25 + i * 0.25}s`,
+                    fontStyle: hw.italic ? 'italic' : undefined,
+                    ...getContentStyle(hw.italic ? 'hero.title.part2' : 'hero.title.part1'),
+                  }}
                 >
-                  {t('hero.portfolio')}
-                  <ArrowRight
-                    size={13}
-                    className="group-hover:translate-x-1 transition-transform duration-500"
-                    aria-hidden="true"
-                  />
-                </span>
-              </Link>
+                  {hw.w}
+                </span>{' '}
+              </React.Fragment>
+            ))}
+          </h1>
 
-              {/* Secondary — quiet label, rule draws across on hover */}
-              <Link to="/contact" className="group relative px-1 py-3 whitespace-nowrap text-center sm:text-left">
-                <span
-                  style={getContentStyle('hero.inquire')}
-                  className="text-[10px] md:text-[11px] tracking-[0.25em] uppercase font-medium text-white/85 group-hover:text-white transition-colors duration-500 flex items-center justify-center sm:justify-start gap-3"
-                >
-                  {t('hero.inquire')}
-                  <ArrowRight
-                    size={13}
-                    className="group-hover:translate-x-1 transition-transform duration-500"
-                    aria-hidden="true"
-                  />
-                </span>
-                <span className="relative block h-[1px] bg-white/25 mt-2 overflow-hidden" aria-hidden="true">
-                  <span className="absolute inset-0 bg-white -translate-x-full group-hover:translate-x-0 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]" />
-                </span>
-              </Link>
-            </motion.div>
+          <span aria-hidden="true" className="lg:hidden w-10 h-px bg-gold-600 mb-6" />
+
+          <p
+            style={{ animationDelay: '1.7s', ...getContentStyle('hero.desc') }}
+            className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none text-[14px] lg:text-[19px] font-light leading-[1.75] m-0 mb-10 lg:mb-13 text-[#ece5d9] max-w-[260px] lg:max-w-none lg:whitespace-nowrap"
+          >
+            {t('hero.desc')}
+          </p>
+
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 lg:gap-10 w-full max-w-[300px] lg:max-w-none">
+            <Link
+              to="/portfolio"
+              style={{ animationDelay: '2s', ...getContentStyle('hero.portfolio') }}
+              className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none bg-cream text-ink-900 text-center text-[11px] lg:text-[12px] font-semibold tracking-[0.22em] uppercase px-0 lg:px-10 py-[19px] lg:py-[22px] border border-cream transition-colors duration-250 hover:bg-white"
+            >
+              {t('hero.portfolio')} →
+            </Link>
+            <Link
+              to="/contact"
+              style={{ animationDelay: '2.2s', ...getContentStyle('hero.inquire') }}
+              className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none text-white text-center text-[11px] lg:text-[12px] font-medium tracking-[0.22em] uppercase py-[19px] lg:py-3.5 border lg:border-0 lg:border-b border-white/55 lg:border-b-white/50 transition-colors duration-250 hover:text-cream"
+            >
+              {t('hero.inquire')} →
+            </Link>
           </div>
         </div>
 
-        {/* Scroll cue — mouse outline with a drifting dot */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 1.5, ease: EASE }}
-          className="absolute bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2.5"
+        {/* Five ticks — bottom right on desktop, centred on phones */}
+        <div
           aria-hidden="true"
+          className="absolute z-[3] bottom-9 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-24 lg:bottom-[68px] flex gap-2.5"
         >
-          <span className="w-[22px] h-[34px] rounded-full border border-white/45 flex items-start justify-center pt-2">
-            <span className="w-[3px] h-[6px] rounded-full bg-white/80 animate-[scrollBounce_2s_ease-in-out_infinite]" />
-          </span>
-          <span
-            style={getContentStyle('home.scroll')}
-            className="text-[9px] tracking-[0.35em] uppercase font-medium text-white/60"
-          >
+          {Array.from({ length: SLIDES }, (_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setSlide(i)}
+              aria-label={`Slika ${i + 1}`}
+              className="block w-7 lg:w-11 h-0.5 bg-white/30 overflow-hidden p-0 border-0 cursor-pointer"
+            >
+              <span
+                className="block h-full bg-white origin-left transition-transform duration-[600ms] ease-linear"
+                style={{ transform: `scaleX(${i === slide ? 1 : 0})` }}
+              />
+            </button>
+          ))}
+        </div>
+
+        <div className="hidden lg:flex absolute bottom-14 left-1/2 -translate-x-1/2 z-[2] flex-col items-center gap-3">
+          <span style={getContentStyle('home.scroll')} className="text-[12px] tracking-[0.3em] uppercase text-rule">
             {t('home.scroll')}
           </span>
-        </motion.div>
+          <span aria-hidden="true" className="w-px h-12 bg-[linear-gradient(#ffffff,rgba(255,255,255,0))]" />
+        </div>
       </section>
 
-      {/* ── Featured works — editorial mosaic on paper ──────────────────────── */}
-      <section className="bg-canvas-100 py-16 md:py-24 px-6 sm:px-8 lg:px-16">
-        <div className="max-w-[1500px] mx-auto">
-          {/* Heading beside the first two image rows */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-[6px] md:gap-2">
-            <div className="md:col-span-3 flex flex-col justify-center text-center md:text-left mb-8 md:mb-0 md:pr-6 lg:pr-10">
-              <motion.span
-                initial={{ opacity: 0, y: 12 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0 }}
-                transition={{ duration: 0.9, ease: EASE }}
+      {/* ── Mosaic ─────────────────────────────────────────────────────────── */}
+      <section id="radovi" className="relative overflow-hidden bg-cream py-[72px] lg:py-32 px-5 lg:px-16">
+        <OliveBranch className="hidden lg:block absolute bottom-5 w-[260px] left-[calc(50%-600px)]" />
+        <OliveBranch className="hidden lg:block absolute bottom-5 w-[260px] right-[calc(50%-600px)]" flip />
+
+        <div className="relative max-w-[1248px] mx-auto">
+          <div className="flex flex-wrap items-center gap-10 lg:gap-16 mb-9 lg:mb-10">
+            <div className="w-full lg:w-auto lg:flex-none text-center lg:text-left">
+              <SectionLabel
+                centered
+                className="lg:hidden mb-6 justify-center"
                 style={getContentStyle('home.featured.title')}
-                className="block text-[10px] lg:text-[11px] tracking-[0.4em] uppercase font-semibold text-ink-500 mb-5 md:mb-6"
               >
                 {t('home.featured.title')}
-              </motion.span>
+              </SectionLabel>
 
-              <h2 className="text-[2rem] lg:text-[2.9rem] font-serif font-light text-ink-900 leading-[1.15] tracking-tight">
-                {(['part1', 'part2', 'part3'] as const).map((part, i) => (
-                  <motion.span
-                    key={part}
-                    initial={{ opacity: 0, y: 16 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0 }}
-                    transition={{ duration: 0.95, delay: 0.1 + i * 0.12, ease: EASE }}
-                    style={getContentStyle(`home.featured.heading.${part}`)}
-                    className="block"
-                  >
-                    {t(`home.featured.heading.${part}`)}
-                  </motion.span>
+              <h2 className="font-serif font-normal text-[40px] lg:text-[64px] leading-[1.08] m-0">
+                {(['part1', 'part2'] as const).map(part => (
+                  <React.Fragment key={part}>
+                    <span style={getContentStyle(`home.featured.heading.${part}`)}>
+                      {t(`home.featured.heading.${part}`)}
+                    </span>
+                    <br />
+                  </React.Fragment>
                 ))}
+                <span className="inline-flex flex-col items-center">
+                  <span className="italic text-love" style={getContentStyle('home.featured.heading.part3')}>
+                    {t('home.featured.heading.part3')}
+                  </span>
+                  <span className="block mt-3.5 lg:mt-9 leading-[0]">
+                    <svg
+                      width="22" height="20" viewBox="0 0 24 22" fill="#a8323e" aria-hidden="true"
+                      className="inline-block origin-center animate-[heartbeat_4s_ease-in-out_infinite] motion-reduce:animate-none"
+                    >
+                      <path d="M12 21.2C5.2 15.4 1.5 11.9 1.5 7.4 1.5 4.2 4 1.8 7 1.8c1.9 0 3.7 1 5 2.8 1.3-1.8 3.1-2.8 5-2.8 3 0 5.5 2.4 5.5 5.6 0 4.5-3.7 8-10.5 13.8z" />
+                    </svg>
+                  </span>
+                </span>
               </h2>
-
-              <motion.div
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true, amount: 0 }}
-                transition={{ duration: 1, delay: 0.5, ease: EASE }}
-                className="flex items-center justify-center md:justify-start gap-4 mt-6 md:mt-7"
-                aria-hidden="true"
-              >
-                <span className="hidden md:block w-10 lg:w-14 h-[1px] bg-ink-900/20" />
-                <Heart size={15} strokeWidth={1.3} className="text-ink-400" />
-              </motion.div>
             </div>
 
-            <div className="md:col-span-9 grid grid-cols-2 md:grid-cols-12 gap-[6px] md:gap-2 auto-rows-[38vw] md:auto-rows-[clamp(150px,17.5vw,266px)]">
+            {/* Desktop grid — ratios straight from the board */}
+            <div
+              className="hidden lg:grid flex-1 min-w-0 gap-2"
+              style={{
+                gridTemplateColumns: '190fr 195fr 355fr 220fr',
+                gridTemplateRows: '262px 262px',
+                flexBasis: '560px',
+              }}
+            >
               {MOSAIC_TOP.map((tile, i) => (
                 <Frame
                   key={tile.key}
-                  src={settings[tile.key] || MOSAIC_FALLBACKS[i]}
-                  index={i}
-                  span={tile.span}
+                  src={mosaicSrc(tile.key, i)}
+                  alt=""
+                  sizes="28vw"
                   eager={i < 3}
+                  className={`${tile.area} min-w-0`}
                 />
               ))}
             </div>
           </div>
 
-          {/* Full-width band underneath */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-[6px] md:gap-2 mt-[6px] md:mt-2 auto-rows-[38vw] md:auto-rows-[clamp(120px,14vw,212px)]">
+          {/* Desktop closing band of three */}
+          <div className="hidden lg:flex gap-2 h-[352px]">
             {MOSAIC_BOTTOM.map((tile, i) => (
               <Frame
                 key={tile.key}
-                src={settings[tile.key] || MOSAIC_FALLBACKS[i + 6]}
-                index={i + 6}
-                span={tile.span}
+                src={mosaicSrc(tile.key, i + 6)}
+                alt=""
+                sizes="33vw"
+                className="min-w-0"
+                style={{ flex: `${tile.grow} 1 0` }}
               />
             ))}
           </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.9, delay: 0.2, ease: EASE }}
-            className="flex justify-center mt-10 md:mt-14"
-          >
+          {/* Phones — two columns, wide frames spanning both */}
+          <div className="grid lg:hidden grid-cols-2 gap-2">
+            {MOSAIC_PHONE.map((tile, i) => (
+              <Frame
+                key={`${tile.key}-${i}`}
+                src={mosaicSrc(tile.key, i)}
+                alt=""
+                sizes="50vw"
+                eager={i < 2}
+                className={tile.span ? 'col-span-2' : ''}
+                style={{ aspectRatio: tile.ratio }}
+              />
+            ))}
+          </div>
+
+          <div className="flex justify-center mt-11 lg:mt-14">
             <Link
               to="/portfolio"
-              className="group relative block px-10 md:px-12 py-[0.95rem] whitespace-nowrap overflow-hidden border border-ink-900/30 hover:border-ink-900 transition-colors duration-500 text-center"
+              style={getContentStyle('home.featured.cta')}
+              className="inline-block border border-ink-900 text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.2em] uppercase px-7 lg:px-10 py-[18px] lg:py-[22px] transition-colors duration-250 hover:bg-ink-900 hover:text-white"
             >
-              <span
-                aria-hidden="true"
-                className="absolute inset-0 bg-ink-900 -translate-x-full group-hover:translate-x-0 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
-              />
-              <span
-                style={getContentStyle('home.featured.cta')}
-                className="relative z-10 text-[10px] md:text-[11px] tracking-[0.25em] uppercase font-medium text-ink-900 group-hover:text-white transition-colors duration-500 flex items-center justify-center gap-3"
-              >
-                {t('home.featured.cta')}
-                <ArrowRight
-                  size={13}
-                  className="group-hover:translate-x-1 transition-transform duration-500"
-                  aria-hidden="true"
-                />
-              </span>
+              {t('home.featured.cta')} →
             </Link>
-          </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* ── About — story left, layered prints right ────────────────────────── */}
-      <section className="bg-canvas-50 py-16 md:py-24 lg:py-28 px-6 sm:px-8 lg:px-16 overflow-hidden">
-        <div className="max-w-[1500px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-          {/* Text column */}
-          <div className="lg:col-span-5">
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.9, ease: EASE }}
-              className="flex items-center gap-4 mb-6"
-            >
-              <span
-                style={getContentStyle('home.about.tag')}
-                className="text-[10px] md:text-[11px] tracking-[0.4em] uppercase font-semibold text-ink-500"
-              >
-                {t('home.about.tag')}
-              </span>
-              <span className="w-10 md:w-14 h-[1px] bg-ink-900/20" aria-hidden="true" />
-            </motion.div>
+      {/* ── About ──────────────────────────────────────────────────────────── */}
+      <section id="onama" className="relative overflow-hidden bg-cream-light py-[72px] lg:py-32 px-6 lg:px-24">
+        <OliveBranch className="hidden lg:block absolute left-24 top-9 w-[170px] opacity-[0.22]" />
 
-            <h2 className="text-[1.9rem] sm:text-4xl lg:text-[2.75rem] font-serif font-light text-ink-900 leading-[1.15] tracking-tight mb-7 md:mb-8">
-              {(['part1', 'part2'] as const).map((part, i) => (
-                <motion.span
-                  key={part}
-                  initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0 }}
-                  transition={{ duration: 0.95, delay: 0.1 + i * 0.12, ease: EASE }}
-                  style={getContentStyle(`home.about.heading.${part}`)}
-                  className="block"
-                >
-                  {t(`home.about.heading.${part}`)}
-                </motion.span>
-              ))}
+        <div className="relative max-w-[1248px] mx-auto flex flex-wrap items-center gap-12 lg:gap-26">
+          <div className="flex-1 min-w-0 basis-full lg:basis-[440px] text-center lg:text-left">
+            <SectionLabel
+              className="mb-6 lg:mb-7 justify-center lg:justify-start"
+              style={getContentStyle('home.about.tag')}
+            >
+              {t('home.about.tag')}
+            </SectionLabel>
+
+            <h2 className="font-serif font-normal text-[34px] lg:text-[56px] leading-[1.12] m-0 mb-6 lg:mb-9">
+              <span style={getContentStyle('home.about.heading.part1')}>{t('home.about.heading.part1')}</span>
+              <br />
+              <span className="italic" style={getContentStyle('home.about.heading.part2')}>
+                {t('home.about.heading.part2')}
+              </span>
             </h2>
 
             {(['1', '2'] as const).map((n, i) => (
-              <motion.p
+              <p
                 key={n}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.95, delay: 0.2 + i * 0.1, ease: EASE }}
                 style={getContentStyle(`home.about.desc.${n}`)}
-                className="text-ink-500 font-light text-[14px] md:text-[15px] leading-[1.9] mb-5 max-w-md"
+                className={`text-[15px] lg:text-[18px] font-light leading-[1.8] lg:leading-[1.75] text-ink-700 max-w-[480px] mx-auto lg:mx-0 m-0 ${i === 0 ? 'mb-5 lg:mb-6' : 'mb-9 lg:mb-12'}`}
               >
                 {t(`home.about.desc.${n}`)}
-              </motion.p>
+              </p>
             ))}
 
-            <motion.div
-              initial={{ opacity: 0, y: 14 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.95, delay: 0.45, ease: EASE }}
-              className="mt-8 md:mt-9"
+            <Link
+              to="/about"
+              style={getContentStyle('home.about.cta')}
+              className="inline-block bg-ink-900 text-white text-[11px] lg:text-[12px] font-semibold tracking-[0.22em] uppercase px-8 lg:px-10 py-[19px] lg:py-[22px] transition-colors duration-250 hover:bg-ink-700"
             >
-              <Link
-                to="/about"
-                className="group relative inline-block px-9 md:px-10 py-[1.05rem] whitespace-nowrap overflow-hidden bg-ink-900 text-center"
-              >
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-0 bg-white/12 -translate-x-full group-hover:translate-x-0 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
-                />
-                <span
-                  style={getContentStyle('home.about.cta')}
-                  className="relative z-10 text-[10px] md:text-[11px] tracking-[0.25em] uppercase font-medium text-white flex items-center justify-center gap-3"
-                >
-                  {t('home.about.cta')}
-                  <ArrowRight
-                    size={13}
-                    className="group-hover:translate-x-1 transition-transform duration-500"
-                    aria-hidden="true"
-                  />
-                </span>
-              </Link>
-            </motion.div>
+              {t('home.about.cta')} →
+            </Link>
           </div>
 
-          {/* Image column — main frame, offset outline, overlapping small print */}
-          <div className="lg:col-span-7 relative mt-4 lg:mt-0 pb-16 sm:pb-12 lg:pb-8">
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.2, ease: EASE }}
-              className="relative w-[86%] ml-auto"
-            >
-              {/* Hairline frame peeking out from behind, down and to the right */}
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 translate-x-4 translate-y-5 md:translate-x-6 md:translate-y-7 border border-ink-900/15"
+          {/* Big portrait with an offset gold frame and a small detail print */}
+          <div className="flex-1 min-w-0 basis-full lg:basis-[440px] relative pb-14 lg:pb-14 lg:pl-14">
+            <span
+              aria-hidden="true"
+              className="hidden lg:block absolute top-10 -right-6 bottom-24 left-24 border border-gold-600"
+            />
+            <div className="relative aspect-[4/5] overflow-hidden bg-rule">
+              <img
+                src={aboutMain.src}
+                srcSet={aboutMain.srcSet}
+                sizes="(min-width: 1024px) 40vw, 90vw"
+                alt={t('home.about.heading.part1')}
+                className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
+                draggable={false}
+                referrerPolicy="no-referrer"
               />
-              <div className="relative aspect-[5/4] overflow-hidden bg-canvas-200">
-                <img
-                  src={aboutMain.src}
-                  srcSet={aboutMain.srcSet}
-                  sizes="(min-width: 1024px) 48vw, 86vw"
-                  alt={t('home.about.tag')}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  decoding="async"
-                  draggable={false}
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-            </motion.div>
-
-            {/* Small print overlapping the main frame's lower-left corner */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.2, delay: 0.25, ease: EASE }}
-              className="absolute left-0 bottom-0 w-[32%] sm:w-[26%] lg:w-[23%]"
-            >
-              <div className="relative aspect-[3/4] overflow-hidden bg-canvas-200 shadow-[0_18px_45px_rgba(0,0,0,0.22)]">
-                <img
-                  src={aboutPrint.src}
-                  srcSet={aboutPrint.srcSet}
-                  sizes="(min-width: 1024px) 14vw, 30vw"
-                  alt=""
-                  aria-hidden="true"
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  decoding="async"
-                  draggable={false}
-                  referrerPolicy="no-referrer"
-                />
-                {/* Brand mark sits on the print */}
-                <span className="absolute inset-0 bg-ink-900/25" aria-hidden="true" />
-                <span
-                  className="absolute inset-0 flex flex-col items-center justify-center text-white"
-                  aria-hidden="true"
-                >
-                  <span className="font-serif font-light text-2xl md:text-[1.9rem] leading-none">387</span>
-                  <span className="text-[6px] md:text-[7px] tracking-[0.4em] uppercase font-semibold mt-1.5 text-white/80">
-                    Weddings
-                  </span>
-                </span>
-              </div>
-            </motion.div>
+            </div>
+            <div className="absolute left-0 bottom-0 w-[36%] aspect-[2/3] overflow-hidden bg-rule border-8 border-cream-light">
+              <img
+                src={aboutDetail.src}
+                srcSet={aboutDetail.srcSet}
+                sizes="(min-width: 1024px) 15vw, 32vw"
+                alt=""
+                aria-hidden="true"
+                className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
+                draggable={false}
+                referrerPolicy="no-referrer"
+              />
+            </div>
           </div>
         </div>
       </section>

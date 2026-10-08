@@ -50,9 +50,9 @@ const COLOR_PRESETS = [
 const PAGE_LABELS: Record<string, string> = {
   home:      'Naslovna',
   portfolio: 'Radovi',
-  services:  'Iskustvo',
   about:     'O Nama',
   contact:   'Upit',
+  story:     'Priča (zajedničke oznake)',
   footer:    'Footer',
 };
 
@@ -60,9 +60,9 @@ const PAGE_LABELS: Record<string, string> = {
 const PAGE_PATHS: Record<string, string> = {
   home:      '/',
   portfolio: '/portfolio',
-  services:  '/services',
   about:     '/about',
   contact:   '/contact',
+  story:     '/prica/...',
   footer:    '(sve stranice)',
 };
 
@@ -74,7 +74,7 @@ const SECTION_LABELS: Record<string, string> = {
   process:       'Proces / Koraci',
   story:         'Priča',
   bio:           'Biografije (Melisa i Aldin)',
-  press:         'Pisali su o nama',
+  press:         'Pisali su o nama (ne prikazuje se)',
   invite:        'Poziv na kontakt',
   facts:         'Sitnice o nama (ne prikazuje se)',
   philosophy:    'Filozofija',
@@ -94,17 +94,19 @@ const SECTION_LABELS: Record<string, string> = {
   brand:         'Brend & Tagline',
   nav:           'Navigacija',
   contact:       'Kontakt kolona',
+  labels:        'Oznake i navigacija',
+  instagram:     'Instagram blok',
   legal:         'Copyright & Legal',
 };
 
 // Explicit section order per page (sections not listed appear at the end)
 const SECTION_ORDER: Record<string, string[]> = {
   home:      ['hero', 'featured', 'about_section'],
-  about:     ['bio', 'press', 'invite'],
-  services:  ['hero', 'intro', 'philosophy', 'journey', 'faq'],
+  about:     ['bio', 'invite'],
   portfolio: ['hero', 'approach', 'filter'],
   contact:   ['hero', 'connect', 'form'],
-  footer:    ['brand', 'nav', 'contact', 'legal'],
+  story:     ['labels'],
+  footer:    ['brand', 'nav', 'contact', 'instagram', 'legal'],
 };
 
 export default function PagesManager() {

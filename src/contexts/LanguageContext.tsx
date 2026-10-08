@@ -493,6 +493,12 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     try { localStorage.setItem('387_language', lang); } catch {}
   };
 
+  // Keep the document language in step with the switch — it was hardcoded to
+  // "bs" while og:locale claimed en_US, which search engines read as a mismatch.
+  useEffect(() => {
+    document.documentElement.lang = language === 'ENG' ? 'en' : 'bs';
+  }, [language]);
+
   const t = (key: string): string => {
     const langCode = language === 'ENG' ? 'en' : 'bs';
     const dbVal = dbContent[key]?.[langCode];

@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 @theme {
-  --font-serif: "Playfair Display", serif;
-  --font-sans: "Montserrat", sans-serif;
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "Montserrat", system-ui, sans-serif;
+  --font-display: "Anton", "Oswald", Impact, sans-serif;
   --font-script: "Caveat", cursive;
 
   --color-gold-50: #faf9f6;
@@ -29,13 +30,26 @@
   --color-moody-900: #1a1a1a;
   --color-moody-950: #0d0d0d;
 
-  /* Light editorial canvas — the homepage sections sit on paper, not on ink */
-  --color-canvas-50: #ffffff;
-  --color-canvas-100: #f7f6f3;
-  --color-canvas-200: #e6e2db;
-  --color-ink-400: #8a8a8a;
-  --color-ink-500: #6b6b6b;
-  --color-ink-900: #1a1a1a;
+  /* ── Palette from the client mockup (board "387 Weddings – vizualno
+     unaprijeden sajt"). The canvas/ink names already used across the app are
+     repointed to those exact values, so nothing has to be renamed. ── */
+  --color-canvas-50: #ffffff;    /* footer, Kontakt, CTA on O nama */
+  --color-canvas-100: #f4f0e9;   /* page background (cream) */
+  --color-canvas-200: #d8cfc2;   /* rules and borders */
+
+  --color-cream: #f4f0e9;        /* same as canvas-100, named as the mockup does */
+  --color-cream-light: #fbf9f5;  /* lighter section band */
+  --color-cream-soft: #fcfbf8;
+  --color-rule: #d8cfc2;
+  --color-rule-soft: #e4dccd;
+
+  --color-ink-900: #151311;      /* headings, buttons, links */
+  --color-ink-700: #3a352f;      /* paragraphs, solid button hover */
+  --color-ink-500: #5a544c;      /* secondary text, inactive nav */
+  --color-ink-400: #6b6358;      /* muted captions */
+
+  --color-gold-label: #7a5f36;   /* small uppercase labels */
+  --color-love: #a8323e;         /* key words, decorative diamond — used sparingly */
 
   --color-sage-50: #f4f7f4;
   --color-sage-100: #e8eee8;
@@ -54,7 +68,7 @@
     scroll-behavior: auto;
   }
   body {
-    @apply bg-canvas-50 text-ink-900 font-sans antialiased selection:bg-gold-600 selection:text-white;
+    @apply bg-cream text-ink-900 font-sans antialiased selection:bg-gold-600 selection:text-white;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -148,6 +162,36 @@
   .animate-marquee {
     animation: none;
   }
+}
+
+
+/* ── Animations lifted from the client mockup ───────────────────────────────
+   wordUp  — hero headline, one word at a time (0.45em rise, 1.1s)
+   fadeUp  — subheading and buttons (14px rise, 1s)
+   heartbeat — the small red heart under "Zauvijek." (two beats, 4s loop)
+   All three are disabled under prefers-reduced-motion.                      */
+@keyframes drift {
+  from { transform: translateY(0) rotate(0); }
+  to   { transform: translateY(-10px) rotate(1.4deg); }
+}
+@keyframes slowZoom {
+  from { transform: scale(1); }
+  to   { transform: scale(1.07); }
+}
+@keyframes wordUp {
+  from { opacity: 0; transform: translateY(0.45em); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes heartbeat {
+  0%, 40%, 100% { transform: scale(1); }
+  8%            { transform: scale(1.28); }
+  16%           { transform: scale(1); }
+  24%           { transform: scale(1.16); }
+  32%           { transform: scale(1); }
 }
 
 /* ── Hero CTA pulse ─────────────────────────────────────────────────────────

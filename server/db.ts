@@ -93,6 +93,38 @@ export async function initDB() {
       ALTER TABLE contact_submissions ADD COLUMN IF NOT EXISTS needs_video     VARCHAR(255) DEFAULT NULL;
       ALTER TABLE contact_submissions ADD COLUMN IF NOT EXISTS photo_locations TEXT         DEFAULT NULL;
 
+      -- ── Stories (one per couple) ─────────────────────────────────────────
+      -- Drives the Radovi cards and the new /prica/:slug page. Numbering on the
+      -- cards (01-09) is derived from sort_order, never stored.
+      CREATE TABLE IF NOT EXISTS stories (
+        id SERIAL PRIMARY KEY,
+        slug VARCHAR(160) UNIQUE NOT NULL,
+        couple VARCHAR(255) NOT NULL,
+        category VARCHAR(50) NOT NULL DEFAULT 'WEDDINGS'
+          CHECK (category IN ('WEDDINGS', 'STUDIO', 'PORTRAITS')),
+        location VARCHAR(255),
+        date_text VARCHAR(100),
+        tag VARCHAR(120),
+        cover_url TEXT,
+        cover_alt VARCHAR(255),
+        cover_layout VARCHAR(20) DEFAULT 'TALL',
+        quote_bs TEXT, quote_en TEXT,
+        text_bs TEXT,  text_en TEXT,
+        sort_order INT DEFAULT 0,
+        is_published BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS story_images (
+        id SERIAL PRIMARY KEY,
+        story_id INT NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+        url TEXT NOT NULL,
+        alt VARCHAR(255),
+        caption VARCHAR(255),
+        layout VARCHAR(20) DEFAULT 'TALL' CHECK (layout IN ('TALL', 'WIDE', 'SQUARE')),
+        sort_order INT DEFAULT 0
+      );
+
       CREATE TABLE IF NOT EXISTS site_settings (
         key VARCHAR(100) PRIMARY KEY,
         value TEXT
@@ -118,10 +150,10 @@ export async function initDB() {
     // Seed default site settings if empty
     await client.query(`
       INSERT INTO site_settings (key, value) VALUES
-        ('email', 'hello@387cinematicweddings.com'),
+        ('email', 'hello@387weddings.ba'),
         ('phone', '+387 61 000 000'),
         ('instagram', '#'),
-        ('instagram_handle', '387cinematicweddings'),
+        ('instagram_handle', '387.weddings'),
         ('facebook', '#'),
         ('pinterest', '#'),
         ('twitter', '#'),
@@ -145,8 +177,8 @@ export async function initDB() {
         ('analytics.ga_id', ''),
         ('analytics.gtm_id', ''),
         ('analytics.gsc_verification', ''),
-        ('sitemap.base_url', 'https://387cinematicweddings.com'),
-        ('robots_txt', E'User-agent: *\nAllow: /\nDisallow: /admin/\n\nSitemap: https://387cinematicweddings.com/sitemap.xml'),
+        ('sitemap.base_url', 'https://387weddings.ba'),
+        ('robots_txt', E'User-agent: *\nAllow: /\nDisallow: /admin/\n\nSitemap: https://387weddings.ba/sitemap.xml'),
         ('img.home.hero.1', ''), ('img.home.hero.2', ''), ('img.home.hero.3', ''),
         ('img.home.hero.4', ''), ('img.home.hero.5', ''),
         ('img.home.grid.1', ''), ('img.home.grid.2', ''), ('img.home.grid.3', ''),
@@ -162,6 +194,7 @@ export async function initDB() {
         ('img.portfolio.hero', ''),
         ('img.contact.hero', ''),
         ('img.contact.ornament', ''),
+        ('img.contact.hero.mobile', ''),
         ('instagram_section_tag', 'Social'),
         ('instagram_section_heading', 'Follow Our Journey'),
         ('img.instagram.1', ''), ('img.instagram.2', ''), ('img.instagram.3', ''),
@@ -523,7 +556,36 @@ export async function initDB() {
         ('about.invite.p2', 'Poziv: Paragraf 2 (prazno = sakriveno)', 'about', 'invite', 'textarea',
          'Write to us and tell us how you imagined your day. We reply within 24 to 48 hours.',
          'Javite nam se i ispričajte kako ste zamislili svoj dan. Odgovaramo u roku od 24 do 48 sati.', 3),
-        ('about.invite.button', 'Poziv: Tekst gumba', 'about', 'invite', 'text', 'Get in touch', 'Javite nam se', 4)
+        ('about.invite.button', 'Poziv: Tekst gumba', 'about', 'invite', 'text', 'Get in touch', 'Javite nam se', 4),
+
+        -- Footer po mockupu: tri velika linka s podnaslovom + "Na vrh"
+        ('footer.link.about.sub',   'Footer: Podnaslov uz "O nama"',  'footer', 'nav', 'text', 'Meet Melisa and Aldin',    'Upoznajte Melisu i Aldina', 10),
+        ('footer.link.work.sub',    'Footer: Podnaslov uz "Radovi"',  'footer', 'nav', 'text', 'See our stories',          'Pogledajte naše priče',     11),
+        ('footer.link.contact.sub', 'Footer: Podnaslov uz "Kontakt"', 'footer', 'nav', 'text', 'Check an available date',  'Provjerite slobodan datum', 12),
+        ('footer.top',              'Footer: Tekst "Na vrh"',         'footer', 'legal', 'text', 'Back to top',            'Na vrh',                     5),
+
+        -- Radovi: oznaka kategorije na kartici (jednina, kako mockup prikazuje)
+        ('portfolio.card.wedding',  'Kartica: Oznaka "Vjenčanje"', 'portfolio', 'filter', 'text', 'Wedding',  'Vjenčanje', 10),
+        ('portfolio.card.studio',   'Kartica: Oznaka "Studio"',    'portfolio', 'filter', 'text', 'Studio',   'Studio',    11),
+        ('portfolio.card.portrait', 'Kartica: Oznaka "Portreti"',  'portfolio', 'filter', 'text', 'Portrait', 'Portreti',  12),
+
+        -- Zavrsni Instagram blok (Radovi i Prica)
+        ('instagram.tag',         'Instagram blok: Tag',             'footer', 'instagram', 'text', 'More moments',  'Još trenutaka',    0),
+        ('instagram.title.part1', 'Instagram blok: Naslov dio 1',    'footer', 'instagram', 'text', 'See more on',   'Pogledajte još na', 1),
+        ('instagram.title.part2', 'Instagram blok: Naslov dio 2 (kurziv)', 'footer', 'instagram', 'text', 'Instagram', 'Instagramu',   2),
+
+        -- Stranica Priča
+        ('story.back',  'Priča: Povratni link',        'story', 'labels', 'text', 'All work',       'Svi radovi',      0),
+        ('story.tag',   'Priča: Oznaka uz tekst',      'story', 'labels', 'text', 'The story',      'Priča',           1),
+        ('story.prev',  'Priča: Prethodna priča',      'story', 'labels', 'text', 'Previous story', 'Prethodna priča', 2),
+        ('story.next',  'Priča: Sljedeća priča',       'story', 'labels', 'text', 'Next story',     'Sljedeća priča',  3),
+        ('story.close', 'Priča: Zatvori (lightbox)',   'story', 'labels', 'text', 'Close',          'Zatvori',         4),
+
+        -- Kontakt: naslovi grupa u obrascu + treci dio naslova (crvena rijec)
+        ('contact.group.you',     'Obrazac: Naslov grupe 1', 'contact', 'form', 'text', 'About you',      'O vama',      -3),
+        ('contact.group.wedding', 'Obrazac: Naslov grupe 2', 'contact', 'form', 'text', 'About the wedding', 'O vjenčanju', -2),
+        ('contact.group.story',   'Obrazac: Naslov grupe 3', 'contact', 'form', 'text', 'Your story',     'Vaša priča',  -1),
+        ('contact.hero.title.part3', 'Hero: Naslov — istaknuta riječ', 'contact', 'hero', 'text', 'story', 'priču', 5)
       ON CONFLICT (key) DO NOTHING
     `);
 
@@ -584,6 +646,28 @@ export async function initDB() {
         WHERE key = 'contact.form.story' AND value_bs IN ('Vaša Priča', '');
       UPDATE page_content SET value_en = 'Tell us anything else you would like us to know', value_bs = 'Napišite nam sve što želite da znamo'
         WHERE key = 'contact.form.story.placeholder' AND value_bs IN ('Ispričajte nam o svojoj viziji...', '');
+      UPDATE page_content
+        SET value_en = 'We have followed couples across Bosnia and the Balkans for years, and the same thing amazes us every time: how many different stories love can tell.',
+            value_bs = 'Pratimo parove kroz Bosnu i Balkan već godinama, i svaki put ista stvar nas oduševi, koliko različitih priča ljubav zna ispričati.'
+        WHERE key = 'home.about.desc.1'
+          AND value_bs LIKE 'Mi smo tim koji vjeruje%';
+      UPDATE page_content
+        SET value_en = 'We do not like posing or stiff frames. We like the moment when nobody is pretending.',
+            value_bs = 'Ne volimo poziranje ni ukočene kadrove. Volimo trenutak kad se niko ne pretvara.'
+        WHERE key = 'home.about.desc.2'
+          AND value_bs LIKE 'Od prvog susreta%';
+      UPDATE page_content SET value_en = 'Stories that', value_bs = 'Priče koje'
+        WHERE key = 'portfolio.hero.title' AND value_bs IN ('Radovi', 'Work', '');
+      UPDATE page_content SET value_en = 'last', value_bs = 'traju'
+        WHERE key = 'portfolio.hero.subtitle' AND value_bs IN ('Vizuelno Naslijeđe', '');
+      UPDATE page_content
+        SET value_en = 'These are the stories we have had the honour of telling: every frame, every moment, every couple. See what we make when you trust us with your day.',
+            value_bs = 'Ovo su priče koje smo imali čast ispričati, svaki kadar, svaki trenutak, svaki par. Pogledajte šta stvaramo kad nam povjerite svoj dan.'
+        WHERE key = 'portfolio.approach.desc' AND value_bs LIKE 'Od tihog iščekivanja%';
+      UPDATE page_content SET value_en = 'Tell us', value_bs = 'Ispričajte nam'
+        WHERE key = 'contact.hero.title.part1' AND value_bs IN ('Pošaljite', '');
+      UPDATE page_content SET value_en = 'your', value_bs = 'svoju'
+        WHERE key = 'contact.hero.title.part2' AND value_bs IN ('nam poruku', '');
       UPDATE page_content SET value_en = 'Send message', value_bs = 'Pošalji poruku'
         WHERE key = 'contact.form.submit' AND value_bs IN ('Pošalji Upit', 'Pošaljite Upit', '');
     `);
@@ -601,6 +685,22 @@ export async function initDB() {
           AND value_bs IN ('Rezervišite fotografisanje vjenčanja i dobijte besplatan kinematski highlight film.', '');
     `);
 
+    // Domain migration — the site answered on 387cinematicweddings.com while the
+    // brief names 387weddings.ba as the canonical host. Each update is guarded on
+    // the exact old value, so anything already corrected in the admin survives.
+    await client.query(`
+      UPDATE site_settings SET value = 'https://387weddings.ba'
+        WHERE key = 'sitemap.base_url' AND value = 'https://387cinematicweddings.com';
+      UPDATE site_settings SET value = replace(value, '387cinematicweddings.com', '387weddings.ba')
+        WHERE key = 'robots_txt' AND value LIKE '%387cinematicweddings.com%';
+      UPDATE site_settings SET value = 'hello@387weddings.ba'
+        WHERE key = 'email' AND value = 'hello@387cinematicweddings.com';
+      UPDATE site_settings SET value = '387.weddings'
+        WHERE key = 'instagram_handle' AND value = '387cinematicweddings';
+      UPDATE site_settings SET value = replace(value, '387cinematicweddings.com', '387weddings.ba')
+        WHERE value LIKE '%387cinematicweddings.com%';
+    `);
+
     // Indexes for the hot public queries (filter by is_active, order by sort_order).
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_gallery_active_sort   ON gallery_images (is_active, sort_order);
@@ -609,6 +709,9 @@ export async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_testimonials_active   ON testimonials (is_active, sort_order);
       CREATE INDEX IF NOT EXISTS idx_submissions_status    ON contact_submissions (status);
       CREATE INDEX IF NOT EXISTS idx_page_content_ordering ON page_content (page, section, sort_order);
+      CREATE INDEX IF NOT EXISTS idx_stories_pub_sort  ON stories (is_published, sort_order);
+      CREATE INDEX IF NOT EXISTS idx_stories_category  ON stories (category);
+      CREATE INDEX IF NOT EXISTS idx_story_images_sort ON story_images (story_id, sort_order);
     `);
 
     console.log('Database initialized successfully');

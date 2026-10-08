@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Image, Images, Package, Quote, Mail,
+  LayoutDashboard, Image, Images, Package, Quote, Mail, BookOpen,
   Settings, LogOut, Menu, X, ChevronRight, FileEdit, Instagram
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -12,6 +12,7 @@ const navItems = [
   { path: '/admin/pages',        label: 'Stranice',    icon: FileEdit },
   { path: '/admin/images',       label: 'Fotografije', icon: Images },
   { path: '/admin/instagram',    label: 'Instagram',   icon: Instagram },
+  { path: '/admin/stories',      label: 'Priče',       icon: BookOpen },
   { path: '/admin/gallery',      label: 'Galerija',    icon: Image },
   { path: '/admin/packages',     label: 'Paketi',      icon: Package },
   { path: '/admin/testimonials', label: 'Recenzije',   icon: Quote },
