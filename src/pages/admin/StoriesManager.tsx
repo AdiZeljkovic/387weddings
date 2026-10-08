@@ -385,7 +385,7 @@ export default function StoriesManager() {
                   <div className="text-white/85 text-sm truncate">{s.couple}</div>
                   <div className="text-white/30 text-[11px] truncate">
                     {CATEGORIES.find(c => c.value === s.category)?.label}
-                    {s.location ? ` · ${s.location}` : ''} · /prica/{s.slug} · {s.image_count ?? 0} fotografija
+                    {s.location ? ` · ${s.location}` : ''} · /portfolio/{s.slug} · {s.image_count ?? 0} fotografija
                   </div>
                 </div>
 
@@ -396,7 +396,7 @@ export default function StoriesManager() {
                   {s.is_published ? <Eye size={15} /> : <EyeOff size={15} />}
                 </button>
                 {s.is_published && (
-                  <a href={`/prica/${s.slug}`} target="_blank" rel="noopener noreferrer" title="Otvori na sajtu"
+                  <a href={`/portfolio/${s.slug}`} target="_blank" rel="noopener noreferrer" title="Otvori na sajtu"
                     className="flex-none p-2 text-white/25 hover:text-white/60 transition-colors"><ExternalLink size={15} /></a>
                 )}
                 <button onClick={() => openStoryGallery(s.id)}

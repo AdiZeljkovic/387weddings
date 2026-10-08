@@ -63,7 +63,7 @@ const PAGE_PATHS: Record<string, string> = {
   portfolio: '/portfolio',
   about:     '/about',
   contact:   '/contact',
-  story:     '/prica/...',
+  story:     '/portfolio/...',
   privacy:   '/privacy',
   footer:    '(sve stranice)',
 };

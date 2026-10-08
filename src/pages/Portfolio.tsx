@@ -32,7 +32,6 @@ interface StoryCard {
   cover_url: string | null;
   cover_alt: string | null;
   cover_layout: string | null;
-  legacy?: boolean;
 }
 
 const ASPECT: Record<string, string> = {
@@ -106,10 +105,6 @@ const Portfolio = () => {
         <OliveBranch className="hidden lg:block absolute right-[140px] top-[84px] w-[340px] animate-[drift_16s_ease-in-out_infinite_alternate] motion-reduce:animate-none" flip />
 
         <div className="relative">
-          <SectionLabel centered className="mb-6 lg:mb-7" style={getContentStyle('portfolio.approach.title')}>
-            {t('portfolio.approach.title')}
-          </SectionLabel>
-
           <Reveal
             as="h1"
             style={getContentStyle('portfolio.hero.title')}
@@ -137,7 +132,7 @@ const Portfolio = () => {
         <div className="max-w-[1248px] mx-auto">
           <nav
             aria-label="Filter radova"
-            className="flex flex-wrap justify-center gap-x-2 gap-y-1 border-b border-rule max-w-[640px] mx-auto mb-10 lg:mb-16"
+            className="flex flex-nowrap lg:flex-wrap justify-center gap-x-1 lg:gap-x-2 border-b border-rule max-w-[640px] mx-auto mb-10 lg:mb-16"
           >
             {categories.map(c => {
               const active = activeFilter === c;
@@ -148,7 +143,7 @@ const Portfolio = () => {
                   onClick={() => setActiveFilter(c)}
                   aria-pressed={active}
                   style={getContentStyle(CATEGORY_KEYS[c])}
-                  className={`text-[11px] lg:text-[12px] tracking-[0.2em] lg:tracking-[0.24em] uppercase px-3 lg:px-7 py-4 lg:py-[18px] min-h-11 transition-colors duration-250 ${
+                  className={`flex-none whitespace-nowrap text-[11px] lg:text-[12px] tracking-[0.12em] lg:tracking-[0.24em] uppercase px-2.5 lg:px-7 py-4 lg:py-[18px] min-h-11 transition-colors duration-250 ${
                     active
                       ? 'text-ink-900 font-semibold border-b-2 border-love -mb-px'
                       : 'text-ink-500 font-medium hover:text-ink-900'
@@ -181,24 +176,24 @@ const Portfolio = () => {
                     const src = item.cover_url || '';
                     const r = respImg(src, [480, 768, 1100]);
                     const label = CARD_LABEL_KEYS[item.category];
-                    const Card = item.slug ? Link : 'div';
-                    const cardProps = item.slug ? { to: `/prica/${item.slug}` } : {};
-
                     return (
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      <Card key={item.id} {...(cardProps as any)} className="group block text-ink-900">
+                      <Link
+                        key={item.id}
+                        to={`/portfolio/${item.slug}`}
+                        className="work-card group block text-ink-900 cursor-pointer"
+                      >
                         <div className="overflow-hidden">
                           <Reveal
                             kind="mask"
                             delay={ci * 0.12 + col.indexOf(col.find(x => x.item.id === item.id)!) * 0.06}
-                            className={`${ASPECT[item.cover_layout || 'TALL'] ?? ASPECT.TALL} overflow-hidden bg-rule`}
+                            className={`${ASPECT[item.cover_layout || 'TALL'] ?? ASPECT.TALL} zoom bg-rule`}
                           >
                             <img
                               src={r.src}
                               srcSet={r.srcSet}
                               sizes="(min-width: 1100px) 32vw, (min-width: 700px) 48vw, 100vw"
                               alt={item.cover_alt || item.couple || ''}
-                              className="w-full h-full object-cover transition-transform duration-1000 ease-[cubic-bezier(.2,.6,.2,1)] group-hover:scale-[1.045] motion-reduce:transition-none"
+                              className="w-full h-full object-cover"
                               loading="lazy"
                               decoding="async"
                               draggable={false}
@@ -217,14 +212,12 @@ const Portfolio = () => {
                           >
                             {label ? t(label) : ''}
                           </span>
-                          {item.slug && (
-                            <span
-                              aria-hidden="true"
-                              className="ml-auto text-ink-900 text-sm opacity-0 -translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0"
-                            >
-                              →
-                            </span>
-                          )}
+                          <span
+                            aria-hidden="true"
+                            className="ml-auto text-ink-900 text-sm opacity-0 -translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0"
+                          >
+                            →
+                          </span>
                         </Reveal>
 
                         {item.couple && (
@@ -235,7 +228,7 @@ const Portfolio = () => {
                             />
                           </Reveal>
                         )}
-                      </Card>
+                      </Link>
                     );
                   })}
                 </div>
@@ -262,7 +255,7 @@ const Portfolio = () => {
               href={instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-3 border border-ink-900 text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.2em] uppercase px-7 lg:px-9 py-[17px] lg:py-5 transition-colors duration-250 hover:bg-ink-900 hover:text-white group"
+              className="btn inline-flex items-center gap-3 border border-ink-900 text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.2em] uppercase px-7 lg:px-9 py-[17px] lg:py-5 hover:text-white group"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
                 <rect x="3" y="3" width="18" height="18" rx="5" />

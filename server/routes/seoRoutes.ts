@@ -26,7 +26,7 @@ router.get('/sitemap.xml', async (_req, res) => {
     );
     const pages = [
       ...STATIC_PAGES,
-      ...stories.rows.map(r => ({ path: `/prica/${r.slug}`, changefreq: 'monthly', priority: '0.7' })),
+      ...stories.rows.map(r => ({ path: `/portfolio/${r.slug}`, changefreq: 'monthly', priority: '0.7' })),
     ];
 
     // Each entry declares both language variants, matching the hreflang tags

@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
-import { respImg } from '../lib/img';
-import { OliveBranch, Rings, SectionLabel } from '../components/ornaments';
+import { respImg, blurSrc } from '../lib/img';
+import { OliveBranch, SectionLabel } from '../components/ornaments';
 import Reveal from '../components/Reveal';
 
 const FALLBACK = [
@@ -19,45 +19,46 @@ const FALLBACK = [
   'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&q=80&w=1200',
 ];
 
-// The mosaic from the mockup: six frames on a four-column grid, then a band of
-// three underneath. Column and flex ratios are taken straight from the board.
-const MOSAIC_TOP = [
-  { key: 'img.home.grid.1', area: 'col-start-1 col-end-3 row-start-1' },
-  { key: 'img.home.grid.2', area: 'col-start-3 row-start-1 row-end-3' },
-  { key: 'img.home.grid.3', area: 'col-start-4 row-start-1' },
-  { key: 'img.home.grid.4', area: 'col-start-1 row-start-2' },
-  { key: 'img.home.grid.5', area: 'col-start-2 row-start-2' },
-  { key: 'img.home.grid.6', area: 'col-start-4 row-start-2' },
+// The mosaic, as the board lays it out: a tall portrait on the left beside two
+// columns of three landscape frames, then a row of two underneath. The three
+// columns start at different heights, which is the `shift` below.
+const MOSAIC_MAIN = [
+  { key: 'img.home.grid.1', col: 1, row: 1, span: 3, shift: -34 },  // 2:3 portrait
+  { key: 'img.home.grid.2', col: 2, row: 1, span: 1, shift: 0 },
+  { key: 'img.home.grid.3', col: 2, row: 2, span: 1, shift: 0 },
+  { key: 'img.home.grid.4', col: 2, row: 3, span: 1, shift: 0 },
+  { key: 'img.home.grid.5', col: 3, row: 1, span: 1, shift: 34 },
+  { key: 'img.home.grid.6', col: 3, row: 2, span: 1, shift: 34 },
+  { key: 'img.home.grid.7', col: 3, row: 3, span: 1, shift: 34 },
 ];
-const MOSAIC_BOTTOM = [
-  { key: 'img.home.grid.7', grow: 1.5 },
-  { key: 'img.home.grid.8', grow: 0.667 },
-  { key: 'img.home.grid.9', grow: 1.5 },
+const MOSAIC_FOOT = [
+  { key: 'img.home.grid.8', grow: 2, ratio: '3 / 2' },   // wide
+  { key: 'img.home.grid.9', grow: 1, ratio: '2 / 3' },   // narrow portrait
 ];
 
-// Phones get the same nine frames in two columns, wide ones spanning both
+// Phones: wide, two, two, wide, two, wide — nine frames, 12px apart
 const MOSAIC_PHONE = [
   { key: 'img.home.grid.1', span: true,  ratio: '3 / 2' },
   { key: 'img.home.grid.2', span: false, ratio: '3 / 4' },
   { key: 'img.home.grid.3', span: false, ratio: '3 / 4' },
   { key: 'img.home.grid.4', span: false, ratio: '3 / 4' },
   { key: 'img.home.grid.5', span: false, ratio: '3 / 4' },
-  { key: 'img.home.grid.7', span: true,  ratio: '3 / 2' },
-  { key: 'img.home.grid.6', span: false, ratio: '3 / 4' },
+  { key: 'img.home.grid.6', span: true,  ratio: '3 / 2' },
+  { key: 'img.home.grid.7', span: false, ratio: '3 / 4' },
   { key: 'img.home.grid.8', span: false, ratio: '3 / 4' },
   { key: 'img.home.grid.9', span: true,  ratio: '3 / 2' },
 ];
 
 const SLIDE_MS = 6000;
-const SLIDES = 5;
+const SLIDE_MAX = 5;  // the number of hero slots the admin offers
 
 const Frame = ({ src, alt, className = '', style, sizes = '50vw', eager = false, delay = 0, focus }: {
   src: string; alt: string; className?: string; style?: React.CSSProperties;
   sizes?: string; eager?: boolean; delay?: number; focus?: string;
 }) => {
-  const r = respImg(src, [480, 768, 1280]);
+  const r = respImg(src, [480, 768, 1200]);
   return (
-    <Reveal kind="mask" delay={delay} className={`overflow-hidden bg-rule ${className}`} style={style}>
+    <Reveal kind="mask" delay={delay} className={`relative overflow-hidden bg-rule ${className}`} style={style}>
       <img
         src={r.src}
         srcSet={r.srcSet}
@@ -70,6 +71,12 @@ const Frame = ({ src, alt, className = '', style, sizes = '50vw', eager = false,
         draggable={false}
         referrerPolicy="no-referrer"
       />
+      {/* Warm wash the board puts over every mosaic frame */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 mix-blend-soft-light"
+        style={{ background: 'linear-gradient(160deg, rgba(166,134,93,.12), rgba(140,70,60,.08))' }}
+      />
     </Reveal>
   );
 };
@@ -79,22 +86,42 @@ const Home = () => {
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [slide, setSlide] = useState(0);
   const [paused, setPaused] = useState(false);
+  // Until the first hero frame has decoded the section was a flat dark panel
+  const [heroReady, setHeroReady] = useState(false);
 
   useEffect(() => {
     loadSettings().then(setSettings).catch(err => console.warn('Home: settings load failed', err));
   }, []);
 
-  // Five frames cross-fade on their own; hovering the hero holds the current one
+  // A blurred full-screen layer costs the compositor something, so it goes away
+  // even if the load event never reaches us (cached image, failed request)
+  useEffect(() => {
+    const id = window.setTimeout(() => setHeroReady(true), 2500);
+    return () => clearTimeout(id);
+  }, []);
+
+  // Only the hero slots the client has actually filled are shown. Until there
+  // is at least one, the placeholder set stands in so the hero is never empty —
+  // and the moment one real photograph is uploaded, no slide comes from
+  // somebody else's server any more.
+  const uploaded = Array.from({ length: SLIDE_MAX }, (_, i) => ({
+    n: i + 1,
+    src: settings[`img.home.hero.${i + 1}`] || '',
+  })).filter(s => s.src);
+  const heroSlides = uploaded.length
+    ? uploaded
+    : FALLBACK.slice(0, SLIDE_MAX).map((src, i) => ({ n: i + 1, src }));
+  // Settings arrive after the first paint, so the count can shrink under us
+  const active = slide % heroSlides.length;
+  const heroBlur = blurSrc(heroSlides[0].src);
+
+  // The frames cross-fade on their own; hovering the hero holds the current one
   useEffect(() => {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduce || paused) return;
-    const id = setInterval(() => setSlide(p => (p + 1) % SLIDES), SLIDE_MS);
+    if (reduce || paused || heroSlides.length < 2) return;  // one frame has nowhere to turn
+    const id = setInterval(() => setSlide(p => (p + 1) % heroSlides.length), SLIDE_MS);
     return () => clearInterval(id);
-  }, [paused]);
-
-  const heroSlides = Array.from({ length: SLIDES }, (_, i) =>
-    settings[`img.home.hero.${i + 1}`] || FALLBACK[i]
-  );
+  }, [paused, heroSlides.length]);
   const mosaicSrc = (key: string, i: number) => settings[key] || FALLBACK[i % FALLBACK.length];
   // Alt text lives beside each image slot as "<key>.alt"
   const altFor = (key: string) => settings[`${key}.alt`] || '';
@@ -113,30 +140,47 @@ const Home = () => {
     <div className="bg-cream">
       {/* ── Hero — five frames cross-fading behind the statement ───────────── */}
       <section
-        className="relative flex flex-col overflow-hidden bg-[#26221e] text-white min-h-[740px] lg:min-h-[900px]"
+        className="relative flex flex-col overflow-hidden w-full max-w-full bg-[#26221e] text-white min-h-[740px] lg:min-h-[900px]"
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
       >
-        {heroSlides.map((src, i) => {
-          const r = respImg(src, [768, 1280, 1920]);
+        {/* A 24px-wide copy of the first frame, blurred up to fill the section.
+            It weighs a few hundred bytes, so the hero has its colours and shapes
+            almost immediately instead of showing a black screen for a second. */}
+        {heroBlur && (
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 bg-cover bg-center transition-opacity duration-700 ease-out motion-reduce:transition-none"
+            style={{
+              backgroundImage: `url(${heroBlur})`,
+              filter: 'blur(26px)',
+              transform: 'scale(1.08)',
+              opacity: heroReady ? 0 : 1,
+            }}
+          />
+        )}
+
+        {heroSlides.map(({ n, src }, i) => {
+          const r = respImg(src, [768, 1280, 1920, 2400]);
           return (
             <img
               key={src + i}
               src={r.src}
               srcSet={r.srcSet}
-              sizes="100vw"
-              // Only the frame on screen is announced; the other four are decoration
-              alt={i === slide ? (settings[`img.home.hero.${i + 1}.alt`] || '') : ''}
-              aria-hidden={i === slide ? undefined : 'true'}
+              sizes="(max-width: 1023px) 200vw, 100vw"
+              // Only the frame on screen is announced; the others are decoration
+              alt={i === active ? (settings[`img.home.hero.${n}.alt`] || '') : ''}
+              aria-hidden={i === active ? undefined : 'true'}
               className="absolute inset-0 w-full h-full object-cover transition-opacity duration-[1200ms] ease-in-out motion-reduce:transition-none motion-reduce:animate-none"
               style={{
-                opacity: i === slide ? 1 : 0,
+                opacity: i === active ? 1 : 0,
                 // Only the visible frame animates, and it restarts on each turn
-                animation: i === slide ? `heroZoom ${SLIDE_MS + 1200}ms ease-out both` : undefined,
-                objectPosition: settings[`img.home.hero.${i + 1}.focus`] || undefined,
+                animation: i === active ? `heroZoom ${SLIDE_MS + 1200}ms ease-out both` : undefined,
+                objectPosition: settings[`img.home.hero.${n}.focus`] || undefined,
               }}
               loading={i === 0 ? 'eager' : 'lazy'}
               fetchPriority={i === 0 ? 'high' : 'low'}
+              onLoad={i === 0 ? () => setHeroReady(true) : undefined}
               decoding="async"
               draggable={false}
               referrerPolicy="no-referrer"
@@ -149,10 +193,9 @@ const Home = () => {
           aria-hidden="true"
           className="absolute inset-0 bg-[linear-gradient(180deg,rgba(14,12,10,.5)_0%,rgba(14,12,10,.15)_38%,rgba(14,12,10,.82)_100%)] lg:bg-[linear-gradient(90deg,rgba(14,12,10,.82)_0%,rgba(14,12,10,.38)_55%,rgba(14,12,10,.12)_100%)]"
         />
-        <div aria-hidden="true" className="absolute inset-2.5 lg:inset-4 border border-white/[0.16] pointer-events-none" />
 
-        <div className="relative z-[2] flex-1 flex flex-col justify-center lg:justify-end items-center lg:items-start text-center lg:text-left px-7 lg:px-24 pt-28 pb-24 lg:pb-30 max-w-[1100px] box-border">
-          <h1 className="font-serif font-normal text-[42px] lg:text-[104px] leading-[1.08] lg:leading-[1.02] lg:tracking-[-0.01em] m-0 mb-6 lg:mb-8">
+        <div className="relative z-[2] flex-1 flex flex-col justify-end items-center lg:items-start text-center lg:text-left px-7 lg:px-24 pt-28 pb-24 lg:pb-30 max-w-[1100px] box-border">
+          <h1 className="font-serif font-normal text-[42px] leading-[1.08] lg:text-[clamp(56px,6.2vw,88px)] lg:leading-[1.02] lg:tracking-[-0.01em] m-0 mb-6 lg:mb-8">
             {heroWords.map((hw, i) => (
               <React.Fragment key={`${hw.w}-${i}`}>
                 {i === breakAt && <br />}
@@ -174,35 +217,35 @@ const Home = () => {
 
           <p
             style={{ animationDelay: 'calc(var(--intro-delay, 0s) + 1.7s)', ...getContentStyle('hero.desc') }}
-            className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none text-[14px] lg:text-[19px] font-light leading-[1.75] m-0 mb-10 lg:mb-13 text-[#ece5d9] max-w-[260px] lg:max-w-none lg:whitespace-nowrap"
+            className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none text-[14px] lg:text-[19px] font-light leading-[1.75] m-0 mb-auto lg:mb-13 pb-10 text-[#ece5d9] max-w-[260px] lg:max-w-none lg:whitespace-nowrap"
           >
             {t('hero.desc')}
           </p>
 
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 lg:gap-10 w-full max-w-[300px] lg:max-w-none">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 lg:gap-10 w-full max-w-[300px] lg:max-w-none mt-auto lg:mt-0">
             <Link
               to="/portfolio"
               style={{ animationDelay: 'calc(var(--intro-delay, 0s) + 2s)', ...getContentStyle('hero.portfolio') }}
-              className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none bg-cream text-ink-900 text-center text-[11px] lg:text-[12px] font-semibold tracking-[0.22em] uppercase px-0 lg:px-10 py-[19px] lg:py-[22px] border border-cream transition-colors duration-250 hover:bg-white"
+              className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none btn btn-on-dark bg-cream text-ink-900 text-center text-[11px] lg:text-[12px] font-semibold tracking-[0.22em] uppercase px-0 lg:px-10 py-[19px] lg:py-[22px] border border-cream"
             >
               {t('hero.portfolio')} →
             </Link>
             <Link
               to="/contact"
               style={{ animationDelay: 'calc(var(--intro-delay, 0s) + 2.2s)', ...getContentStyle('hero.inquire') }}
-              className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none text-white text-center text-[11px] lg:text-[12px] font-medium tracking-[0.22em] uppercase py-[19px] lg:py-3.5 border lg:border-0 lg:border-b border-white/55 lg:border-b-white/50 transition-colors duration-250 hover:text-cream"
+              className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none btn btn-on-dark text-white text-center text-[11px] lg:text-[12px] font-medium tracking-[0.22em] uppercase px-6 py-[19px] lg:py-3.5 border border-white/55 hover:text-ink-900"
             >
               {t('hero.inquire')} →
             </Link>
           </div>
         </div>
 
-        {/* Five ticks — bottom right on desktop, centred on phones */}
+        {/* One tick per frame — bottom right on desktop, centred on phones */}
         <div
           aria-hidden="true"
           className="absolute z-[3] bottom-5 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-24 lg:bottom-[52px] flex gap-2.5"
         >
-          {Array.from({ length: SLIDES }, (_, i) => (
+          {heroSlides.length > 1 && heroSlides.map((_, i) => (
             <button
               key={i}
               type="button"
@@ -213,7 +256,7 @@ const Home = () => {
               <span className="block w-full h-0.5 bg-white/30 overflow-hidden">
                 <span
                   className="block h-full bg-white origin-left transition-transform duration-[600ms] ease-linear"
-                  style={{ transform: `scaleX(${i === slide ? 1 : 0})` }}
+                  style={{ transform: `scaleX(${i === active ? 1 : 0})` }}
                 />
               </span>
             </button>
@@ -269,39 +312,46 @@ const Home = () => {
               </Reveal>
             </div>
 
-            {/* Desktop grid — ratios straight from the board */}
+            {/* Desktop: tall portrait beside two columns of three */}
             <div
-              className="hidden lg:grid flex-1 min-w-0 gap-2"
+              className="hidden lg:grid flex-1 min-w-0"
               style={{
-                gridTemplateColumns: '190fr 195fr 355fr 220fr',
-                gridTemplateRows: '262px 262px',
-                flexBasis: '560px',
+                gridTemplateColumns: '396fr 414fr 414fr',
+                gridTemplateRows: 'repeat(3, 190px)',
+                gap: '12px',
+                flexBasis: '852px',
+                paddingTop: '34px',
+                paddingBottom: '34px',
               }}
             >
-              {MOSAIC_TOP.map((tile, i) => (
+              {MOSAIC_MAIN.map((tile, i) => (
                 <Frame
                   key={tile.key}
                   src={mosaicSrc(tile.key, i)}
                   alt={altFor(tile.key)}
-                  sizes="28vw"
-                  eager={i < 3}
-                  delay={i * 0.09}
+                  sizes="(min-width: 1024px) 32vw, 100vw"
+                  delay={i * 0.06}
                   focus={focusFor(tile.key)}
-                  className={`${tile.area} min-w-0`}
+                  className={`min-w-0 ${tile.col === 1 ? 'px-big' : tile.col === 2 ? 'px-colA' : 'px-colB'}`}
+                  style={{
+                    gridColumn: tile.col,
+                    gridRow: `${tile.row} / span ${tile.span}`,
+                    transform: `translateY(${tile.shift}px)`,
+                  }}
                 />
               ))}
             </div>
           </div>
 
-          {/* Desktop closing band of three */}
-          <div className="hidden lg:flex gap-2 h-[352px]">
-            {MOSAIC_BOTTOM.map((tile, i) => (
+          {/* Desktop closing row: one wide, one narrow portrait */}
+          <div className="hidden lg:flex gap-3 h-[300px]">
+            {MOSAIC_FOOT.map((tile, i) => (
               <Frame
                 key={tile.key}
-                src={mosaicSrc(tile.key, i + 6)}
+                src={mosaicSrc(tile.key, i + 7)}
                 alt={altFor(tile.key)}
-                sizes="33vw"
-                delay={i * 0.09}
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                delay={i * 0.06}
                 focus={focusFor(tile.key)}
                 className="min-w-0"
                 style={{ flex: `${tile.grow} 1 0` }}
@@ -310,14 +360,13 @@ const Home = () => {
           </div>
 
           {/* Phones — two columns, wide frames spanning both */}
-          <div className="grid lg:hidden grid-cols-2 gap-2">
+          <div className="grid lg:hidden grid-cols-2 gap-3">
             {MOSAIC_PHONE.map((tile, i) => (
               <Frame
                 key={`${tile.key}-${i}`}
                 src={mosaicSrc(tile.key, i)}
                 alt={altFor(tile.key)}
                 sizes="50vw"
-                eager={i < 2}
                 delay={i * 0.07}
                 focus={focusFor(tile.key)}
                 className={tile.span ? 'col-span-2' : ''}
@@ -327,12 +376,10 @@ const Home = () => {
           </div>
 
           <div className="relative flex justify-center mt-11 lg:mt-14">
-            {/* The second ornament the brief names, set behind the button */}
-            <Rings className="hidden lg:block absolute -top-10 left-1/2 -translate-x-1/2 w-[200px] animate-[drift_16s_ease-in-out_infinite_alternate] motion-reduce:animate-none" />
             <Link
               to="/portfolio"
               style={getContentStyle('home.featured.cta')}
-              className="relative inline-block border border-ink-900 text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.2em] uppercase px-7 lg:px-10 py-[18px] lg:py-[22px] transition-colors duration-250 hover:bg-ink-900 hover:text-white"
+              className="btn relative inline-block border border-ink-900 text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.2em] uppercase px-7 lg:px-10 py-[18px] lg:py-[22px] hover:text-white"
             >
               {t('home.featured.cta')} →
             </Link>
@@ -376,7 +423,7 @@ const Home = () => {
             <Link
               to="/about"
               style={getContentStyle('home.about.cta')}
-              className="inline-block bg-ink-900 text-white text-[11px] lg:text-[12px] font-semibold tracking-[0.22em] uppercase px-8 lg:px-10 py-[19px] lg:py-[22px] transition-colors duration-250 hover:bg-ink-700"
+              className="btn btn-solid inline-block bg-ink-900 text-white text-[11px] lg:text-[12px] font-semibold tracking-[0.22em] uppercase px-8 lg:px-10 py-[19px] lg:py-[22px]"
             >
               {t('home.about.cta')} →
             </Link>

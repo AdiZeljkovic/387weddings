@@ -265,7 +265,7 @@ const Story = () => {
               className="max-w-[1248px] mx-auto mt-16 lg:mt-24 border-t border-rule pt-8 lg:pt-9 flex flex-wrap justify-between gap-6"
             >
               {story.prev_slug ? (
-                <Link to={`/prica/${story.prev_slug}`} className="group flex flex-col gap-2.5 text-ink-900">
+                <Link to={`/portfolio/${story.prev_slug}`} className="group flex flex-col gap-2.5 text-ink-900">
                   <span
                     style={getContentStyle('story.prev')}
                     className="text-[11px] font-medium tracking-[0.24em] uppercase text-gold-label"
@@ -279,7 +279,7 @@ const Story = () => {
               ) : <span />}
 
               {story.next_slug && (
-                <Link to={`/prica/${story.next_slug}`} className="group flex flex-col gap-2.5 text-ink-900 text-right items-end ml-auto">
+                <Link to={`/portfolio/${story.next_slug}`} className="group flex flex-col gap-2.5 text-ink-900 text-right items-end ml-auto">
                   <span
                     style={getContentStyle('story.next')}
                     className="text-[11px] font-medium tracking-[0.24em] uppercase text-gold-label"

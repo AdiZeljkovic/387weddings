@@ -7,8 +7,9 @@ const router = Router();
 
 const UPLOADS = path.join(process.cwd(), 'uploads');
 const CACHE = path.join(UPLOADS, '.cache');
-// Fixed set of widths keeps the cache bounded (no cache-busting via ?w=999999)
-const WIDTHS = [320, 480, 640, 960, 1280, 1920];
+// Fixed set of widths keeps the cache bounded (no cache-busting via ?w=999999).
+// 24 is the blurred placeholder shown while a hero image is still decoding.
+const WIDTHS = [24, 320, 480, 640, 960, 1280, 1920, 2400];
 
 // GET /img/:file?w=640 — on-demand resized webp with a disk cache.
 // First request generates the variant; every later request is a static file hit.

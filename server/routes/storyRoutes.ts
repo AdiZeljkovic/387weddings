@@ -28,21 +28,10 @@ router.get('/', async (_req, res) => {
         ORDER BY sort_order, id`
     );
 
-    if (rows.length > 0) {
-      res.setHeader('Cache-Control', 'public, max-age=60');
-      res.json(rows);
-      return;
-    }
-
-    const legacy = await pool.query(
-      `SELECT id, url AS cover_url, category, title AS couple, location,
-              COALESCE(layout, 'TALL') AS cover_layout
-         FROM gallery_images
-        WHERE is_active = TRUE
-        ORDER BY sort_order, id`
-    );
+    // Every card is a real story with a slug, so every card is a link. Old
+    // gallery rows were migrated into stories by initDB rather than faked here.
     res.setHeader('Cache-Control', 'public, max-age=60');
-    res.json(legacy.rows.map(r => ({ ...r, slug: null, cover_alt: r.couple, legacy: true })));
+    res.json(rows);
   } catch (err) {
     console.error('[stories]', err);
     res.status(500).json({ error: 'Server error' });

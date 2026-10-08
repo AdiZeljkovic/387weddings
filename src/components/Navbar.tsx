@@ -100,7 +100,7 @@ const Navbar = () => {
           'px-5 sm:px-8 lg:px-24',
           overHero
             ? 'absolute top-0 pt-4 lg:pt-9 pb-0 text-white'
-            : 'sticky top-0 pt-3 lg:pt-[22px] pb-[10px] text-ink-900 bg-cream/[0.94] backdrop-blur-[10px] border-b border-ink-900/[0.07]',
+            : 'sticky top-0 pt-3 lg:pt-[22px] pb-[10px] text-ink-900 bg-[rgba(249,245,238,0.94)] backdrop-blur-[10px] border-b border-ink-900/[0.07]',
         )}
       >
         <Link
@@ -109,8 +109,9 @@ const Navbar = () => {
           aria-label="387 Weddings"
           className="flex-none"
         >
-          <Logo size={22} className="lg:hidden" color="currentColor" />
-          <Logo size={38} className="hidden lg:block" color="currentColor" />
+          {/* One mark scaled by CSS. Two Logo elements put the brand — and its
+              aria-label — in the DOM twice for every page. */}
+          <Logo size={38} className="w-[53px] lg:w-[92px] h-auto" color="currentColor" />
         </Link>
 
         {/* Desktop navigation */}

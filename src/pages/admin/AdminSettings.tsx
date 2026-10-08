@@ -15,7 +15,7 @@ const SEO_PAGES = [
   { key: 'about',     label: 'O nama',   path: '/about',     defaultTitle: 'About Us | 387 Weddings' },
   { key: 'portfolio', label: 'Portfolio', path: '/portfolio', defaultTitle: 'Portfolio | 387 Weddings' },
   { key: 'contact',   label: 'Kontakt',  path: '/contact',   defaultTitle: 'Inquire | 387 Weddings' },
-  { key: 'story',     label: 'Priča',      path: '/prica/...', defaultTitle: 'Priča | 387 Weddings' },
+  { key: 'story',     label: 'Priča',      path: '/portfolio/...', defaultTitle: 'Priča | 387 Weddings' },
   { key: 'privacy',   label: 'Privatnost', path: '/privacy',   defaultTitle: 'Politika privatnosti | 387 Weddings' },
 ];
 
@@ -200,19 +200,9 @@ export default function AdminSettings() {
               value={settings['facebook'] ?? ''} onChange={v => set('facebook', v)} />
           </SocialGroup>
 
-          <SocialGroup icon={<Twitter size={15} />} label="Twitter / X">
-            <Field label="URL profila" placeholder="https://x.com/387cinematic"
-              value={settings['twitter'] ?? ''} onChange={v => set('twitter', v)} />
-          </SocialGroup>
-
           <SocialGroup icon={<Youtube size={15} />} label="YouTube">
             <Field label="URL kanala" placeholder="https://youtube.com/@387cinematic"
               value={settings['youtube'] ?? ''} onChange={v => set('youtube', v)} />
-          </SocialGroup>
-
-          <SocialGroup icon={<Share2 size={15} />} label="Pinterest">
-            <Field label="URL profila" placeholder="https://pinterest.com/387weddings"
-              value={settings['pinterest'] ?? ''} onChange={v => set('pinterest', v)} />
           </SocialGroup>
 
           <SocialGroup icon={<Music2 size={15} />} label="TikTok">

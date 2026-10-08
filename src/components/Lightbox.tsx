@@ -57,7 +57,7 @@ const Lightbox = ({ images, index, onIndex, onClose, title, meta, closeLabel = '
 
   return (
     <div
-      className="fixed inset-0 z-[2000] bg-[#0e0c0a] text-white"
+      className="lightbox-in fixed inset-0 z-[2000] bg-[#0e0c0a] text-white"
       role="dialog"
       aria-modal="true"
       aria-label={title || 'Galerija'}

@@ -119,7 +119,7 @@ const Contact = () => {
   const videoOptions = optionsFor('contact.form.video', 3);
 
   const heading = (
-    <h1 className="font-serif font-light text-[32px] lg:text-[48px] leading-[1.2] lg:leading-[60px] tracking-[0.1em] uppercase m-0 mb-3.5">
+    <h1 className="font-serif font-light text-[clamp(22px,7vw,32px)] lg:text-[48px] leading-[1.2] lg:leading-[60px] tracking-[0.04em] lg:tracking-[0.1em] uppercase m-0 mb-3.5 max-w-full break-words">
       <span className="block" style={getContentStyle('contact.hero.title.part1')}>
         {t('contact.hero.title.part1')}
       </span>
@@ -174,38 +174,35 @@ const Contact = () => {
         </div>
       )}
 
-      {/* ── Hero — text beside a slowly zooming frame ──────────────────────── */}
+      {/* ── Hero — text beside a slowly zooming frame on desktop, above its own
+          frame on a phone. The title, ornament and intro are one set of
+          elements; only the box around them changes. The two crops the brief
+          asks for come from <picture>, so there is still a single <img>.     */}
       <section className="relative lg:flex bg-[#f7f6f3] lg:h-[464px] overflow-hidden">
-        <div className="hidden lg:flex flex-1 min-w-0 flex-col items-center justify-center text-center px-16">
+        <div className="flex-1 min-w-0 flex flex-col items-center justify-center text-center px-6 lg:px-16 pt-12 pb-9 lg:py-0">
           {heading}{ornament}{intro}
         </div>
-        <div className="hidden lg:block flex-none w-[661px] relative overflow-hidden">
-          <img
-            src={heroDesktop.src} srcSet={heroDesktop.srcSet} sizes="46vw" alt="" aria-hidden="true"
-            className="w-full h-full object-cover animate-[slowZoom_18s_ease-in-out_infinite_alternate] motion-reduce:animate-none"
-            loading="eager" fetchPriority="high" decoding="async" draggable={false} referrerPolicy="no-referrer"
-          />
-          <span aria-hidden="true"
-            className="absolute inset-y-0 left-0 w-[70%] bg-[linear-gradient(90deg,#f7f6f3_0%,rgba(247,246,243,.65)_45%,rgba(247,246,243,0)_100%)]" />
-        </div>
 
-        {/* Phones: title first, then its own frame fading into the page */}
-        <div className="lg:hidden">
-          <div className="text-center px-6 pt-12 pb-9">{heading}{ornament}<div className="flex justify-center">{intro}</div></div>
-          <div className="relative h-[320px] overflow-hidden">
+        <div className="relative flex-none w-full h-[320px] lg:w-[661px] lg:h-auto overflow-hidden">
+          <picture className="block w-full h-full">
+            <source media="(min-width: 1024px)" srcSet={heroDesktop.srcSet || heroDesktop.src} sizes="46vw" />
             <img
               src={heroMobile.src} srcSet={heroMobile.srcSet} sizes="100vw" alt="" aria-hidden="true"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover lg:animate-[slowZoom_18s_ease-in-out_infinite_alternate] motion-reduce:animate-none"
               loading="eager" fetchPriority="high" decoding="async" draggable={false} referrerPolicy="no-referrer"
             />
-            <span aria-hidden="true" className="absolute inset-x-0 top-0 h-24 bg-[linear-gradient(#f7f6f3,rgba(247,246,243,0))]" />
-            <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(rgba(255,255,255,0),#ffffff)]" />
-          </div>
+          </picture>
+          {/* Desktop: the frame fades into the text column on its left */}
+          <span aria-hidden="true"
+            className="hidden lg:block absolute inset-y-0 left-0 w-[70%] bg-[linear-gradient(90deg,#f7f6f3_0%,rgba(247,246,243,.65)_45%,rgba(247,246,243,0)_100%)]" />
+          {/* Phones: it fades into the page above and the form below */}
+          <span aria-hidden="true" className="lg:hidden absolute inset-x-0 top-0 h-24 bg-[linear-gradient(#f7f6f3,rgba(247,246,243,0))]" />
+          <span aria-hidden="true" className="lg:hidden absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(rgba(255,255,255,0),#ffffff)]" />
         </div>
       </section>
 
       {/* ── The form ───────────────────────────────────────────────────────── */}
-      <section className="bg-white px-6 pt-14 lg:pt-24 pb-16 lg:pb-20">
+      <section className="bg-white px-5 lg:px-6 pt-14 lg:pt-24 pb-16 lg:pb-20">
         <form
           onSubmit={handleSubmit}
           method="post"
@@ -317,7 +314,7 @@ const Contact = () => {
           <div className="flex justify-center mt-4">
             <button type="submit" disabled={submitting}
               style={getContentStyle('contact.form.submit')}
-              className="w-full sm:w-[280px] h-[54px] border-0 bg-ink-900 hover:bg-ink-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-[11px] font-semibold tracking-[0.25em] uppercase transition-colors duration-250 flex items-center justify-center gap-3">
+              className="btn btn-solid w-full sm:w-[280px] h-[54px] border-0 bg-ink-900 disabled:opacity-60 disabled:cursor-not-allowed text-white text-[11px] font-semibold tracking-[0.25em] uppercase flex items-center justify-center gap-3">
               {submitting && <Loader2 size={14} className="animate-spin" aria-hidden="true" />}
               {submitting ? t('contact.form.sending') : `${t('contact.form.submit')} →`}
             </button>

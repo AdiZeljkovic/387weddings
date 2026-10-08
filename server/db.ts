@@ -60,7 +60,7 @@ export async function initDB() {
       ALTER TABLE contact_submissions ADD COLUMN IF NOT EXISTS photo_locations TEXT         DEFAULT NULL;
 
       -- ── Stories (one per couple) ─────────────────────────────────────────
-      -- Drives the Radovi cards and the new /prica/:slug page. Numbering on the
+      -- Drives the Radovi cards and the /portfolio/:slug story page. Numbering on the
       -- cards (01-09) is derived from sort_order, never stored.
       CREATE TABLE IF NOT EXISTS stories (
         id SERIAL PRIMARY KEY,
@@ -170,124 +170,133 @@ export async function initDB() {
       ON CONFLICT (key) DO NOTHING;
     `);
 
-    // Seed page content if empty
-    const existing = await client.query('SELECT COUNT(*) FROM page_content');
-    if (parseInt(existing.rows[0].count) === 0) {
-      const items = [
-        // HOME — hero
-        { key: 'hero.title.part1', label: 'Naslov: 1. linija', page: 'home', section: 'hero', type: 'text', en: 'Art in the', bs: 'Umjetnost u', sort: 0 },
-        { key: 'hero.title.part2', label: 'Naslov: 2. linija (kurziv)', page: 'home', section: 'hero', type: 'text', en: 'Moments', bs: 'Trenucima', sort: 1 },
-        { key: 'hero.location', label: 'Lokacija tagline', page: 'home', section: 'hero', type: 'text', en: 'BASED IN SARAJEVO — TRAVELING WORLDWIDE', bs: 'SARAJEVO — PUTUJEMO ŠIROM SVIJETA', sort: 2 },
-        { key: 'hero.inquire', label: 'Gumb: Upit', page: 'home', section: 'hero', type: 'text', en: 'Inquire Now', bs: 'Pošaljite Upit', sort: 3 },
-        { key: 'hero.portfolio', label: 'Gumb: Portfolio', page: 'home', section: 'hero', type: 'text', en: 'View Portfolio', bs: 'Pogledajte Portfolio', sort: 4 },
-        // HOME — intro
-        { key: 'home.intro.tag', label: 'Tag', page: 'home', section: 'intro', type: 'text', en: 'The Art of Storytelling', bs: 'Umjetnost pripovijedanja', sort: 0 },
-        { key: 'home.intro.title.part1', label: 'Naslov: dio 1', page: 'home', section: 'intro', type: 'text', en: 'Fine-art,', bs: 'Fine-art,', sort: 1 },
-        { key: 'home.intro.title.part2', label: 'Naslov: dio 2 (kurziv)', page: 'home', section: 'intro', type: 'text', en: 'Editorial', bs: 'Editorijalna', sort: 2 },
-        { key: 'home.intro.title.part3', label: 'Naslov: dio 3', page: 'home', section: 'intro', type: 'text', en: 'Wedding Photography', bs: 'Vjenčana Fotografija', sort: 3 },
-        { key: 'home.intro.desc', label: 'Opis', page: 'home', section: 'intro', type: 'textarea', en: 'Our approach is rooted in the belief that every wedding is a unique masterpiece. We blend editorial sophistication with documentary honesty to capture the quiet grandeur and fleeting magic of your most significant day.', bs: 'Naš pristup temelji se na uvjerenju da je svako vjenčanje jedinstveno remek-djelo. Spajamo editorijalnu sofisticiranost s dokumentarnom iskrenošću kako bismo zabilježili tihu raskoš i prolaznu magiju vašeg najznačajnijeg dana.', sort: 4 },
-        // HOME — process
-        { key: 'home.process.01.title', label: 'Korak 1: Naslov', page: 'home', section: 'process', type: 'text', en: 'We begin with your vision', bs: 'Počinjemo s vašom vizijom', sort: 0 },
-        { key: 'home.process.01.tag', label: 'Korak 1: Tag', page: 'home', section: 'process', type: 'text', en: 'And our artistic style', bs: 'I našim umjetničkim stilom', sort: 1 },
-        { key: 'home.process.01.desc', label: 'Korak 1: Opis', page: 'home', section: 'process', type: 'textarea', en: 'If you have ideas or specific requests, please let us know. The pre-wedding shoot is a big collaboration — whilst we are happy to direct, we also love working with couples to create truly remarkable images.', bs: 'Ako imate ideje ili specifične zahtjeve, slobodno nam javite. Fotografisanje prije vjenčanja je velika saradnja — rado usmjeravamo, ali volimo i raditi s parovima na stvaranju izvanrednih slika.', sort: 2 },
-        { key: 'home.process.02.title', label: 'Korak 2: Naslov', page: 'home', section: 'process', type: 'text', en: 'You choose the location', bs: 'Vi birate lokaciju', sort: 3 },
-        { key: 'home.process.02.tag', label: 'Korak 2: Tag', page: 'home', section: 'process', type: 'text', en: 'We document the moments', bs: 'Mi dokumentujemo trenutke', sort: 4 },
-        { key: 'home.process.02.desc', label: 'Korak 2: Opis', page: 'home', section: 'process', type: 'textarea', en: "Often it's possible to shoot in the city and the countryside to get beautiful variation. We handle all logistics and transport, so you can focus entirely on being present.", bs: 'Često je moguće obaviti fotografisanje u gradu i na selu kako bismo dobili lijepu varijaciju. Brinemo o svoj logistici i prevozu kako biste se mogli potpuno posvetiti trenutku.', sort: 5 },
-        { key: 'home.process.03.title', label: 'Korak 3: Naslov', page: 'home', section: 'process', type: 'text', en: 'We create art that lasts a lifetime', bs: 'Zajedno stvaramo umjetnost koja traje vječno', sort: 6 },
-        { key: 'home.process.03.tag', label: 'Korak 3: Tag', page: 'home', section: 'process', type: 'text', en: 'Heirloom images for generations', bs: 'Naslijedne slike za generacije', sort: 7 },
-        { key: 'home.process.03.desc', label: 'Korak 3: Opis', page: 'home', section: 'process', type: 'textarea', en: 'Our shoots are relaxed and filled with laughter — there are never any stiff poses. Just beautiful, natural moments and genuine connection. We often explore different locations and many couples choose to bring a change of outfit.', bs: 'Naša fotografisanja su opuštena i puna smijeha — nikada nema ukočenih poza. Samo lijepi, prirodni trenuci i iskrena veza. Često istražujemo različite lokacije, a mnogi parovi biraju i promjenu odjeće.', sort: 8 },
-        { key: 'home.process.03.cta', label: 'Korak 3: CTA gumb', page: 'home', section: 'process', type: 'text', en: "Let's Connect", bs: 'Povežimo se', sort: 9 },
-        // ABOUT — hero
-        { key: 'about.hero.title', label: 'Hero: Naslov', page: 'about', section: 'hero', type: 'text', en: 'About Us', bs: 'O Nama', sort: 0 },
-        { key: 'about.hero.subtitle', label: 'Hero: Podnaslov', page: 'about', section: 'hero', type: 'text', en: 'The Artists Behind the Lens', bs: 'Umjetnici iza objektiva', sort: 1 },
-        // ABOUT — story
-        { key: 'about.title', label: 'Priča: Glavni naslov', page: 'about', section: 'story', type: 'text', en: 'Hi, we are Melisa & Aldin.', bs: 'Zdravo, mi smo Melisa i Aldin.', sort: 0 },
-        { key: 'about.desc.1', label: 'Priča: Paragraf 1', page: 'about', section: 'story', type: 'textarea', en: 'Partners in life and lens. As photographers and filmmakers — and husband and wife — our work is a dialogue between editorial fashion and the moving image. Inspired by emotion, we take an intentional approach to your narrative.', bs: 'Partneri u životu i iza objektiva. Kao fotografi i filmaši — i muž i žena — naš rad je dijalog između editorijalne mode i pokretne slike. Inspirisani emocijama, pristupamo vašoj priči s namjerom.', sort: 1 },
-        { key: 'about.desc.2', label: 'Priča: Paragraf 2', page: 'about', section: 'story', type: 'textarea', en: 'Just a bunch of ordinary people utterly in love with creating images of love for the past 8 years. And the next images we create could be of your love.', bs: 'Samo grupa običnih ljudi zaljubljenih u stvaranje slika ljubavi proteklih 8 godina. Sljedeće slike koje stvorimo mogle bi biti vaše.', sort: 2 },
-        { key: 'about.desc.3', label: 'Priča: Paragraf 3 (citat)', page: 'about', section: 'story', type: 'textarea', en: "We spend our days at other people's weddings cracking half-witty jokes and trying to capture the quiet grandeur of love. We don't just capture moments; we craft elevated imagery that resonates with the soul of your unique journey.", bs: 'Provodimo dane na vjenčanjima zbijajući šale i pokušavajući uhvatiti tihu raskoš ljubavi. Mi ne bilježimo samo trenutke; mi stvaramo uzvišene slike koje rezonuju s dušom vašeg jedinstvenog putovanja.', sort: 3 },
-        // SERVICES — hero
-        { key: 'experience.hero.title', label: 'Hero: Naslov', page: 'services', section: 'hero', type: 'text', en: 'Experience', bs: 'Iskustvo', sort: 0 },
-        { key: 'experience.hero.subtitle', label: 'Hero: Podnaslov', page: 'services', section: 'hero', type: 'text', en: 'The Art of Cinematic Documentation', bs: 'Umjetnost filmskog dokumentovanja', sort: 1 },
-        // SERVICES — intro
-        { key: 'experience.intro.tag', label: 'Uvod: Tag', page: 'services', section: 'intro', type: 'text', en: 'The Experience', bs: 'Iskustvo', sort: 0 },
-        { key: 'experience.intro.title.part1', label: 'Uvod: Naslov dio 1', page: 'services', section: 'intro', type: 'text', en: 'More than just', bs: 'Više od', sort: 1 },
-        { key: 'experience.intro.title.part2', label: 'Uvod: Naslov dio 2 (kurziv)', page: 'services', section: 'intro', type: 'text', en: 'vendors.', bs: 'dobavljača.', sort: 2 },
-        { key: 'experience.intro.desc', label: 'Uvod: Opis', page: 'services', section: 'intro', type: 'textarea', en: "When you hire us, you aren't just getting \"vendors.\" You are getting a team that works as one. We've spent years refining our silent language, knowing exactly where the other is and what they are seeing.", bs: 'Kada nas angažujete, ne dobijate samo "dobavljače". Dobijate tim koji radi kao jedno. Proveli smo godine usavršavajući naš tihi jezik, znajući tačno gdje je drugi i što vidi.', sort: 3 },
-        // SERVICES — philosophy
-        { key: 'experience.benefit.tag', label: 'Korist: Tag', page: 'services', section: 'philosophy', type: 'text', en: 'The Benefit', bs: 'Korist', sort: 0 },
-        { key: 'experience.benefit.desc', label: 'Korist: Opis', page: 'services', section: 'philosophy', type: 'textarea', en: 'While one of us focuses on the grand, epic "hero" shot, the other is hunting for the quiet, emotional detail — the way your hand shakes, the tear your father wipes away, or the wild energy on the dance floor.', bs: 'Dok se jedan od nas fokusira na veliki, epski kadar, drugi traži tihi, emocionalni detalj — način na koji vam ruka drhti, suzu koju vaš otac briše ili divlju energiju na plesnom podiju.', sort: 1 },
-        { key: 'experience.result.tag', label: 'Rezultat: Tag', page: 'services', section: 'philosophy', type: 'text', en: 'The Result', bs: 'Rezultat', sort: 2 },
-        { key: 'experience.result.desc', label: 'Rezultat: Opis', page: 'services', section: 'philosophy', type: 'textarea', en: 'Your photos and your film will feel like they belong together. The same colors, the same mood, and the same soul. A cohesive visual legacy that tells your story from every angle.', bs: 'Vaše fotografije i vaš film će izgledati kao da idu zajedno. Iste boje, isto raspoloženje i ista duša. Kohezivno vizualno naslijeđe koje priča vašu priču iz svakog kuta.', sort: 3 },
-        { key: 'experience.philosophy', label: 'Filozofija: Citat', page: 'services', section: 'philosophy', type: 'textarea', en: '"We believe that the most powerful images aren\'t staged; they are felt."', bs: '"Vjerujemo da najmoćnije slike nisu postavljene; one se osjećaju."', sort: 4 },
-        // SERVICES — investment
-        { key: 'experience.investment.tag', label: 'Investicija: Tag', page: 'services', section: 'investment', type: 'text', en: 'Investment', bs: 'Investicija', sort: 0 },
-        { key: 'experience.investment.title', label: 'Investicija: Naslov', page: 'services', section: 'investment', type: 'text', en: 'Curated Collections', bs: 'Odabrane Kolekcije', sort: 1 },
-        { key: 'experience.investment.availability', label: 'Dostupnost (obavijest)', page: 'services', section: 'investment', type: 'text', en: 'Limited Availability for 2026 Weddings', bs: 'Ograničena dostupnost za vjenčanja 2026.', sort: 2 },
-        // SERVICES — promo
-        { key: 'experience.promo.tag', label: 'Promo: Tag', page: 'services', section: 'promo', type: 'text', en: 'Special 2026 Promo', bs: 'Posebna promo ponuda 2026', sort: 0 },
-        { key: 'experience.promo.desc', label: 'Promo: Opis', page: 'services', section: 'promo', type: 'textarea', en: 'Book your wedding photography and receive a complimentary cinematic highlight film.', bs: 'Rezervišite fotografisanje vjenčanja i dobijte besplatan kinematski highlight film.', sort: 1 },
-        // SERVICES — faq
-        { key: 'experience.faq.1.q', label: 'Pitanje 1', page: 'services', section: 'faq', type: 'text', en: 'How would you describe your artistic approach on the wedding day?', bs: 'Kako biste opisali vaš artistički pristup na dan vjenčanja?', sort: 0 },
-        { key: 'experience.faq.1.a', label: 'Odgovor 1', page: 'services', section: 'faq', type: 'textarea', en: 'We describe our style as cinematic and editorial. We find the perfect balance between being discreet observers — capturing those raw, unscripted emotions — and providing intentional, high-end direction during portraits. Our goal is to make you feel like yourselves, never like you are performing for the camera.', bs: 'Naš stil opisujemo kao kinematski i editorijalni. Nalazimo savršenu ravnotežu između diskretnih promatrača i pružanja namjerne, vrhunske direkcije tokom portreta. Naš cilj je da se osjećate kao vi sami.', sort: 1 },
-        { key: 'experience.faq.2.q', label: 'Pitanje 2', page: 'services', section: 'faq', type: 'text', en: 'How many artists will be present at our wedding?', bs: 'Koliko umjetnika će biti prisutno na našem vjenčanju?', sort: 2 },
-        { key: 'experience.faq.2.a', label: 'Odgovor 2', page: 'services', section: 'faq', type: 'textarea', en: 'You will always have two dedicated artists with you. As a husband-and-wife team, we move in unison to ensure no moment is missed. This dual perspective allows us to capture the grand architecture of the ceremony while simultaneously focusing on the quiet, whispered details and guest reactions.', bs: 'Uvijek ćete imati dva posvećena umjetnika uz vas. Kao tim muža i žene, krećemo se unisono kako bismo osigurali da nijedan trenutak ne bude propušten.', sort: 3 },
-        { key: 'experience.faq.3.q', label: 'Pitanje 3', page: 'services', section: 'faq', type: 'text', en: 'When can we expect to see our final wedding gallery?', bs: 'Kada možemo očekivati finalnu galeriju vjenčanja?', sort: 4 },
-        { key: 'experience.faq.3.a', label: 'Odgovor 3', page: 'services', section: 'faq', type: 'textarea', en: 'Quality and artistry take time, but we know you are eager to relive the magic. You will receive a curated "sneak peek" collection within 48 hours of your wedding. Your complete portfolio will be delivered in approximately 6 to 8 weeks.', bs: 'Kvaliteta i umjetnost zahtijevaju vrijeme. U roku od 48 sati primit ćete "sneak peek" kolekciju, a kompletni portfolio za otprilike 6 do 8 sedmica.', sort: 5 },
-        { key: 'experience.faq.4.q', label: 'Pitanje 4', page: 'services', section: 'faq', type: 'text', en: 'Do you offer travel for destination weddings?', bs: 'Nudite li putovanje za destinacijska vjenčanja?', sort: 6 },
-        { key: 'experience.faq.4.a', label: 'Odgovor 4', page: 'services', section: 'faq', type: 'textarea', en: 'Absolutely. We are driven by unique stories and beautiful landscapes, and we are available for travel worldwide. We handle all our own travel logistics to ensure a seamless experience for you.', bs: 'Apsolutno. Pokreću nas jedinstvene priče i lijepi krajolici, dostupni smo za putovanje širom svijeta i brinemo o svim putnim logistikama.', sort: 7 },
-        // PORTFOLIO — hero
-        { key: 'portfolio.hero.title', label: 'Hero: Naslov', page: 'portfolio', section: 'hero', type: 'text', en: 'Work', bs: 'Radovi', sort: 0 },
-        { key: 'portfolio.hero.subtitle', label: 'Hero: Podnaslov', page: 'portfolio', section: 'hero', type: 'text', en: 'A Visual Legacy', bs: 'Vizuelno Naslijeđe', sort: 1 },
-        // PORTFOLIO — approach
-        { key: 'portfolio.approach.title', label: 'Pristup: Tag', page: 'portfolio', section: 'approach', type: 'text', en: 'The Approach', bs: 'Pristup', sort: 0 },
-        { key: 'portfolio.approach.heading', label: 'Pristup: Naslov', page: 'portfolio', section: 'approach', type: 'text', en: 'Preserving every', bs: 'Čuvamo svako', sort: 1 },
-        { key: 'portfolio.approach.subheading', label: 'Pristup: Podnaslov', page: 'portfolio', section: 'approach', type: 'text', en: 'chapter of your story.', bs: 'poglavlje vaše priče.', sort: 2 },
-        { key: 'portfolio.approach.desc', label: 'Pristup: Opis', page: 'portfolio', section: 'approach', type: 'textarea', en: 'From the quiet anticipation of the morning to the wild energy of the dance floor, we document the moments that define your celebration. Every detail, no matter how small, is a vital part of the visual legacy we create together — a timeless reminder of the love and joy that filled your day.', bs: 'Od tihog iščekivanja jutra do divlje energije plesnog podija, dokumentujemo trenutke koji definišu vašu proslavu. Svaki detalj je vitalni dio vizuelnog naslijeđa koje stvaramo zajedno.', sort: 3 },
-        // CONTACT — hero
-        { key: 'contact.hero.title', label: 'Hero: Naslov', page: 'contact', section: 'hero', type: 'text', en: 'Inquire', bs: 'Upit', sort: 0 },
-        { key: 'contact.hero.subtitle', label: 'Hero: Podnaslov', page: 'contact', section: 'hero', type: 'text', en: "Let's create something timeless together", bs: 'Stvorimo nešto bezvremensko zajedno', sort: 1 },
-        // CONTACT — connect
-        { key: 'home.about.cta', label: 'O nama: CTA gumb', page: 'home', section: 'about_section', type: 'text', en: 'Get to know us', bs: 'Upoznajte nas', sort: 0 },
-        { key: 'contact.connect.tag', label: 'Kontakt: Tag', page: 'contact', section: 'connect', type: 'text', en: 'Inquiries', bs: 'Upiti', sort: 0 },
-        { key: 'contact.connect.title.part1', label: 'Kontakt: Naslov dio 1', page: 'contact', section: 'connect', type: 'text', en: "Let's", bs: 'Započnimo', sort: 1 },
-        { key: 'contact.connect.title.part2', label: 'Kontakt: Naslov dio 2 (kurziv)', page: 'contact', section: 'connect', type: 'text', en: 'Connect', bs: 'Dijalog', sort: 2 },
-        { key: 'contact.response.note', label: 'Napomena o odgovoru', page: 'contact', section: 'connect', type: 'textarea', en: "We typically respond within 24-48 hours. If you haven't heard from us, please check your spam folder or reach out via Instagram.", bs: 'Obično odgovaramo u roku od 24-48 sati. Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram.', sort: 3 },
-        { key: 'contact.note.tag', label: 'Napomena: Tag oznaka', page: 'contact', section: 'connect', type: 'text', en: 'Note', bs: 'Napomena', sort: 10 },
-      ];
-      for (const item of items) {
-        await client.query(
-          `INSERT INTO page_content (key, label, page, section, type, value_en, value_bs, sort_order)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-           ON CONFLICT (key) DO NOTHING`,
-          [item.key, item.label, item.page, item.section, item.type, item.en, item.bs, item.sort]
-        );
-      }
-    }
-
-    // Migration-safe: insert new page_content keys that may not exist on older installs
+    // Content seed. Generated from the live schema so the file and the database
+    // cannot drift: every key the site renders is here, and nothing else. New
+    // installs get the full set; existing rows are never overwritten.
     await client.query(`
       INSERT INTO page_content (key, label, page, section, type, value_en, value_bs, sort_order) VALUES
-        ('contact.form.submit',    'Gumb: Pošaljite upit',                               'contact', 'form',       'text',     'Send Your Inquiry',                                                                                       'Pošaljite Upit',                                                                                                 0),
-        ('portfolio.filter.all',       'Filter: Sve',                  'portfolio', 'filter', 'text', 'ALL',                             'SVE',                               0),
-        ('portfolio.filter.weddings',  'Filter: Vjenčanja',            'portfolio', 'filter', 'text', 'WEDDINGS',                        'VJENČANJA',                         1),
-        ('portfolio.filter.studio',    'Filter: Studio',               'portfolio', 'filter', 'text', 'STUDIO',                          'STUDIO',                            2),
-        ('portfolio.filter.portraits', 'Filter: Portreti',             'portfolio', 'filter', 'text', 'PORTRAITS',                       'PORTRETI',                          3),
-        ('portfolio.empty',            'Prazna galerija — poruka',     'portfolio', 'filter', 'text', 'No images in this category yet.', 'Nema slika u ovoj kategoriji.',     4),
-        ('home.scroll',                'Hero: Scroll indicator tekst',     'home', 'hero',         'text', 'Scroll to explore',               'Skrolaj za više',                   10),
-        ('home.about.desc.1',          'O nama: Paragraf 1',               'home', 'about_section','text', 'We are wedding photographers based in Bosnia, capturing love stories across the Balkans and beyond.', 'Mi smo vjenčani fotografski tim iz Bosne, bilježimo priče ljubavi diljem Balkana i dalje.', 2),
-        ('home.about.desc.2',          'O nama: Paragraf 2',               'home', 'about_section','text', 'With a cinematic eye and a documentary heart, we turn fleeting moments into timeless imagery.', 'Kinematskim okom i dokumentarnim srcem pretvaramo prolazne trenutke u vječne slike.', 3),
-        ('home.about.desc.3',          'O nama: Paragraf 3',               'home', 'about_section','text', 'Every frame is intentional. Every story is unique.',  'Svaki kadar je namjeran. Svaka priča je jedinstvena.', 4),
-        ('footer.tagline',   'Footer: Tagline tekst',          'footer', 'brand', 'textarea', 'Fine art wedding photography documenting love stories with a focus on raw emotion and timeless elegance.', 'Fine-art vjenčana fotografija koja dokumentuje ljubavne priče s fokusom na sirovu emociju i bezvremensku eleganciju.', 0),
-        ('footer.navigation','Footer: Naslov navigacije',      'footer', 'nav',   'text',     'Navigation',          'Navigacija',           0),
-        ('footer.rights',    'Footer: Copyright tekst',        'footer', 'legal', 'text',     'All rights reserved.','Sva prava zadržana.',  0),
-        ('footer.designed',  'Footer: "Dizajnirano..." tekst', 'footer', 'legal', 'text',     'Designed with intention.', 'Dizajnirano s namjerom.', 1),
-        ('nav.work',         'Navigacija: Link "Radovi"',      'footer', 'nav',   'text',     'Work',                'Radovi',               1),
-        ('nav.experience',   'Navigacija: Link "Iskustvo"',    'footer', 'nav',   'text',     'Experience',          'Iskustvo',             2),
-        ('nav.stories',      'Navigacija: Link "O nama"',      'footer', 'nav',   'text',     'About Us',            'O nama',               3),
-        ('nav.inquire',      'Navigacija: Link "Upit"',        'footer', 'nav',   'text',     'Inquire',             'Upit',                 4),
-        ('hero.desc', 'Hero: Kratki opis ispod naslova', 'home', 'hero', 'textarea',
-         'We capture the emotions that remain long after everything else has passed.',
-         'Zabilježimo emocije koje traju kada sve drugo prođe.', 5)
+        ('about.bio.1.tag', 'Biografija 1: Tag', 'about', 'bio', 'text', 'Behind the lens', 'Iza objektiva', 0),
+        ('about.bio.1.title.part1', 'Biografija 1: Naslov linija 1', 'about', 'bio', 'text', 'Meet', 'Upoznajte', 1),
+        ('about.bio.1.title.part2', 'Biografija 1: Naslov linija 2', 'about', 'bio', 'text', 'Melisa', 'Melisu', 2),
+        ('about.bio.1.p1', 'Biografija 1: Paragraf 1 (prazno = sakriveno)', 'about', 'bio', 'textarea', 'Photography has been part of my life for as long as I can remember. I grew up among people who believed the most important things cannot be put into words, and somewhere in there came the need to record them in pictures.', 'Fotografija je dio mog života otkad znam za sebe. Odrasla sam među ljudima koji su vjerovali da se najvažnije stvari ne daju ispričati riječima, i negdje tu se rodila potreba da ih zabilježim slikom.', 3),
+        ('about.bio.1.p2', 'Biografija 1: Paragraf 2 (prazno = sakriveno)', 'about', 'bio', 'textarea', 'Over the years I learned to be quiet at weddings. To take a step back, wait, and let the moment happen on its own. Patience became a tool as important as the camera.', 'Godinama sam učila da budem tiha na vjenčanjima. Da stanem korak unazad, sačekam i pustim da se trenutak dogodi sam. Strpljenje mi je postalo alat jednako važan kao i fotoaparat.', 4),
+        ('about.bio.1.p3', 'Biografija 1: Paragraf 3 (prazno = sakriveno)', 'about', 'bio', 'textarea', 'I am not after the perfect frame but the honest one. The warmth, the joy and the love that radiate through your day, because those are the moments you will keep long after the celebration ends.', 'Ne tražim savršen kadar nego iskren. Toplinu, radost i ljubav koja zrači kroz vaš dan, jer to su trenuci koje ćete čuvati dugo nakon što proslava prođe.', 5),
+        ('about.bio.2.tag', 'Biografija 2: Tag', 'about', 'bio', 'text', 'Behind our films', 'Iza kamere', 6),
+        ('about.bio.2.title.part1', 'Biografija 2: Naslov linija 1', 'about', 'bio', 'text', 'Meet', 'Upoznajte', 7),
+        ('about.bio.2.title.part2', 'Biografija 2: Naslov linija 2', 'about', 'bio', 'text', 'Aldin', 'Aldina', 8),
+        ('about.bio.2.p1', 'Biografija 2: Paragraf 1 (prazno = sakriveno)', 'about', 'bio', 'textarea', 'Film won me over long before I ever shot a wedding. I was fascinated by the idea that a moving image can tell a story without a single word, and that led me exactly here.', 'Film me osvojio davno prije nego što sam prvi put snimao vjenčanje. Fascinirala me ideja da se pokretnom slikom može ispričati priča bez ijedne riječi, i to me je dovelo tačno ovdje.', 9),
+        ('about.bio.2.p2', 'Biografija 2: Paragraf 2 (prazno = sakriveno)', 'about', 'bio', 'textarea', 'Before weddings I shot music videos and commercials. That school taught me to watch rhythm, light and detail, and I bring the same into every film we make.', 'Prije vjenčanja snimao sam muzičke spotove i reklame. Ta škola me naučila da pazim na ritam, svjetlo i detalj, a danas to isto unosim u svaki film koji napravimo.', 10),
+        ('about.bio.2.p3', 'Biografija 2: Paragraf 3 (prazno = sakriveno)', 'about', 'bio', 'textarea', 'The greatest reward is when a couple plays their film a year later and feels exactly what they felt that day. A sound, a glance, someone laughing in the background: things a photograph cannot keep, but a film can.', 'Najveća nagrada mi je kada par nakon godinu dana pusti svoj film i ponovo osjeti isto što i tog dana. Zvuk, pogled, nečiji smijeh u pozadini: stvari koje fotografija ne može sačuvati, a film može.', 11),
+        ('about.invite.title.part1', 'Poziv: Naslov linija 1', 'about', 'invite', 'text', 'We would love to hear', 'Želimo čuti', 0),
+        ('about.invite.title.part2', 'Poziv: Naslov linija 2', 'about', 'invite', 'text', 'from you', 'vašu priču', 1),
+        ('about.invite.p1', 'Poziv: Paragraf 1 (prazno = sakriveno)', 'about', 'invite', 'textarea', 'We believe the best stories begin with an honest conversation. That is why we never rush, we want to know you first.', 'Vjerujemo da najbolje priče počinju iskrenim razgovorom. Zato ne žurimo, prvo želimo upoznati vas.', 2),
+        ('about.invite.p2', 'Poziv: Paragraf 2 (prazno = sakriveno)', 'about', 'invite', 'textarea', 'Write to us and tell us how you imagined your day. We reply within 24 to 48 hours.', 'Javite nam se i ispričajte kako ste zamislili svoj dan. Odgovaramo u roku od 24 do 48 sati.', 3),
+        ('about.invite.button', 'Poziv: Tekst gumba', 'about', 'invite', 'text', 'Get in touch', 'Javite nam se', 4),
+        ('contact.response.note', 'Napomena o odgovoru', 'contact', 'connect', 'textarea', 'We typically respond within 24-48 hours. If you haven''t heard from us, please check your spam folder or reach out via Instagram.', 'Obično odgovaramo u roku od 4-8 sati. 
+Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
+        ('contact.group.you', 'Obrazac: Naslov grupe 1', 'contact', 'form', 'text', 'About you', 'O vama', -3),
+        ('contact.group.wedding', 'Obrazac: Naslov grupe 2', 'contact', 'form', 'text', 'About the wedding', 'O vjenčanju', -2),
+        ('contact.group.story', 'Obrazac: Naslov grupe 3', 'contact', 'form', 'text', 'Your story', 'Vaša priča', -1),
+        ('contact.form.name', 'Forma: Naziv polja Ime', 'contact', 'form', 'text', 'Full name', 'Ime i prezime', 0),
+        ('contact.form.name.placeholder', 'Forma: Placeholder Ime', 'contact', 'form', 'text', 'Enter your full name', 'Unesite vaše ime i prezime', 1),
+        ('contact.form.email', 'Forma: Naziv polja Email', 'contact', 'form', 'text', 'Email address', 'E-mail adresa', 2),
+        ('contact.form.date', 'Forma: Naziv polja Datum', 'contact', 'form', 'text', 'Wedding date', 'Datum vjenčanja', 3),
+        ('contact.form.email.placeholder', 'Polje: E-mail — placeholder', 'contact', 'form', 'text', 'Enter your email address', 'Unesite e-mail adresu', 3),
+        ('contact.form.date.placeholder', 'Forma: Placeholder Datum', 'contact', 'form', 'text', 'Choose a date', 'Odaberite datum', 4),
+        ('contact.form.phone', 'Polje: Telefon — labela', 'contact', 'form', 'text', 'Phone number', 'Broj telefona', 4),
+        ('contact.form.location', 'Forma: Naziv polja Lokacija', 'contact', 'form', 'text', 'Wedding location / city', 'Lokacija vjenčanja / grad', 5),
+        ('contact.form.phone.placeholder', 'Polje: Telefon — placeholder', 'contact', 'form', 'text', 'Enter phone number (optional)', 'Unesite broj telefona (opciono)', 5),
+        ('contact.form.location.placeholder', 'Forma: Placeholder Lokacija', 'contact', 'form', 'text', 'Enter location / city', 'Unesite lokaciju / grad', 6),
+        ('contact.form.story', 'Forma: Naziv polja Priča', 'contact', 'form', 'text', 'Additional information / your story', 'Dodatne informacije / vaša priča', 7),
+        ('contact.form.guests', 'Polje: Broj gostiju — labela', 'contact', 'form', 'text', 'Approximate number of guests', 'Približan broj gostiju', 8),
+        ('contact.form.story.placeholder', 'Forma: Placeholder Priča', 'contact', 'form', 'textarea', 'Tell us anything else you would like us to know', 'Napišite nam sve što želite da znamo', 8),
+        ('contact.form.guests.placeholder', 'Polje: Broj gostiju — placeholder', 'contact', 'form', 'text', 'Enter number of guests', 'Unesite broj gostiju', 9),
+        ('contact.form.submit', 'Forma: Gumb Pošalji', 'contact', 'form', 'text', 'Send message', 'Pošalji poruku', 9),
+        ('contact.form.coverage', 'Polje: Trajanje angažmana — labela', 'contact', 'form', 'text', 'Approximate length of our coverage', 'Okvirno vrijeme trajanja našeg angažmana', 10),
+        ('contact.form.sending', 'Forma: Slanje u toku', 'contact', 'form', 'text', 'Sending...', 'Slanje...', 10),
+        ('contact.form.close', 'Forma: Zatvori modal', 'contact', 'form', 'text', 'Close Window', 'Zatvori', 11),
+        ('contact.form.coverage.placeholder', 'Polje: Trajanje angažmana — placeholder', 'contact', 'form', 'text', 'Select duration', 'Odaberite trajanje', 11),
+        ('contact.form.coverage.opt.1', 'Trajanje: Opcija 1 (prazno = sakriveno)', 'contact', 'form', 'text', 'Up to 4 hours', 'Do 4 sata', 12),
+        ('contact.form.success.title', 'Uspjeh: Naslov', 'contact', 'form', 'text', 'Thank You', 'Hvala Vam', 12),
+        ('contact.form.coverage.opt.2', 'Trajanje: Opcija 2 (prazno = sakriveno)', 'contact', 'form', 'text', '4–8 hours', '4–8 sati', 13),
+        ('contact.form.success.desc', 'Uspjeh: Opis', 'contact', 'form', 'textarea', 'Your message has been received. We look forward to hearing more about your story.', 'Vaša poruka je primljena. Veselimo se što ćemo čuti više o vašoj priči.', 13),
+        ('contact.form.coverage.opt.3', 'Trajanje: Opcija 3 (prazno = sakriveno)', 'contact', 'form', 'text', '8–12 hours', '8–12 sati', 14),
+        ('contact.form.success.another', 'Uspjeh: Pošalji još jednu', 'contact', 'form', 'text', 'Send Another Message', 'Pošalji Novu Poruku', 14),
+        ('contact.form.coverage.opt.4', 'Trajanje: Opcija 4 (prazno = sakriveno)', 'contact', 'form', 'text', 'Full day', 'Cijeli dan', 15),
+        ('contact.form.error', 'Greška: Poruka', 'contact', 'form', 'text', 'Something went wrong. Please try again later.', 'Nešto je pošlo po krivu. Molimo pokušajte ponovo.', 15),
+        ('contact.form.coverage.opt.5', 'Trajanje: Opcija 5 (prazno = sakriveno)', 'contact', 'form', 'text', 'Multiple days', 'Više dana', 16),
+        ('contact.form.video', 'Polje: Video — labela', 'contact', 'form', 'text', 'Do you need video?', 'Treba li vam video?', 17),
+        ('contact.form.video.placeholder', 'Polje: Video — placeholder', 'contact', 'form', 'text', 'Select an option', 'Odaberite opciju', 18),
+        ('contact.form.video.opt.1', 'Video: Opcija 1 (prazno = sakriveno)', 'contact', 'form', 'text', 'Yes', 'Da', 19),
+        ('contact.form.video.opt.2', 'Video: Opcija 2 (prazno = sakriveno)', 'contact', 'form', 'text', 'No', 'Ne', 20),
+        ('contact.form.video.opt.3', 'Video: Opcija 3 (prazno = sakriveno)', 'contact', 'form', 'text', 'Not sure yet', 'Još nisam siguran/na', 21),
+        ('contact.form.places', 'Polje: Mjesta fotografisanja — labela', 'contact', 'form', 'text', 'Photo locations (if already known)', 'Mjesta fotografisanja (ako su već poznata)', 22),
+        ('contact.form.places.placeholder', 'Polje: Mjesta fotografisanja — placeholder', 'contact', 'form', 'text', 'Write the locations', 'Napišite lokacije', 23),
+        ('contact.form.consent', 'Obrazac: Tekst uz kvačicu (saglasnost)', 'contact', 'form', 'textarea', 'I agree that my data may be used to respond to this inquiry.', 'Prihvatam da se moji podaci koriste u svrhu odgovora na upit.', 30),
+        ('contact.hero.title.part1', 'Hero: Naslov — linija 1', 'contact', 'hero', 'text', 'Tell us', 'Ispričajte nam', 2),
+        ('contact.hero.title.part2', 'Hero: Naslov — linija 2', 'contact', 'hero', 'text', 'your', 'svoju', 3),
+        ('contact.hero.desc', 'Hero: Opis ispod naslova', 'contact', 'hero', 'textarea', 'Fill in the form and tell us the details of your wedding. We will get back to you as soon as possible.', 'Ispunite formu i javite nam detalje o vašem vjenčanju. Javićemo vam se u najkraćem mogućem roku.', 4),
+        ('contact.hero.title.part3', 'Hero: Naslov — istaknuta riječ', 'contact', 'hero', 'text', 'story', 'priču', 5),
+        ('footer.tagline', 'Footer: Tagline tekst', 'footer', 'brand', 'textarea', 'We capture emotions that last when everything else has passed.', 'Zabilježimo emocije koje traju kada sve drugo prođe.', 0),
+        ('footer.contact', 'Footer: Naslov kontakt kolone', 'footer', 'contact', 'text', 'Contact', 'Kontakt', 0),
+        ('instagram.tag', 'Instagram blok: Tag', 'footer', 'instagram', 'text', 'More moments', 'Još trenutaka', 0),
+        ('instagram.title.part1', 'Instagram blok: Naslov dio 1', 'footer', 'instagram', 'text', 'See more on', 'Pogledajte još na', 1),
+        ('instagram.title.part2', 'Instagram blok: Naslov dio 2 (kurziv)', 'footer', 'instagram', 'text', 'Instagram', 'Instagramu', 2),
+        ('footer.rights', 'Footer: Copyright tekst', 'footer', 'legal', 'text', 'All rights reserved.', 'Sva prava zadržana.', 0),
+        ('footer.designed', 'Footer: "Dizajnirano..." tekst', 'footer', 'legal', 'text', 'Design and build', 'Dizajn i izrada', 1),
+        ('footer.top', 'Footer: Tekst "Na vrh"', 'footer', 'legal', 'text', 'Back to top', 'Na vrh', 5),
+        ('footer.navigation', 'Footer: Naslov navigacije', 'footer', 'nav', 'text', 'Navigation', 'Navigacija', 0),
+        ('nav.home', 'Navigacija: Link "Početna"', 'footer', 'nav', 'text', 'Home', 'Početna', 0),
+        ('nav.work', 'Navigacija: Link "Radovi"', 'footer', 'nav', 'text', 'Work', 'Radovi', 1),
+        ('nav.experience', 'Navigacija: Link "Iskustvo"', 'footer', 'nav', 'text', 'Services', 'Usluge', 2),
+        ('nav.stories', 'Navigacija: Link "O nama"', 'footer', 'nav', 'text', 'About Us', 'O nama', 3),
+        ('nav.inquire', 'Navigacija: Link "Upit"', 'footer', 'nav', 'text', 'Contact', 'Kontakt', 4),
+        ('footer.link.about.sub', 'Footer: Podnaslov uz "O nama"', 'footer', 'nav', 'text', 'Meet Melisa and Aldin', 'Upoznajte Melisu i Aldina', 10),
+        ('footer.link.work.sub', 'Footer: Podnaslov uz "Radovi"', 'footer', 'nav', 'text', 'See our stories', 'Pogledajte naše priče', 11),
+        ('footer.link.contact.sub', 'Footer: Podnaslov uz "Kontakt"', 'footer', 'nav', 'text', 'Check an available date', 'Provjerite slobodan datum', 12),
+        ('home.about.cta', 'O nama: CTA gumb', 'home', 'about_section', 'text', 'Get to know us', 'Upoznajte nas', 2),
+        ('home.about.desc.1', 'O nama: Paragraf 1', 'home', 'about_section', 'text', 'We have followed couples across Bosnia and the Balkans for years, and the same thing amazes us every time: how many different stories love can tell.', 'Pratimo parove kroz Bosnu i Balkan već godinama, i svaki put ista stvar nas oduševi, koliko različitih priča ljubav zna ispričati.', 2),
+        ('home.about.desc.2', 'O nama: Paragraf 2', 'home', 'about_section', 'text', 'We do not like posing or stiff frames. We like the moment when nobody is pretending.', 'Ne volimo poziranje ni ukočene kadrove. Volimo trenutak kad se niko ne pretvara.', 3),
+        ('home.about.desc.3', 'O nama: Paragraf 3', 'home', 'about_section', 'text', 'Every frame is intentional. Every story is unique.', 'Svaki kadar je namjeran. Svaka priča je jedinstvena.', 4),
+        ('home.about.tag', 'O nama: Tag iznad naslova', 'home', 'about_section', 'text', 'About us', 'O nama', 9),
+        ('home.about.heading.part1', 'O nama: Naslov — linija 1', 'home', 'about_section', 'text', 'More than photographs.', 'Više od fotografija.', 10),
+        ('home.about.heading.part2', 'O nama: Naslov — linija 2', 'home', 'about_section', 'text', 'It is your story.', 'To je vaša priča.', 11),
+        ('home.featured.title', 'Istaknuti radovi: Naslov sekcije', 'home', 'featured', 'text', 'Featured works', 'Istaknuti radovi', 0),
+        ('home.featured.cta', 'Istaknuti radovi: Tekst gumba', 'home', 'featured', 'text', 'View more work', 'Pogledaj više radova', 1),
+        ('home.featured.heading.part1', 'Istaknuti radovi: Naslov — linija 1', 'home', 'featured', 'text', 'Moments.', 'Trenuci.', 2),
+        ('home.featured.heading.part2', 'Istaknuti radovi: Naslov — linija 2', 'home', 'featured', 'text', 'Emotion.', 'Emocija.', 3),
+        ('home.featured.heading.part3', 'Istaknuti radovi: Naslov — linija 3', 'home', 'featured', 'text', 'Forever.', 'Zauvijek.', 4),
+        ('hero.title.part1', 'Naslov: 1. linija', 'home', 'hero', 'text', 'Your story.', 'Vaša priča.', 0),
+        ('hero.title.part2', 'Naslov: 2. linija (kurziv)', 'home', 'hero', 'text', 'Our art.', 'Naša umjetnost.', 1),
+        ('hero.inquire', 'Gumb: Upit', 'home', 'hero', 'text', 'Inquire Now', 'Pošaljite Upit', 3),
+        ('hero.portfolio', 'Gumb: Portfolio', 'home', 'hero', 'text', 'View our work', 'Pogledajte radove', 4),
+        ('hero.desc', 'Hero: Kratki opis ispod naslova', 'home', 'hero', 'textarea', 'We capture the emotions that remain long after everything else has passed.', 'Zabilježimo emocije koje traju kada sve drugo prođe.', 5),
+        ('home.scroll', 'Hero: Scroll indicator tekst', 'home', 'hero', 'text', 'Scroll', 'Skroluj', 10),
+        ('portfolio.approach.title', 'Pristup: Tag', 'portfolio', 'approach', 'text', 'The Approach', 'Pristup', 0),
+        ('portfolio.approach.desc', 'Pristup: Opis', 'portfolio', 'approach', 'textarea', 'These are the stories we have had the honour of telling: every frame, every moment, every couple. See what we make when you trust us with your day.', 'Ovo su priče koje smo imali čast ispričati, svaki kadar, svaki trenutak, svaki par. Pogledajte šta stvaramo kad nam povjerite svoj dan.', 3),
+        ('portfolio.empty', 'Prazna kategorija', 'portfolio', 'approach', 'text', 'No images in this category', 'Nema slika u ovoj kategoriji', 10),
+        ('portfolio.filter.all', 'Filter: Sve', 'portfolio', 'filter', 'text', 'ALL', 'SVE', 0),
+        ('portfolio.filter.weddings', 'Filter: Vjenčanja', 'portfolio', 'filter', 'text', 'WEDDINGS', 'VJENČANJA', 1),
+        ('portfolio.filter.studio', 'Filter: Studio', 'portfolio', 'filter', 'text', 'STUDIO', 'STUDIO', 2),
+        ('portfolio.filter.portraits', 'Filter: Portreti', 'portfolio', 'filter', 'text', 'PORTRAITS', 'PORTRETI', 3),
+        ('portfolio.card.wedding', 'Kartica: Oznaka "Vjenčanje"', 'portfolio', 'filter', 'text', 'Wedding', 'Vjenčanje', 10),
+        ('portfolio.card.studio', 'Kartica: Oznaka "Studio"', 'portfolio', 'filter', 'text', 'Studio', 'Studio', 11),
+        ('portfolio.card.portrait', 'Kartica: Oznaka "Portreti"', 'portfolio', 'filter', 'text', 'Portrait', 'Portreti', 12),
+        ('portfolio.hero.title', 'Hero: Naslov', 'portfolio', 'hero', 'text', 'Stories that', 'Priče koje', 0),
+        ('portfolio.hero.subtitle', 'Hero: Podnaslov', 'portfolio', 'hero', 'text', 'last', 'traju', 1),
+        ('cookie.text', 'Cookie baner: Tekst', 'privacy', 'cookie', 'textarea', 'We use cookies to understand how the site is used. Analytics only runs if you agree.', 'Koristimo kolačiće da razumijemo kako se sajt koristi. Analitika se pokreće samo ako pristanete.', 0),
+        ('cookie.more', 'Cookie baner: Link', 'privacy', 'cookie', 'text', 'Read more', 'Saznajte više', 1),
+        ('cookie.accept', 'Cookie baner: Prihvatam', 'privacy', 'cookie', 'text', 'Accept', 'Prihvatam', 2),
+        ('cookie.decline', 'Cookie baner: Odbijam', 'privacy', 'cookie', 'text', 'Decline', 'Odbijam', 3),
+        ('cookie.title', 'Cookie baner: Naslov (za čitače ekrana)', 'privacy', 'cookie', 'text', 'Cookies', 'Kolačići', 4),
+        ('privacy.title', 'Privatnost: Naslov', 'privacy', 'page', 'text', 'Privacy policy', 'Politika privatnosti', 0),
+        ('privacy.body', 'Privatnost: Tekst (prazan red = novi pasus, red koji završava sa : = podnaslov)', 'privacy', 'page', 'textarea', '', '', 1),
+        ('privacy.empty', 'Privatnost: Poruka dok tekst nije unesen', 'privacy', 'page', 'text', 'The policy text is being prepared.', 'Tekst politike je u pripremi.', 2),
+        ('story.back', 'Priča: Povratni link', 'story', 'labels', 'text', 'All work', 'Svi radovi', 0),
+        ('story.tag', 'Priča: Oznaka uz tekst', 'story', 'labels', 'text', 'The story', 'Priča', 1),
+        ('story.prev', 'Priča: Prethodna priča', 'story', 'labels', 'text', 'Previous story', 'Prethodna priča', 2),
+        ('story.next', 'Priča: Sljedeća priča', 'story', 'labels', 'text', 'Next story', 'Sljedeća priča', 3),
+        ('story.close', 'Priča: Zatvori (lightbox)', 'story', 'labels', 'text', 'Close', 'Zatvori', 4)
       ON CONFLICT (key) DO NOTHING
     `);
 
@@ -361,6 +370,11 @@ export async function initDB() {
       UPDATE page_content SET value_en = 'Stories that', value_bs = 'Priče koje'
         WHERE key = 'portfolio.hero.title' AND value_bs IN ('Radovi', 'Work', '');
       UPDATE page_content SET value_en = 'last', value_bs = 'traju'
+        WHERE key = 'portfolio.hero.subtitle'
+          AND value_bs IN ('Vizuelno Naslijedje', 'Vizuelno Nasljedje', 'Nas portfolio, vasa inspiracija', 'Naš portfolio, vaša inspiracija', 'A Visual Legacy', '');
+      UPDATE page_content SET value_en = 'Stories that', value_bs = 'Priče koje'
+        WHERE key = 'portfolio.hero.title' AND value_bs IN ('Radovi', 'Work', '');
+      UPDATE page_content SET value_en = 'last', value_bs = 'traju'
         WHERE key = 'portfolio.hero.subtitle' AND value_bs IN ('Vizuelno Naslijeđe', '');
       UPDATE page_content
         SET value_en = 'These are the stories we have had the honour of telling: every frame, every moment, every couple. See what we make when you trust us with your day.',
@@ -401,6 +415,35 @@ export async function initDB() {
         WHERE key = 'instagram_handle' AND value = '387cinematicweddings';
       UPDATE site_settings SET value = replace(value, '387cinematicweddings.com', '387weddings.ba')
         WHERE value LIKE '%387cinematicweddings.com%';
+    `);
+
+    // The Radovi cards used to fall back to gallery_images, which have no slug,
+    // so nothing was clickable and every filter said WEDDINGS. Each active image
+    // becomes a real story once, keeping its photo, title and category, and the
+    // client edits the rest in Admin → Priče.
+    await client.query(`
+      INSERT INTO stories (slug, couple, category, cover_url, cover_alt, cover_layout, sort_order, is_published)
+      SELECT
+        'rad-' || g.id,
+        COALESCE(NULLIF(btrim(g.title), ''), 'Priča ' || g.id),
+        g.category,
+        g.url,
+        NULLIF(btrim(g.title), ''),
+        COALESCE(g.layout, 'TALL'),
+        g.sort_order,
+        TRUE
+      FROM gallery_images g
+      WHERE g.is_active = TRUE
+        AND NOT EXISTS (SELECT 1 FROM stories)
+      ON CONFLICT (slug) DO NOTHING;
+
+      -- the cover also becomes the story's first gallery photo
+      INSERT INTO story_images (story_id, url, alt, layout, sort_order)
+      SELECT s.id, s.cover_url, s.cover_alt, s.cover_layout, 0
+      FROM stories s
+      WHERE s.slug LIKE 'rad-%'
+        AND s.cover_url IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM story_images i WHERE i.story_id = s.id);
     `);
 
     // Indexes for the hot public queries (filter by is_active, order by sort_order).

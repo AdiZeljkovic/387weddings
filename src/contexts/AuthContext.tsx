@@ -20,6 +20,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Check if already logged in
+    // Only the admin needs this. Calling it on public pages burned through the
+    // login rate limit and logged a 429 in every visitor's console.
+    if (!window.location.pathname.startsWith('/admin')) {
+      setIsLoading(false);
+      return;
+    }
+
     fetch('/api/auth/me', { credentials: 'include' })
       .then(res => res.ok ? res.json() : null)
       .then(data => {

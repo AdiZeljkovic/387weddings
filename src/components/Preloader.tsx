@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import Logo from './Logo';
 
-const SESSION_KEY = '387_intro_seen';
 // The board loops at 9s for display; in production the whole thing is ~2.2s.
+// It used to be gated on sessionStorage, which meant it never showed on a
+// refresh or on returning to the tab. It now plays on every full page load.
 const LIFT_AT = 1300;   // overlay starts rising
 const DONE_AT = 2200;   // overlay is gone and unmounts
 const HARD_STOP = 3000; // never hold the page longer than this
@@ -9,14 +11,6 @@ const HARD_STOP = 3000; // never hold the page longer than this
 // variable mid-flight would make those animations recompute and jump, so it is
 // cleared only once they have finished.
 const CLEAR_DELAY_AT = 4800;
-
-const seenThisSession = () => {
-  try { return sessionStorage.getItem(SESSION_KEY) === '1'; } catch { return true; }
-};
-
-const markSeen = () => {
-  try { sessionStorage.setItem(SESSION_KEY, '1'); } catch { /* private mode */ }
-};
 
 /**
  * First-visit curtain. It never blocks: the page (and the hero image) render
@@ -27,14 +21,14 @@ const markSeen = () => {
 const Preloader = () => {
   const [state, setState] = useState<'hidden' | 'showing' | 'lifting'>(() => {
     if (typeof window === 'undefined') return 'hidden';
-    if (seenThisSession()) return 'hidden';
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return 'hidden';
+    // Only the entry page gets the curtain, never an in-app navigation
+    if (window.location.pathname.replace(/\/$/, '') !== '') return 'hidden';
     return 'showing';
   });
 
   useEffect(() => {
     if (state === 'hidden') return;
-    markSeen();
 
     // Hero animations hold back until the curtain starts moving
     document.documentElement.style.setProperty('--intro-delay', `${LIFT_AT / 1000}s`);
@@ -65,17 +59,9 @@ const Preloader = () => {
         state === 'lifting' ? 'animate-[introLift_0.9s_cubic-bezier(.76,0,.24,1)_both]' : ''
       }`}
     >
-      {/* The two halves arrive separately, as the board shows */}
-      <span className="flex flex-col items-center gap-2 leading-none text-ink-900">
-        <span
-          className="font-display text-[38px] leading-none opacity-0 animate-[introFade_0.6s_ease_0.1s_both]"
-          style={{ writingMode: 'vertical-rl' }}
-        >
-          387
-        </span>
-        <span className="font-display text-[14px] tracking-[0.06em] opacity-0 animate-[introFade_0.6s_ease_0.45s_both]">
-          WEDDINGS
-        </span>
+      {/* The same mark as the header, at the intro size from the brief */}
+      <span className="block text-ink-900 opacity-0 animate-[introFade_0.6s_ease_0.1s_both]">
+        <Logo size={88} color="currentColor" />
       </span>
       <span
         className="block w-[120px] h-px bg-gold-600 origin-left mt-7 scale-x-0 animate-[introLine_0.7s_cubic-bezier(.6,0,.3,1)_0.55s_both]"

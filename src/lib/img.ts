@@ -11,3 +11,14 @@ export function respImg(src: string, widths: number[]): { src: string; srcSet?: 
   }
   return { src, srcSet: undefined };
 }
+
+// A thumbnail small enough to arrive with the HTML, used blurred behind an image
+// that has not decoded yet. Returns undefined when the host offers no way to ask
+// for a small version, in which case the caller keeps its flat background.
+export function blurSrc(src: string): string | undefined {
+  if (!src) return undefined;
+  if (src.startsWith('/uploads/')) return `/img/${src.slice('/uploads/'.length)}?w=24`;
+  // Unsplash serves through imgix, so a width is just a query parameter
+  if (src.includes('images.unsplash.com')) return src.replace(/([?&])w=\d+/, '$1w=32');
+  return undefined;
+}

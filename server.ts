@@ -17,6 +17,7 @@ import contentRoutes from './server/routes/contentRoutes.js';
 import seoRoutes from './server/routes/seoRoutes.js';
 import imageRoutes from './server/routes/imageRoutes.js';
 import storyRoutes from './server/routes/storyRoutes.js';
+import { renderShell } from './server/shell.js';
 
 dotenv.config();
 
@@ -131,6 +132,11 @@ async function startServer() {
     }
   });
 
+  // The story page used to live under /prica/:slug; keep those links alive
+  app.get('/prica/:slug', (req, res) => {
+    res.redirect(301, `/portfolio/${encodeURIComponent(req.params.slug)}`);
+  });
+
   // ── API Routes ─────────────────────────────────────────────────────────────
   app.use('/api/auth', authLimiter, authRoutes);
   app.use('/api/gallery', galleryRoutes);
@@ -162,21 +168,47 @@ async function startServer() {
     // Known routes still get the shell; anything else gets a real 404.
     const KNOWN_ROUTES = new Set(['/', '/portfolio', '/about', '/contact', '/privacy']);
     const isKnownRoute = (p: string) =>
-      KNOWN_ROUTES.has(p.replace(/\/$/, '') || '/') || p.startsWith('/admin') || p.startsWith('/prica/');
+      KNOWN_ROUTES.has(p.replace(/\/$/, '') || '/') || p.startsWith('/admin') || p.startsWith('/portfolio/');
 
-    app.get('*', (req, res) => {
+    const shell = path.join(process.cwd(), 'dist', 'index.html');
+
+    app.get('*', async (req, res) => {
       // Anything with a file extension that reached this point does not exist
       if (path.extname(req.path)) {
         res.status(404).type('text/plain').send('Not found');
         return;
       }
+
+      // A story URL is only real if that slug is published. Without this check
+      // every /portfolio/<anything> answered 200, which is a soft 404.
+      let ok = isKnownRoute(req.path);
+      const story = req.path.match(/^\/portfolio\/([^/]+)\/?$/);
+      if (story) {
+        try {
+          const { rowCount } = await pool.query(
+            'SELECT 1 FROM stories WHERE slug = $1 AND is_published = TRUE',
+            [decodeURIComponent(story[1])]
+          );
+          ok = (rowCount ?? 0) > 0;
+        } catch {
+          ok = true; // a database hiccup must not turn a real page into a 404
+        }
+      }
+
       // The shell must revalidate every time: the asset filenames inside it
       // change on each build, so a cached shell would point at files that no
       // longer exist. The hashed assets themselves keep their one-year headers.
       res.setHeader('Cache-Control', 'no-cache');
-      res
-        .status(isKnownRoute(req.path) ? 200 : 404)
-        .sendFile(path.join(process.cwd(), 'dist', 'index.html'));
+
+      // Meta tags are written in before the HTML leaves, so crawlers and link
+      // previews see this page rather than the homepage's defaults.
+      const lang = req.query.lang === 'en' ? 'en' : 'bs';
+      try {
+        const html = await renderShell(req.path, lang);
+        res.status(ok ? 200 : 404).type('html').send(html);
+      } catch {
+        res.status(ok ? 200 : 404).sendFile(shell);
+      }
     });
   }
 

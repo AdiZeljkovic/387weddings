@@ -4,12 +4,16 @@ import { requireAuth } from '../auth.js';
 
 const router = Router();
 
+// Values the front end never reads. They were being handed to every visitor.
+const PRIVATE_KEYS = new Set(['contact_recipient', 'robots_txt']);
+
 // GET /api/settings — public
 router.get('/', async (_req, res) => {
   try {
     const result = await pool.query('SELECT key, value FROM site_settings');
     const settings: Record<string, string> = {};
     for (const row of result.rows) {
+      if (PRIVATE_KEYS.has(row.key)) continue;
       settings[row.key] = row.value;
     }
     res.setHeader('Cache-Control', 'public, max-age=60');

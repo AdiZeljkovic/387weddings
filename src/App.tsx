@@ -97,6 +97,7 @@ function PageMetadata({ title, description, pageKey }: { title: string; descript
       }
 
       const baseUrl = (s['sitemap.base_url']?.trim() || 'https://387weddings.ba').replace(/\/$/, '');
+      setMeta('meta[property="og:url"]',          `${baseUrl}${pathname}${langCode === 'en' ? '?lang=en' : ''}`);
       const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
       // The canonical always points at the language actually being shown
       const suffix = langCode === 'en' ? '?lang=en' : '';
@@ -339,7 +340,7 @@ function App() {
                             <Privacy />
                           </>
                         } />
-                        <Route path="/prica/:slug" element={
+                        <Route path="/portfolio/:slug" element={
                           <>
                             <PageMetadata title="Priča" description="Priča jednog para." pageKey="story" />
                             <Story />
