@@ -174,6 +174,74 @@
   from { transform: translateY(0) rotate(0); }
   to   { transform: translateY(-10px) rotate(1.4deg); }
 }
+/* ── Intro curtain ─────────────────────────────────────────────────────────
+   Logo rises 14px into place, a 120px gold rule draws left to right, then the
+   whole sheet lifts away. Values follow the mockup's own easing curves.      */
+/* ── Scroll reveals ────────────────────────────────────────────────────────
+   Driven by one IntersectionObserver (see Reveal.tsx), which adds `is-in`.
+   Nothing here runs longer than the 1.2s per element the brief allows.      */
+.rv-up {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(.2, .6, .2, 1);
+}
+.rv-mask {
+  clip-path: inset(0 0 100% 0);
+  transition: clip-path 0.9s cubic-bezier(.2, .6, .2, 1);
+}
+.rv-line {
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.8s cubic-bezier(.2, .6, .2, 1);
+}
+.rv-up.is-in   { opacity: 1; transform: none; }
+.rv-mask.is-in { clip-path: inset(0 0 0 0); }
+.rv-line.is-in { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rv-up, .rv-mask, .rv-line {
+    opacity: 1;
+    transform: none;
+    clip-path: none;
+    transition: none;
+    transition-delay: 0s !important;
+  }
+}
+
+/* Page transition: the outgoing view fades rather than snapping */
+@keyframes pageIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.page-in {
+  animation: pageIn 0.25s ease both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-in { animation: none; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes introFade {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes introLine {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+@keyframes introLift {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-100%); }
+}
+
+/* Hero frames drift from 1.06 to 1 while they are on screen (brief: up to 6%) */
+@keyframes heroZoom {
+  from { transform: scale(1.06); }
+  to   { transform: scale(1); }
+}
 @keyframes slowZoom {
   from { transform: scale(1); }
   to   { transform: scale(1.07); }

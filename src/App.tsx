@@ -10,7 +10,8 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/admin/ProtectedRoute';
 import { AdminLayout } from './components/admin/AdminLayout';
-import ComingSoon from './pages/ComingSoon';
+import Preloader from './components/Preloader';
+import CookieBanner, { readConsent } from './components/CookieBanner';
 
 // ── Error Boundary ────────────────────────────────────────────────────────────
 type EBProps = { children: React.ReactNode };
@@ -44,6 +45,8 @@ class ErrorBoundary extends React.Component<EBProps, EBState> {
 const Home = lazy(() => import('./pages/Home'));
 const Portfolio = lazy(() => import('./pages/Portfolio'));
 const Story = lazy(() => import('./pages/Story'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const ComingSoon = lazy(() => import('./pages/ComingSoon'));
 const About = lazy(() => import('./pages/About'));
 const Contact = lazy(() => import('./pages/Contact'));
 const NotFound = lazy(() => import('./pages/NotFound'));
@@ -53,8 +56,6 @@ const AdminLogin = lazy(() => import('./pages/admin/Login'));
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
 const GalleryManager = lazy(() => import('./pages/admin/GalleryManager'));
 const StoriesManager = lazy(() => import('./pages/admin/StoriesManager'));
-const PackagesManager = lazy(() => import('./pages/admin/PackagesManager'));
-const TestimonialsManager = lazy(() => import('./pages/admin/TestimonialsManager'));
 const Submissions = lazy(() => import('./pages/admin/Submissions'));
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
 const PagesManager = lazy(() => import('./pages/admin/PagesManager'));
@@ -97,7 +98,24 @@ function PageMetadata({ title, description, pageKey }: { title: string; descript
 
       const baseUrl = (s['sitemap.base_url']?.trim() || 'https://387weddings.ba').replace(/\/$/, '');
       const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
-      if (canonical) canonical.href = `${baseUrl}${pathname}`;
+      // The canonical always points at the language actually being shown
+      const suffix = langCode === 'en' ? '?lang=en' : '';
+      if (canonical) canonical.href = `${baseUrl}${pathname}${suffix}`;
+
+      // hreflang needs one address per language, plus an x-default
+      const alternates: [string, string][] = [
+        ['bs', `${baseUrl}${pathname}`],
+        ['en', `${baseUrl}${pathname}?lang=en`],
+        ['x-default', `${baseUrl}${pathname}`],
+      ];
+      document.querySelectorAll('link[rel="alternate"][hreflang]').forEach(el => el.remove());
+      for (const [lang, href] of alternates) {
+        const link = document.createElement('link');
+        link.rel = 'alternate';
+        link.hreflang = lang;
+        link.href = href;
+        document.head.appendChild(link);
+      }
     });
   }, [title, description, pageKey, langCode, pathname]);
   return null;
@@ -108,7 +126,11 @@ function PageMetadata({ title, description, pageKey }: { title: string; descript
 // into <head> once. Re-runs if settings change (e.g. after admin save + reload).
 function AnalyticsInjector() {
   React.useEffect(() => {
+    // Nothing is injected until the visitor has actually agreed
+    let injected = false;
     const inject = () => loadSettings().then(s => {
+      if (injected) return;
+      injected = true;
       const gaId  = s['analytics.ga_id']?.trim();
       const gtmId = s['analytics.gtm_id']?.trim();
       const gsc   = s['analytics.gsc_verification']?.trim();
@@ -164,13 +186,30 @@ function AnalyticsInjector() {
         }
       }
     });
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(inject, { timeout: 3000 });
-    } else {
-      setTimeout(inject, 1500);
-    }
+    const start = () => {
+      if ('requestIdleCallback' in window) requestIdleCallback(inject, { timeout: 3000 });
+      else setTimeout(inject, 1500);
+    };
+
+    if (readConsent() === 'granted') start();
+    const onConsent = (e: Event) => {
+      if ((e as CustomEvent).detail === 'granted') start();
+    };
+    window.addEventListener('387:consent', onConsent);
+    return () => window.removeEventListener('387:consent', onConsent);
   }, []);
   return null;
+}
+
+// Replays a short fade whenever the route changes, instead of the page
+// snapping in. Remounting on `pathname` is what restarts the animation.
+function PageFade({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation();
+  return (
+    <main key={pathname} className="page-in">
+      {children}
+    </main>
+  );
 }
 
 const PublicLoadingFallback = (
@@ -226,7 +265,7 @@ function ComingSoonGate({ children }: { children: React.ReactNode }) {
   }
 
   // Regular visitor — show Coming Soon
-  return <ComingSoon />;
+  return <Suspense fallback={PublicLoadingFallback}><ComingSoon /></Suspense>;
 }
 
 function App() {
@@ -262,8 +301,6 @@ function App() {
                         <Route path="/instagram" element={<InstagramManager />} />
                         <Route path="/stories" element={<StoriesManager />} />
                         <Route path="/gallery" element={<GalleryManager />} />
-                        <Route path="/packages" element={<PackagesManager />} />
-                        <Route path="/testimonials" element={<TestimonialsManager />} />
                         <Route path="/submissions" element={<Submissions />} />
                         <Route path="/settings" element={<AdminSettings />} />
                       </Routes>
@@ -279,8 +316,9 @@ function App() {
               element={
                 <ComingSoonGate>
                 <div className="relative min-h-screen bg-cream">
+                  <Preloader />
                   <Navbar />
-                  <main>
+                  <PageFade>
                     <Suspense fallback={PublicLoadingFallback}>
                       <Routes>
                         <Route path="/" element={
@@ -293,6 +331,12 @@ function App() {
                           <>
                             <PageMetadata title="Portfolio" description="Explore our curated collection of wedding, engagement, and elopement stories." pageKey="portfolio" />
                             <Portfolio />
+                          </>
+                        } />
+                        <Route path="/privacy" element={
+                          <>
+                            <PageMetadata title="Privatnost" description="Politika privatnosti i kolačića." pageKey="privacy" />
+                            <Privacy />
                           </>
                         } />
                         <Route path="/prica/:slug" element={
@@ -321,9 +365,10 @@ function App() {
                         } />
                       </Routes>
                     </Suspense>
-                  </main>
+                  </PageFade>
                   <Footer />
                   <BackToTop />
+                  <CookieBanner />
                 </div>
                 </ComingSoonGate>
               }

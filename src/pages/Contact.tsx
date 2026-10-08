@@ -299,7 +299,7 @@ const Contact = () => {
               value={formData.message} onChange={e => set('message')(e.target.value)} />
           </div>
 
-          <label htmlFor="c-consent" className="flex items-center gap-3 text-[13px] font-light text-[#6b6b6b] -mt-1 cursor-pointer">
+          <label htmlFor="c-consent" className="flex items-center gap-3 text-[13px] font-light text-[#6b6b6b] -mt-1 min-h-11 cursor-pointer">
             <input id="c-consent" name="consent" type="checkbox" required checked={consent}
               onChange={e => setConsent(e.target.checked)}
               className="w-4 h-4 m-0 flex-none accent-ink-900 cursor-pointer" />

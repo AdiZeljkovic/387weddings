@@ -1,4 +1,5 @@
 import React from 'react';
+import Reveal from './Reveal';
 
 // Decorative line-art taken from the client mockup. The olive sprig and the
 // diamond separator are the only two ornaments the brief allows, used sparingly
@@ -35,6 +36,16 @@ export const OliveBranch = ({ className = '', flip = false }: { className?: stri
   </div>
 );
 
+// Two thin gold rings, the second ornament the brief names.
+export const Rings = ({ className = '' }: { className?: string }) => (
+  <div aria-hidden="true" className={`pointer-events-none select-none opacity-20 ${className}`}>
+    <svg viewBox="0 0 160 110" width="100%" fill="none" stroke="#a6865d" strokeWidth="1.2">
+      <circle cx="62" cy="55" r="38" />
+      <circle cx="100" cy="55" r="38" />
+    </svg>
+  </div>
+);
+
 // Rule — red diamond — rule. Sits above the closing Instagram block.
 export const DiamondRule = ({ className = '' }: { className?: string }) => (
   <div className={`flex items-center justify-center gap-3 ${className}`} aria-hidden="true">
@@ -54,13 +65,13 @@ export const SectionLabel = ({
   className?: string;
 }) => (
   <div className={`flex items-center gap-3.5 md:gap-4 ${centered ? 'justify-center' : ''} ${className}`}>
-    {centered && <span aria-hidden="true" className="w-7 md:w-12 h-px bg-gold-600" />}
+    {centered && <Reveal as="span" kind="line" aria-hidden="true" className="block w-7 md:w-12 h-px bg-gold-600" />}
     <span
       style={style}
       className="text-[11px] md:text-[12px] tracking-[0.32em] uppercase text-gold-label whitespace-nowrap"
     >
       {children}
     </span>
-    <span aria-hidden="true" className="w-7 md:w-12 h-px bg-gold-600" />
+    <Reveal as="span" kind="line" aria-hidden="true" className="block w-7 md:w-12 h-px bg-gold-600" />
   </div>
 );

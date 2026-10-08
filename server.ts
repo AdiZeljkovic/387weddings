@@ -10,8 +10,6 @@ import rateLimit from 'express-rate-limit';
 import { initDB, pool } from './server/db.js';
 import authRoutes from './server/routes/authRoutes.js';
 import galleryRoutes from './server/routes/galleryRoutes.js';
-import packageRoutes from './server/routes/packageRoutes.js';
-import testimonialRoutes from './server/routes/testimonialRoutes.js';
 import submissionRoutes from './server/routes/submissionRoutes.js';
 import contactRoutes from './server/routes/contactRoutes.js';
 import settingsRoutes from './server/routes/settingsRoutes.js';
@@ -137,8 +135,6 @@ async function startServer() {
   app.use('/api/auth', authLimiter, authRoutes);
   app.use('/api/gallery', galleryRoutes);
   app.use('/api/stories', storyRoutes);
-  app.use('/api/packages', packageRoutes);
-  app.use('/api/testimonials', testimonialRoutes);
   app.use('/api/contact', contactLimiter, contactRoutes);
   app.use('/api/submissions', submissionRoutes);
   app.use('/api/settings', settingsRoutes);
@@ -174,6 +170,10 @@ async function startServer() {
         res.status(404).type('text/plain').send('Not found');
         return;
       }
+      // The shell must revalidate every time: the asset filenames inside it
+      // change on each build, so a cached shell would point at files that no
+      // longer exist. The hashed assets themselves keep their one-year headers.
+      res.setHeader('Cache-Control', 'no-cache');
       res
         .status(isKnownRoute(req.path) ? 200 : 404)
         .sendFile(path.join(process.cwd(), 'dist', 'index.html'));

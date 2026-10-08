@@ -37,43 +37,9 @@ export async function initDB() {
       );
       ALTER TABLE gallery_images ADD COLUMN IF NOT EXISTS layout VARCHAR(20) DEFAULT 'TALL';
 
-      -- packages table must be created BEFORE the ALTER TABLE statements below,
-      -- otherwise a fresh install fails with "relation packages does not exist".
-      CREATE TABLE IF NOT EXISTS packages (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        price VARCHAR(100) NOT NULL,
-        description TEXT,
-        features JSONB DEFAULT '[]',
-        is_featured BOOLEAN DEFAULT FALSE,
-        is_active BOOLEAN DEFAULT TRUE,
-        sort_order INT DEFAULT 0
-      );
 
-      ALTER TABLE packages ADD COLUMN IF NOT EXISTS name_color     TEXT DEFAULT NULL;
-      ALTER TABLE packages ADD COLUMN IF NOT EXISTS name_font_size TEXT DEFAULT NULL;
-      ALTER TABLE packages ADD COLUMN IF NOT EXISTS name_en        TEXT DEFAULT NULL;
-      ALTER TABLE packages ADD COLUMN IF NOT EXISTS name_bs        TEXT DEFAULT NULL;
-      ALTER TABLE packages ADD COLUMN IF NOT EXISTS description_en TEXT DEFAULT NULL;
-      ALTER TABLE packages ADD COLUMN IF NOT EXISTS description_bs TEXT DEFAULT NULL;
-      ALTER TABLE packages ADD COLUMN IF NOT EXISTS features_en         JSONB DEFAULT '[]';
-      ALTER TABLE packages ADD COLUMN IF NOT EXISTS features_bs         JSONB DEFAULT '[]';
-      ALTER TABLE packages ADD COLUMN IF NOT EXISTS features_font_size  TEXT DEFAULT NULL;
 
-      UPDATE packages SET name_bs = name         WHERE name_bs IS NULL;
-      UPDATE packages SET description_bs = description WHERE description_bs IS NULL;
-      UPDATE packages SET features_bs = features  WHERE features_bs IS NULL OR features_bs::text = '[]';
 
-      CREATE TABLE IF NOT EXISTS testimonials (
-        id SERIAL PRIMARY KEY,
-        client_name VARCHAR(255) NOT NULL,
-        text TEXT NOT NULL,
-        location VARCHAR(255),
-        wedding_date VARCHAR(100),
-        is_active BOOLEAN DEFAULT TRUE,
-        sort_order INT DEFAULT 0,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      );
 
       CREATE TABLE IF NOT EXISTS contact_submissions (
         id SERIAL PRIMARY KEY,
@@ -151,6 +117,7 @@ export async function initDB() {
     await client.query(`
       INSERT INTO site_settings (key, value) VALUES
         ('email', 'hello@387weddings.ba'),
+        ('contact_recipient', ''),
         ('phone', '+387 61 000 000'),
         ('instagram', '#'),
         ('instagram_handle', '387.weddings'),
@@ -301,92 +268,12 @@ export async function initDB() {
     await client.query(`
       INSERT INTO page_content (key, label, page, section, type, value_en, value_bs, sort_order) VALUES
         ('contact.form.submit',    'Gumb: Pošaljite upit',                               'contact', 'form',       'text',     'Send Your Inquiry',                                                                                       'Pošaljite Upit',                                                                                                 0),
-        ('contact.follow.tag',     '"Pratite nas" — tag',                                'contact', 'connect',   'text',     'Follow Us',                                                                                               'Pratite nas',                                                                                                    5),
-        ('about.artists',          'Priča: Mali tag iznad naslova',                      'about',   'story',     'text',     'The Artists Behind the Lens',                                                                             'Umjetnici iza objektiva',                                                                                        5),
-        ('about.experience.tag',   'Iskustvo: Tag oznaka',                               'about',   'experience','text',     'The Experience',                                                                                          'Iskustvo',                                                                                                       0),
-        ('about.experience.title', 'Iskustvo: Naslov sekcije',                           'about',   'experience','text',     'How We Work',                                                                                             'Kako Radimo',                                                                                                    1),
-        ('about.step.1.num',       'Korak 1: Broj (npr. 01)',                            'about',   'experience','text',     '01',                                                                                                      '01',                                                                                                             2),
-        ('about.step.1.title',     'Korak 1: Naslov',                                   'about',   'experience','text',     'Initial Consultation',                                                                                    'Inicijalni razgovor',                                                                                            3),
-        ('about.step.1.desc',      'Korak 1: Opis',                                     'about',   'experience','textarea', 'We begin by getting to know you — your story, your vision, and what makes your love unique.',             'Počinjemo upoznavanjem — vaša priča, vizija i ono što vaše vjenčanje čini jedinstvenim.',                        4),
-        ('about.step.1.icon',      'Korak 1: Ikona (chat/star/camera/image/heart/film)', 'about',   'experience','text',     'chat',                                                                                                    'chat',                                                                                                           5),
-        ('about.step.2.num',       'Korak 2: Broj (npr. 02)',                            'about',   'experience','text',     '02',                                                                                                      '02',                                                                                                             6),
-        ('about.step.2.title',     'Korak 2: Naslov',                                   'about',   'experience','text',     'Planning & Preparation',                                                                                  'Planiranje i priprema',                                                                                          7),
-        ('about.step.2.desc',      'Korak 2: Opis',                                     'about',   'experience','textarea', 'We work closely with you to plan every detail, ensuring we capture the moments that matter most.',         'Blisko surađujemo na planiranju svakog detalja kako bismo uhvatili trenutke koji su vam najvažniji.',             8),
-        ('about.step.2.icon',      'Korak 2: Ikona (chat/star/camera/image/heart/film)', 'about',   'experience','text',     'star',                                                                                                    'star',                                                                                                           9),
-        ('about.step.3.num',       'Korak 3: Broj (npr. 03)',                            'about',   'experience','text',     '03',                                                                                                      '03',                                                                                                             10),
-        ('about.step.3.title',     'Korak 3: Naslov',                                   'about',   'experience','text',     'The Wedding Day',                                                                                         'Dan vjenčanja',                                                                                                  11),
-        ('about.step.3.desc',      'Korak 3: Opis',                                     'about',   'experience','textarea', 'We arrive early and stay late — unobtrusive observers capturing every emotion, glance, and celebration.', 'Dolazimo rano i ostajemo dugo — nenametljivi promatrači koji bilježe svaku emociju, pogled i proslavu.',         12),
-        ('about.step.3.icon',      'Korak 3: Ikona (chat/star/camera/image/heart/film)', 'about',   'experience','text',     'camera',                                                                                                  'camera',                                                                                                         13),
-        ('about.step.4.num',       'Korak 4: Broj (npr. 04)',                            'about',   'experience','text',     '04',                                                                                                      '04',                                                                                                             14),
-        ('about.step.4.title',     'Korak 4: Naslov',                                   'about',   'experience','text',     'Gallery Delivery',                                                                                        'Isporuka galerije',                                                                                              15),
-        ('about.step.4.desc',      'Korak 4: Opis',                                     'about',   'experience','textarea', 'Your curated gallery is delivered within 6–8 weeks, with a sneak peek within 48 hours of your wedding.',  'Vaša galerija isporučuje se u roku od 6–8 sedmica, s prvim uvidom u roku od 48 sati od vjenčanja.',               16),
-        ('about.step.4.icon',      'Korak 4: Ikona (chat/star/camera/image/heart/film)', 'about',   'experience','text',     'image',                                                                                                   'image',                                                                                                          17),
-        ('stories.ready',                    'CTA: Naslov — linija 1',                              'about',    'cta',        'text',     'Ready to tell',                                                                                                          'Spremni da ispričate',                                                                                                       0),
-        ('stories.yourOwn',                  'CTA: Naslov — linija 2 (kurziv)',                     'about',    'cta',        'text',     'your own story?',                                                                                                        'svoju priču?',                                                                                                               1),
-        ('stories.start',                    'CTA: Tekst gumba',                                    'about',    'cta',        'text',     'Start the Dialogue',                                                                                                     'Započnite Dijalog',                                                                                                          2),
-        ('experience.journey.tag',           'Putovanje: Tag oznaka',                               'services', 'journey',    'text',     'The Journey',                                                                                                            'Putovanje',                                                                                                                  0),
-        ('experience.journey.title',         'Putovanje: Naslov sekcije',                           'services', 'journey',    'text',     'How We Work With You',                                                                                                   'Kako radimo s vama',                                                                                                         1),
-        ('experience.journey.step.1.num',    'Korak 1: Broj (npr. 01)',                             'services', 'journey',    'text',     '01',                                                                                                                     '01',                                                                                                                         2),
-        ('experience.journey.step.1.title',  'Korak 1: Naslov',                                    'services', 'journey',    'text',     'Initial Inquiry',                                                                                                        'Inicijalni upit',                                                                                                            3),
-        ('experience.journey.step.1.desc',   'Korak 1: Opis',                                      'services', 'journey',    'textarea', 'You reach out and tell us about your day. We respond within 24 hours and schedule a call to learn more about your vision.', 'Kontaktirate nas i pričate o svom danu. Odgovaramo u roku od 24 sata i zakažemo poziv da saznamo više o vašoj viziji.',     4),
-        ('experience.journey.step.1.icon',   'Korak 1: Ikona (chat/star/camera/image/heart/film)',  'services', 'journey',    'text',     'chat',                                                                                                                   'chat',                                                                                                                       5),
-        ('experience.journey.step.2.num',    'Korak 2: Broj (npr. 02)',                             'services', 'journey',    'text',     '02',                                                                                                                     '02',                                                                                                                         6),
-        ('experience.journey.step.2.title',  'Korak 2: Naslov',                                    'services', 'journey',    'text',     'Planning Together',                                                                                                      'Planiranje zajedno',                                                                                                         7),
-        ('experience.journey.step.2.desc',   'Korak 2: Opis',                                      'services', 'journey',    'textarea', 'We send a detailed questionnaire and timeline to understand every detail — from ceremony timing to family combinations.', 'Šaljemo detaljan upitnik i raspored kako bismo razumjeli svaki detalj — od vremena ceremonije do porodičnih kombinacija.',  8),
-        ('experience.journey.step.2.icon',   'Korak 2: Ikona (chat/star/camera/image/heart/film)',  'services', 'journey',    'text',     'star',                                                                                                                   'star',                                                                                                                       9),
-        ('experience.journey.step.3.num',    'Korak 3: Broj (npr. 03)',                             'services', 'journey',    'text',     '03',                                                                                                                     '03',                                                                                                                         10),
-        ('experience.journey.step.3.title',  'Korak 3: Naslov',                                    'services', 'journey',    'text',     'The Wedding Day',                                                                                                        'Dan vjenčanja',                                                                                                              11),
-        ('experience.journey.step.3.desc',   'Korak 3: Opis',                                      'services', 'journey',    'textarea', 'We arrive early, blend into your day, and work in perfect sync as a husband-and-wife team to capture every moment.',     'Stižemo rano, uklapamo se u vaš dan i radimo u savršenoj sinergiji kao tim muža i žene da uhvatimo svaki trenutak.',       12),
-        ('experience.journey.step.3.icon',   'Korak 3: Ikona (chat/star/camera/image/heart/film)',  'services', 'journey',    'text',     'camera',                                                                                                                 'camera',                                                                                                                     13),
-        ('experience.journey.step.4.num',    'Korak 4: Broj (npr. 04)',                             'services', 'journey',    'text',     '04',                                                                                                                     '04',                                                                                                                         14),
-        ('experience.journey.step.4.title',  'Korak 4: Naslov',                                    'services', 'journey',    'text',     'Gallery & Film Delivery',                                                                                                'Isporuka galerije i filma',                                                                                                  15),
-        ('experience.journey.step.4.desc',   'Korak 4: Opis',                                      'services', 'journey',    'textarea', 'Sneak peek within 48 hours. Full gallery in 6–8 weeks. Your film delivered as a timeless cinematic memory.',            'Sneak peek u roku od 48 sati. Puna galerija za 6–8 sedmica. Vaš film isporučen kao bezvremensko kinematsko sjećanje.',  16),
-        ('experience.journey.step.4.icon',   'Korak 4: Ikona (chat/star/camera/image/heart/film)',  'services', 'journey',    'text',     'image',                                                                                                                  'image',                                                                                                                      17),
-        ('experience.addons.tag',            'Podrška: Tag oznaka',                                 'services', 'addons',     'text',     'Our Support',                                                                                                            'Naša podrška',                                                                                                               0),
-        ('experience.addons.title.part1',    'Podrška: Naslov linija 1',                            'services', 'addons',     'text',     'Here for you',                                                                                                           'Tu smo za vas',                                                                                                              1),
-        ('experience.addons.title.part2',    'Podrška: Naslov linija 2 (kurziv)',                   'services', 'addons',     'text',     'every step.',                                                                                                            'na svakom koraku.',                                                                                                          2),
-        ('experience.addons.1.title',        'Podrška 1: Naslov',                                   'services', 'addons',     'text',     'Cinematic Film',                                                                                                         'Kinematski film',                                                                                                            3),
-        ('experience.addons.1.desc',         'Podrška 1: Opis',                                     'services', 'addons',     'textarea', 'A cinematic highlight film that captures the emotion, atmosphere, and story of your wedding day.',                       'Kinematski highlight film koji bilježi emociju, atmosferu i priču vašeg dana vjenčanja.',                                    4),
-        ('experience.addons.1.icon',         'Podrška 1: Ikona (camera/map/sparkles/globe/heart/film)', 'services', 'addons', 'text',     'camera',                                                                                                                 'camera',                                                                                                                     5),
-        ('experience.addons.2.title',        'Podrška 2: Naslov',                                   'services', 'addons',     'text',     'Destination Coverage',                                                                                                   'Destinacijska pokrivenost',                                                                                                  6),
-        ('experience.addons.2.desc',         'Podrška 2: Opis',                                     'services', 'addons',     'textarea', 'We travel worldwide. All travel logistics handled by us so your experience is seamless from start to finish.',          'Putujemo širom svijeta. Svu putnu logistiku preuzimamo mi kako bi vaše iskustvo bilo besprijekorno.',                       7),
-        ('experience.addons.2.icon',         'Podrška 2: Ikona (camera/map/sparkles/globe/heart/film)', 'services', 'addons', 'text',     'map',                                                                                                                    'map',                                                                                                                        8),
-        ('experience.addons.3.title',        'Podrška 3: Naslov',                                   'services', 'addons',     'text',     'Pre-Wedding Session',                                                                                                    'Sesija prije vjenčanja',                                                                                                     9),
-        ('experience.addons.3.desc',         'Podrška 3: Opis',                                     'services', 'addons',     'textarea', 'A relaxed shoot before the big day to get comfortable in front of the camera and build our creative connection.',       'Opušteno fotografisanje prije velikog dana kako biste se ugodili pred kamerom i izgradili naš kreativni spoj.',            10),
-        ('experience.addons.3.icon',         'Podrška 3: Ikona (camera/map/sparkles/globe/heart/film)', 'services', 'addons', 'text',     'sparkles',                                                                                                               'sparkles',                                                                                                                   11),
-        ('experience.addons.4.title',        'Podrška 4: Naslov',                                   'services', 'addons',     'text',     'Global Availability',                                                                                                    'Globalna dostupnost',                                                                                                        12),
-        ('experience.addons.4.desc',         'Podrška 4: Opis',                                     'services', 'addons',     'textarea', 'Based in Sarajevo but available everywhere. From the Adriatic to the Alps, we follow your love story.',                 'Sjedište u Sarajevu, dostupni svuda. Od Jadrana do Alpa, pratimo vašu ljubavnu priču.',                                    13),
-        ('experience.addons.4.icon',         'Podrška 4: Ikona (camera/map/sparkles/globe/heart/film)', 'services', 'addons', 'text',     'globe',                                                                                                                  'globe',                                                                                                                      14),
-        ('experience.faq.title',             'FAQ: Naslov sekcije',                                  'services', 'faq',        'text',     'Frequently Asked Questions',                                                                                              'Česta pitanja',                                                                                                              0),
-        ('experience.cta.title.part1',       'CTA: Naslov linija 1',                                 'services', 'cta',        'text',     'Ready to start',                                                                                                         'Započnite dijalog',                                                                                                          0),
-        ('experience.cta.title.part2',       'CTA: Naslov linija 2 (kurziv)',                        'services', 'cta',        'text',     'the dialogue?',                                                                                                          'sa vašom pričom.',                                                                                                           1),
-        ('experience.cta.button',            'CTA: Tekst gumba',                                     'services', 'cta',        'text',     'Pošaljite upit',                                                                                                         'Pošaljite upit',                                                                                                             2),
-        ('experience.package.collection',    'Paketi: "Kolekcija" tekst',                            'services', 'investment', 'text',     'Collection',                                                                                                             'Kolekcija',                                                                                                                  3),
-        ('experience.package.popular',       'Paketi: "Popularno" badge',                            'services', 'investment', 'text',     'Most popular',                                                                                                           'Najpopularnije',                                                                                                             4),
-        ('experience.package.inquire',       'Paketi: Gumb "Inquire"',                               'services', 'investment', 'text',     'Inquire',                                                                                                                'Pošaljite upit',                                                                                                             5),
-        ('experience.package.starting_at',  'Paketi: "Starting at" / "Počinje od"',                 'services', 'investment', 'text',     'Starting at',                                                                                                            'Počinje od',                                                                                                                 6),
-        ('experience.promo.cta',        'Promocija: Tekst gumba',       'services',  'promo',  'text', 'Send Inquiry',                    'Pošaljite Upit',                    2),
         ('portfolio.filter.all',       'Filter: Sve',                  'portfolio', 'filter', 'text', 'ALL',                             'SVE',                               0),
         ('portfolio.filter.weddings',  'Filter: Vjenčanja',            'portfolio', 'filter', 'text', 'WEDDINGS',                        'VJENČANJA',                         1),
         ('portfolio.filter.studio',    'Filter: Studio',               'portfolio', 'filter', 'text', 'STUDIO',                          'STUDIO',                            2),
         ('portfolio.filter.portraits', 'Filter: Portreti',             'portfolio', 'filter', 'text', 'PORTRAITS',                       'PORTRETI',                          3),
         ('portfolio.empty',            'Prazna galerija — poruka',     'portfolio', 'filter', 'text', 'No images in this category yet.', 'Nema slika u ovoj kategoriji.',     4),
-        ('portfolio.ready',            'CTA: Naslov linija 1',         'portfolio', 'cta',    'text', 'Ready to start',                  'Jeste li spremni',                  0),
-        ('portfolio.dialogue',         'CTA: Naslov linija 2 (kurziv)','portfolio', 'cta',    'text', 'a dialogue?',                     'da ispričate svoju priču?',         1),
-        ('portfolio.cta.button',       'CTA: Tekst gumba',             'portfolio', 'cta',    'text', 'Inquire Now',                     'Pošaljite upit',                    2),
-        ('home.explore',               'Intro: Gumb "Istraži portfolio"',  'home', 'intro',        'text', 'Explore Portfolio',               'Istraži portfolio',                 5),
         ('home.scroll',                'Hero: Scroll indicator tekst',     'home', 'hero',         'text', 'Scroll to explore',               'Skrolaj za više',                   10),
-        ('home.process.01.num',        'Proces: Broj koraka 01',           'home', 'process',      'text', '01.',                             '01.',                               10),
-        ('home.process.01.icon',       'Proces: Ikona 01 (sparkles/camera/heart/star/film/users)', 'home', 'process', 'text', 'sparkles',      'sparkles',                          11),
-        ('home.process.02.num',        'Proces: Broj koraka 02',           'home', 'process',      'text', '02.',                             '02.',                               20),
-        ('home.process.02.icon',       'Proces: Ikona 02 (sparkles/camera/heart/star/film/users)', 'home', 'process', 'text', 'mappin',        'mappin',                            21),
-        ('home.process.03.num',        'Proces: Broj koraka 03',           'home', 'process',      'text', '03.',                             '03.',                               30),
-        ('home.process.03.icon',       'Proces: Ikona 03 (sparkles/camera/heart/star/film/users)', 'home', 'process', 'text', 'heart',         'heart',                             31),
-        ('home.testimonials.tag',      'Recenzije: Tag tekst',             'home', 'testimonials', 'text', 'Client Stories',                  'Priče klijenata',                   0),
-        ('home.testimonials.title',    'Recenzije: Naslov',                'home', 'testimonials', 'text', 'Words that move us',              'Njihove riječi',                    1),
-        ('home.fallback.quote',        'Recenzije: Fallback citat',        'home', 'testimonials', 'text', 'An unforgettable experience.',    'Nezaboravno iskustvo.',              2),
-        ('home.about.title',           'O nama: Ime fotografa 1',          'home', 'about_section','text', 'Amar',                            'Amar',                              0),
-        ('home.about.and',             'O nama: Ime fotografa 2 (i/and)',  'home', 'about_section','text', '& Lejla',                         '& Lejla',                           1),
         ('home.about.desc.1',          'O nama: Paragraf 1',               'home', 'about_section','text', 'We are wedding photographers based in Bosnia, capturing love stories across the Balkans and beyond.', 'Mi smo vjenčani fotografski tim iz Bosne, bilježimo priče ljubavi diljem Balkana i dalje.', 2),
         ('home.about.desc.2',          'O nama: Paragraf 2',               'home', 'about_section','text', 'With a cinematic eye and a documentary heart, we turn fleeting moments into timeless imagery.', 'Kinematskim okom i dokumentarnim srcem pretvaramo prolazne trenutke u vječne slike.', 3),
         ('home.about.desc.3',          'O nama: Paragraf 3',               'home', 'about_section','text', 'Every frame is intentional. Every story is unique.',  'Svaki kadar je namjeran. Svaka priča je jedinstvena.', 4),
@@ -398,194 +285,9 @@ export async function initDB() {
         ('nav.experience',   'Navigacija: Link "Iskustvo"',    'footer', 'nav',   'text',     'Experience',          'Iskustvo',             2),
         ('nav.stories',      'Navigacija: Link "O nama"',      'footer', 'nav',   'text',     'About Us',            'O nama',               3),
         ('nav.inquire',      'Navigacija: Link "Upit"',        'footer', 'nav',   'text',     'Inquire',             'Upit',                 4),
-        ('home.collections.tag',   'Kolekcije: Tag iznad naslova', 'home', 'collections', 'text', 'Browse by',  'Pregledajte po', 0),
-        ('home.collections.title', 'Kolekcije: Veliki naslov',     'home', 'collections', 'text', 'Collection', 'Kolekcijama',    1),
         ('hero.desc', 'Hero: Kratki opis ispod naslova', 'home', 'hero', 'textarea',
          'We capture the emotions that remain long after everything else has passed.',
-         'Zabilježimo emocije koje traju kada sve drugo prođe.', 5),
-        ('home.collections.desc', 'Kolekcije: Opis ispod naslova', 'home', 'collections', 'textarea',
-         'Every story is unique. From weddings and studio sessions to portraits — we create memories that last forever.',
-         'Svaka priča je jedinstvena. Od vjenčanja i studijskih snimanja do portreta – stvaramo uspomene koje traju zauvijek.', 2),
-        ('home.collections.weddings.desc', 'Kartica Vjenčanja: Opis', 'home', 'collections', 'textarea',
-         'Your special day, captured through its most beautiful moments.',
-         'Vaš poseban dan, zabilježen kroz najljepše trenutke.', 3),
-        ('home.collections.studio.desc', 'Kartica Studio: Opis', 'home', 'collections', 'textarea',
-         'Timeless photographs in a perfectly composed setting.',
-         'Bezvremenske fotografije u savršenom ambijentu.', 4),
-        ('home.collections.portraits.desc', 'Kartica Portreti: Opis', 'home', 'collections', 'textarea',
-         'Portraits that reveal your character and emotion.',
-         'Portreti koji otkrivaju vašu jedinstvenost i emociju.', 5),
-        ('home.featured.title', 'Istaknuti radovi: Naslov sekcije', 'home', 'featured', 'text',
-         'Featured works', 'Istaknuti radovi', 0),
-        ('home.featured.cta', 'Istaknuti radovi: Tekst gumba', 'home', 'featured', 'text',
-         'View all works', 'Pogledajte sve radove', 1),
-        ('home.features.title', 'Iskustvo (3 stavke): Naslov sekcije', 'home', 'process', 'text',
-         'The experience we provide', 'Iskustvo koje pružamo', 40),
-        ('home.about.caption', 'O nama: Script natpis uz malu sliku', 'home', 'about_section', 'text',
-         'your story — our inspiration', 'vaša priča — naša inspiracija', 8),
-        ('nav.home', 'Navigacija: Link "Početna"', 'footer', 'nav', 'text', 'Home', 'Početna', 0),
-
-        -- Naslovna, redizajn 2026: hero / istaknuti radovi / o nama
-        ('home.featured.heading.part1', 'Istaknuti radovi: Naslov — linija 1', 'home', 'featured', 'text',
-         'Moments.', 'Trenuci.', 2),
-        ('home.featured.heading.part2', 'Istaknuti radovi: Naslov — linija 2', 'home', 'featured', 'text',
-         'Emotion.', 'Emocija.', 3),
-        ('home.featured.heading.part3', 'Istaknuti radovi: Naslov — linija 3', 'home', 'featured', 'text',
-         'Forever.', 'Zauvijek.', 4),
-        ('home.about.tag', 'O nama: Tag iznad naslova', 'home', 'about_section', 'text',
-         'About us', 'O nama', 9),
-        ('home.about.heading.part1', 'O nama: Naslov — linija 1', 'home', 'about_section', 'text',
-         'More than photographs.', 'Više od fotografija.', 10),
-        ('home.about.heading.part2', 'O nama: Naslov — linija 2', 'home', 'about_section', 'text',
-         'It is your story.', 'To je vaša priča.', 11),
-        ('footer.contact', 'Footer: Naslov kontakt kolone', 'footer', 'contact', 'text',
-         'Contact', 'Kontakt', 0),
-
-        -- Kontakt, redizajn 2026: hero + prošireni obrazac
-        ('contact.hero.title.part1', 'Hero: Naslov — linija 1', 'contact', 'hero', 'text', 'Send us',   'Pošaljite',   2),
-        ('contact.hero.title.part2', 'Hero: Naslov — linija 2', 'contact', 'hero', 'text', 'a message', 'nam poruku',  3),
-        ('contact.hero.desc', 'Hero: Opis ispod naslova', 'contact', 'hero', 'textarea',
-         'Fill in the form and tell us the details of your wedding. We will get back to you as soon as possible.',
-         'Ispunite formu i javite nam detalje o vašem vjenčanju. Javićemo vam se u najkraćem mogućem roku.', 4),
-
-        ('contact.form.name',              'Polje: Ime — labela',      'contact', 'form', 'text', 'Full name',     'Ime i prezime',            0),
-        ('contact.form.name.placeholder',  'Polje: Ime — placeholder', 'contact', 'form', 'text', 'Enter your full name', 'Unesite vaše ime i prezime', 1),
-        ('contact.form.email',             'Polje: E-mail — labela',      'contact', 'form', 'text', 'Email address', 'E-mail adresa',        2),
-        ('contact.form.email.placeholder', 'Polje: E-mail — placeholder', 'contact', 'form', 'text', 'Enter your email address', 'Unesite e-mail adresu', 3),
-        ('contact.form.phone',             'Polje: Telefon — labela',      'contact', 'form', 'text', 'Phone number', 'Broj telefona',        4),
-        ('contact.form.phone.placeholder', 'Polje: Telefon — placeholder', 'contact', 'form', 'text', 'Enter phone number (optional)', 'Unesite broj telefona (opciono)', 5),
-        ('contact.form.date',                 'Polje: Datum — labela',      'contact', 'form', 'text', 'Wedding date',   'Datum vjenčanja',        6),
-        ('contact.form.date.placeholder',     'Polje: Datum — placeholder', 'contact', 'form', 'text', 'Choose a date',  'Odaberite datum',        7),
-        ('contact.form.location',             'Polje: Lokacija — labela',      'contact', 'form', 'text', 'Wedding location / city', 'Lokacija vjenčanja / grad', 7),
-        ('contact.form.location.placeholder', 'Polje: Lokacija — placeholder', 'contact', 'form', 'text', 'Enter location / city',   'Unesite lokaciju / grad',   8),
-        ('contact.form.story',                'Polje: Dodatne informacije — labela',      'contact', 'form', 'textarea', 'Additional information / your story', 'Dodatne informacije / vaša priča', 24),
-        ('contact.form.story.placeholder',    'Polje: Dodatne informacije — placeholder', 'contact', 'form', 'text',     'Tell us anything else you would like us to know', 'Napišite nam sve što želite da znamo', 25),
-        ('contact.form.guests',             'Polje: Broj gostiju — labela',      'contact', 'form', 'text', 'Approximate number of guests', 'Približan broj gostiju', 8),
-        ('contact.form.guests.placeholder', 'Polje: Broj gostiju — placeholder', 'contact', 'form', 'text', 'Enter number of guests', 'Unesite broj gostiju', 9),
-        ('contact.form.coverage',             'Polje: Trajanje angažmana — labela',      'contact', 'form', 'text', 'Approximate length of our coverage', 'Okvirno vrijeme trajanja našeg angažmana', 10),
-        ('contact.form.coverage.placeholder', 'Polje: Trajanje angažmana — placeholder', 'contact', 'form', 'text', 'Select duration', 'Odaberite trajanje', 11),
-        ('contact.form.coverage.opt.1', 'Trajanje: Opcija 1 (prazno = sakriveno)', 'contact', 'form', 'text', 'Up to 4 hours',  'Do 4 sata',        12),
-        ('contact.form.coverage.opt.2', 'Trajanje: Opcija 2 (prazno = sakriveno)', 'contact', 'form', 'text', '4–8 hours',      '4–8 sati',         13),
-        ('contact.form.coverage.opt.3', 'Trajanje: Opcija 3 (prazno = sakriveno)', 'contact', 'form', 'text', '8–12 hours',     '8–12 sati',        14),
-        ('contact.form.coverage.opt.4', 'Trajanje: Opcija 4 (prazno = sakriveno)', 'contact', 'form', 'text', 'Full day',       'Cijeli dan',       15),
-        ('contact.form.coverage.opt.5', 'Trajanje: Opcija 5 (prazno = sakriveno)', 'contact', 'form', 'text', 'Multiple days',  'Više dana',        16),
-        ('contact.form.video',             'Polje: Video — labela',      'contact', 'form', 'text', 'Do you need video?', 'Treba li vam video?', 17),
-        ('contact.form.video.placeholder', 'Polje: Video — placeholder', 'contact', 'form', 'text', 'Select an option',   'Odaberite opciju',    18),
-        ('contact.form.video.opt.1', 'Video: Opcija 1 (prazno = sakriveno)', 'contact', 'form', 'text', 'Yes',        'Da',            19),
-        ('contact.form.video.opt.2', 'Video: Opcija 2 (prazno = sakriveno)', 'contact', 'form', 'text', 'No',         'Ne',            20),
-        ('contact.form.video.opt.3', 'Video: Opcija 3 (prazno = sakriveno)', 'contact', 'form', 'text', 'Not sure yet', 'Još nisam siguran/na', 21),
-        ('contact.form.places',             'Polje: Mjesta fotografisanja — labela',      'contact', 'form', 'text', 'Photo locations (if already known)', 'Mjesta fotografisanja (ako su već poznata)', 22),
-        ('contact.form.places.placeholder', 'Polje: Mjesta fotografisanja — placeholder', 'contact', 'form', 'text', 'Write the locations', 'Napišite lokacije', 23),
-        ('contact.form.consent', 'Obrazac: Tekst uz kvačicu (saglasnost)', 'contact', 'form', 'textarea',
-         'I agree that my data may be used to respond to this inquiry.',
-         'Prihvatam da se moji podaci koriste u svrhu odgovora na upit.', 30),
-        ('contact.form.sending', 'Obrazac: Tekst dok se šalje', 'contact', 'form', 'text', 'Sending...', 'Šaljem...', 31),
-        ('contact.form.error',   'Obrazac: Poruka o grešci',   'contact', 'form', 'text',
-         'Something went wrong. Please try again or email us directly.',
-         'Nešto je pošlo po zlu. Pokušajte ponovo ili nam pišite direktno na e-mail.', 32),
-
-        -- O nama, redizajn 2026: lična sekcija "nekoliko sitnica"
-        ('about.facts.tag',          'Sitnice: Tag iznad naslova',   'about', 'facts', 'text', 'Up close',            'Izbliza',             0),
-        ('about.facts.title.part1',  'Sitnice: Naslov — linija 1',   'about', 'facts', 'text', 'A few small things',  'Nekoliko sitnica',    1),
-        ('about.facts.title.part2',  'Sitnice: Naslov — linija 2',   'about', 'facts', 'text', 'about the two of us.','o nama dvoje.',       2),
-        ('about.facts.1.label', 'Sitnica 1: Naslov', 'about', 'facts', 'text', 'The first thing we ask', 'Prvo što pitamo', 3),
-        ('about.facts.1.text',  'Sitnica 1: Tekst (prazno = sakriveno)', 'about', 'facts', 'textarea',
-         'How you met. The answer usually sets the tone for the whole day.',
-         'Kako ste se upoznali. Odgovor na to pitanje obično odredi ton cijelog dana.', 4),
-        ('about.facts.2.label', 'Sitnica 2: Naslov', 'about', 'facts', 'text', 'Favourite part of the day', 'Najdraži dio dana', 5),
-        ('about.facts.2.text',  'Sitnica 2: Tekst (prazno = sakriveno)', 'about', 'facts', 'textarea',
-         'The ten minutes before sunset, when everyone settles and the light turns gold.',
-         'Onih deset minuta pred zalazak, kada se svi smire a svjetlo postane zlatno.', 6),
-        ('about.facts.3.label', 'Sitnica 3: Naslov', 'about', 'facts', 'text', 'Always in the bag', 'Uvijek u torbi', 7),
-        ('about.facts.3.text',  'Sitnica 3: Tekst (prazno = sakriveno)', 'about', 'facts', 'textarea',
-         'Two cameras, spare batteries and a pack of tissues. The third one usually runs out first.',
-         'Dva fotoaparata, rezervne baterije i paket maramica. Treće se obično prvo potroši.', 8),
-        ('about.facts.4.label', 'Sitnica 4: Naslov', 'about', 'facts', 'text', 'We never direct', 'Ne režiramo', 9),
-        ('about.facts.4.text',  'Sitnica 4: Tekst (prazno = sakriveno)', 'about', 'facts', 'textarea',
-         'The laughter, the tears, and the looks you exchange when you think nobody is watching.',
-         'Smijeh, suze i poglede koje razmijenite kad mislite da niko ne gleda.', 10),
-        ('about.facts.5.label', 'Sitnica 5: Naslov', 'about', 'facts', 'text', 'We love rain', 'Volimo kišu', 11),
-        ('about.facts.5.text',  'Sitnica 5: Tekst (prazno = sakriveno)', 'about', 'facts', 'textarea',
-         'Honestly. Some of the best frames we have ever made happened under an umbrella.',
-         'Ozbiljno. Neke od najboljih fotografija koje smo napravili nastale su pod kišobranom.', 12),
-        ('about.facts.6.label', 'Sitnica 6: Naslov', 'about', 'facts', 'text', 'After it all', 'Poslije svega', 13),
-        ('about.facts.6.text',  'Sitnica 6: Tekst (prazno = sakriveno)', 'about', 'facts', 'textarea',
-         'We stay for the last song. We have never left before the end.',
-         'Ostanemo na zadnjoj pjesmi. Nikad nismo otišli prije kraja.', 14),
-        ('about.facts.signoff', 'Sitnice: Potpis (script font)', 'about', 'facts', 'text', 'Melisa & Aldin', 'Melisa & Aldin', 15),
-
-        -- O nama, verzija po klijentovoj referenci: dvije biografije + poziv
-        ('about.bio.1.tag',         'Biografija 1: Tag',             'about', 'bio', 'text', 'Behind the lens', 'Iza objektiva', 0),
-        ('about.bio.1.title.part1', 'Biografija 1: Naslov linija 1', 'about', 'bio', 'text', 'Meet',            'Upoznajte',     1),
-        ('about.bio.1.title.part2', 'Biografija 1: Naslov linija 2', 'about', 'bio', 'text', 'Melisa',          'Melisu',        2),
-        ('about.bio.1.p1', 'Biografija 1: Paragraf 1 (prazno = sakriveno)', 'about', 'bio', 'textarea',
-         'Photography has been part of my life for as long as I can remember. I grew up among people who believed the most important things cannot be put into words, and somewhere in there came the need to record them in pictures.',
-         'Fotografija je dio mog života otkad znam za sebe. Odrasla sam među ljudima koji su vjerovali da se najvažnije stvari ne daju ispričati riječima, i negdje tu se rodila potreba da ih zabilježim slikom.', 3),
-        ('about.bio.1.p2', 'Biografija 1: Paragraf 2 (prazno = sakriveno)', 'about', 'bio', 'textarea',
-         'Over the years I learned to be quiet at weddings. To take a step back, wait, and let the moment happen on its own. Patience became a tool as important as the camera.',
-         'Godinama sam učila da budem tiha na vjenčanjima. Da stanem korak unazad, sačekam i pustim da se trenutak dogodi sam. Strpljenje mi je postalo alat jednako važan kao i fotoaparat.', 4),
-        ('about.bio.1.p3', 'Biografija 1: Paragraf 3 (prazno = sakriveno)', 'about', 'bio', 'textarea',
-         'I am not after the perfect frame but the honest one. The warmth, the joy and the love that radiate through your day, because those are the moments you will keep long after the celebration ends.',
-         'Ne tražim savršen kadar nego iskren. Toplinu, radost i ljubav koja zrači kroz vaš dan, jer to su trenuci koje ćete čuvati dugo nakon što proslava prođe.', 5),
-
-        ('about.bio.2.tag',         'Biografija 2: Tag',             'about', 'bio', 'text', 'Behind our films', 'Iza kamere', 6),
-        ('about.bio.2.title.part1', 'Biografija 2: Naslov linija 1', 'about', 'bio', 'text', 'Meet',             'Upoznajte',  7),
-        ('about.bio.2.title.part2', 'Biografija 2: Naslov linija 2', 'about', 'bio', 'text', 'Aldin',            'Aldina',     8),
-        ('about.bio.2.p1', 'Biografija 2: Paragraf 1 (prazno = sakriveno)', 'about', 'bio', 'textarea',
-         'Film won me over long before I ever shot a wedding. I was fascinated by the idea that a moving image can tell a story without a single word, and that led me exactly here.',
-         'Film me osvojio davno prije nego što sam prvi put snimao vjenčanje. Fascinirala me ideja da se pokretnom slikom može ispričati priča bez ijedne riječi, i to me je dovelo tačno ovdje.', 9),
-        ('about.bio.2.p2', 'Biografija 2: Paragraf 2 (prazno = sakriveno)', 'about', 'bio', 'textarea',
-         'Before weddings I shot music videos and commercials. That school taught me to watch rhythm, light and detail, and I bring the same into every film we make.',
-         'Prije vjenčanja snimao sam muzičke spotove i reklame. Ta škola me naučila da pazim na ritam, svjetlo i detalj, a danas to isto unosim u svaki film koji napravimo.', 10),
-        ('about.bio.2.p3', 'Biografija 2: Paragraf 3 (prazno = sakriveno)', 'about', 'bio', 'textarea',
-         'The greatest reward is when a couple plays their film a year later and feels exactly what they felt that day. A sound, a glance, someone laughing in the background: things a photograph cannot keep, but a film can.',
-         'Najveća nagrada mi je kada par nakon godinu dana pusti svoj film i ponovo osjeti isto što i tog dana. Zvuk, pogled, nečiji smijeh u pozadini: stvari koje fotografija ne može sačuvati, a film može.', 11),
-
-        ('about.press.tag', 'Pisali o nama: Tag', 'about', 'press', 'text', 'As seen in', 'Pisali su o nama', 0),
-        ('about.press.1', 'Pisali o nama: Naziv 1 (prazno = sakriveno)', 'about', 'press', 'text', '', '', 1),
-        ('about.press.2', 'Pisali o nama: Naziv 2 (prazno = sakriveno)', 'about', 'press', 'text', '', '', 2),
-        ('about.press.3', 'Pisali o nama: Naziv 3 (prazno = sakriveno)', 'about', 'press', 'text', '', '', 3),
-        ('about.press.4', 'Pisali o nama: Naziv 4 (prazno = sakriveno)', 'about', 'press', 'text', '', '', 4),
-        ('about.press.5', 'Pisali o nama: Naziv 5 (prazno = sakriveno)', 'about', 'press', 'text', '', '', 5),
-
-        ('about.invite.title.part1', 'Poziv: Naslov linija 1', 'about', 'invite', 'text', 'We would love to hear', 'Želimo čuti', 0),
-        ('about.invite.title.part2', 'Poziv: Naslov linija 2', 'about', 'invite', 'text', 'from you',              'vašu priču',  1),
-        ('about.invite.p1', 'Poziv: Paragraf 1 (prazno = sakriveno)', 'about', 'invite', 'textarea',
-         'We believe the best stories begin with an honest conversation. That is why we never rush, we want to know you first.',
-         'Vjerujemo da najbolje priče počinju iskrenim razgovorom. Zato ne žurimo, prvo želimo upoznati vas.', 2),
-        ('about.invite.p2', 'Poziv: Paragraf 2 (prazno = sakriveno)', 'about', 'invite', 'textarea',
-         'Write to us and tell us how you imagined your day. We reply within 24 to 48 hours.',
-         'Javite nam se i ispričajte kako ste zamislili svoj dan. Odgovaramo u roku od 24 do 48 sati.', 3),
-        ('about.invite.button', 'Poziv: Tekst gumba', 'about', 'invite', 'text', 'Get in touch', 'Javite nam se', 4),
-
-        -- Footer po mockupu: tri velika linka s podnaslovom + "Na vrh"
-        ('footer.link.about.sub',   'Footer: Podnaslov uz "O nama"',  'footer', 'nav', 'text', 'Meet Melisa and Aldin',    'Upoznajte Melisu i Aldina', 10),
-        ('footer.link.work.sub',    'Footer: Podnaslov uz "Radovi"',  'footer', 'nav', 'text', 'See our stories',          'Pogledajte naše priče',     11),
-        ('footer.link.contact.sub', 'Footer: Podnaslov uz "Kontakt"', 'footer', 'nav', 'text', 'Check an available date',  'Provjerite slobodan datum', 12),
-        ('footer.top',              'Footer: Tekst "Na vrh"',         'footer', 'legal', 'text', 'Back to top',            'Na vrh',                     5),
-
-        -- Radovi: oznaka kategorije na kartici (jednina, kako mockup prikazuje)
-        ('portfolio.card.wedding',  'Kartica: Oznaka "Vjenčanje"', 'portfolio', 'filter', 'text', 'Wedding',  'Vjenčanje', 10),
-        ('portfolio.card.studio',   'Kartica: Oznaka "Studio"',    'portfolio', 'filter', 'text', 'Studio',   'Studio',    11),
-        ('portfolio.card.portrait', 'Kartica: Oznaka "Portreti"',  'portfolio', 'filter', 'text', 'Portrait', 'Portreti',  12),
-
-        -- Zavrsni Instagram blok (Radovi i Prica)
-        ('instagram.tag',         'Instagram blok: Tag',             'footer', 'instagram', 'text', 'More moments',  'Još trenutaka',    0),
-        ('instagram.title.part1', 'Instagram blok: Naslov dio 1',    'footer', 'instagram', 'text', 'See more on',   'Pogledajte još na', 1),
-        ('instagram.title.part2', 'Instagram blok: Naslov dio 2 (kurziv)', 'footer', 'instagram', 'text', 'Instagram', 'Instagramu',   2),
-
-        -- Stranica Priča
-        ('story.back',  'Priča: Povratni link',        'story', 'labels', 'text', 'All work',       'Svi radovi',      0),
-        ('story.tag',   'Priča: Oznaka uz tekst',      'story', 'labels', 'text', 'The story',      'Priča',           1),
-        ('story.prev',  'Priča: Prethodna priča',      'story', 'labels', 'text', 'Previous story', 'Prethodna priča', 2),
-        ('story.next',  'Priča: Sljedeća priča',       'story', 'labels', 'text', 'Next story',     'Sljedeća priča',  3),
-        ('story.close', 'Priča: Zatvori (lightbox)',   'story', 'labels', 'text', 'Close',          'Zatvori',         4),
-
-        -- Kontakt: naslovi grupa u obrascu + treci dio naslova (crvena rijec)
-        ('contact.group.you',     'Obrazac: Naslov grupe 1', 'contact', 'form', 'text', 'About you',      'O vama',      -3),
-        ('contact.group.wedding', 'Obrazac: Naslov grupe 2', 'contact', 'form', 'text', 'About the wedding', 'O vjenčanju', -2),
-        ('contact.group.story',   'Obrazac: Naslov grupe 3', 'contact', 'form', 'text', 'Your story',     'Vaša priča',  -1),
-        ('contact.hero.title.part3', 'Hero: Naslov — istaknuta riječ', 'contact', 'hero', 'text', 'story', 'priču', 5)
+         'Zabilježimo emocije koje traju kada sve drugo prođe.', 5)
       ON CONFLICT (key) DO NOTHING
     `);
 
@@ -705,8 +407,6 @@ export async function initDB() {
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_gallery_active_sort   ON gallery_images (is_active, sort_order);
       CREATE INDEX IF NOT EXISTS idx_gallery_category      ON gallery_images (category);
-      CREATE INDEX IF NOT EXISTS idx_packages_active_sort  ON packages (is_active, sort_order);
-      CREATE INDEX IF NOT EXISTS idx_testimonials_active   ON testimonials (is_active, sort_order);
       CREATE INDEX IF NOT EXISTS idx_submissions_status    ON contact_submissions (status);
       CREATE INDEX IF NOT EXISTS idx_page_content_ordering ON page_content (page, section, sort_order);
       CREATE INDEX IF NOT EXISTS idx_stories_pub_sort  ON stories (is_published, sort_order);

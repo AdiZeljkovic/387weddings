@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
+import { sendInquiryInBackground } from '../mailer.js';
 
 const router = Router();
 
@@ -41,6 +42,9 @@ router.post('/', async (req, res) => {
         phone || null, guests || null, coverage || null, video || null, places || null,
       ]
     );
+    // Saved first, then notified — a mail outage must not lose the inquiry
+    sendInquiryInBackground({ name, email, phone, date, location, guests, coverage, video, places, message });
+
     res.json({ success: true, message: 'Thank you for your inquiry. We will get back to you soon.' });
   } catch (err) {
     console.error(err);

@@ -89,7 +89,7 @@ const Footer = () => {
                 aria-current={active ? 'page' : undefined}
                 style={getContentStyle(l.styleKey)}
                 className={cn(
-                  'py-3 text-[10px] md:text-[11px] font-medium tracking-[0.26em] uppercase transition-opacity duration-250 hover:opacity-60',
+                  'py-3 min-h-11 inline-flex items-center text-[10px] md:text-[11px] font-medium tracking-[0.26em] uppercase transition-opacity duration-250 hover:opacity-60',
                   active ? 'text-[#8a8279] border-b border-gold-600' : 'text-ink-900',
                 )}
               >
@@ -105,7 +105,7 @@ const Footer = () => {
             href={instagramUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-3 md:gap-3.5 text-ink-900 text-[10px] md:text-[11px] tracking-[0.24em] uppercase transition-opacity duration-250 hover:opacity-60"
+            className="inline-flex items-center gap-3 md:gap-3.5 min-h-11 text-ink-900 text-[10px] md:text-[11px] tracking-[0.24em] uppercase transition-opacity duration-250 hover:opacity-60"
           >
             <InstagramGlyph />
             {handle}
@@ -119,7 +119,7 @@ const Footer = () => {
             type="button"
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             style={getContentStyle('footer.top')}
-            className="text-ink-900 text-[10px] md:text-[11px] tracking-[0.24em] uppercase py-2 transition-opacity duration-250 hover:opacity-60"
+            className="text-ink-900 text-[10px] md:text-[11px] tracking-[0.24em] uppercase min-h-11 px-3 transition-opacity duration-250 hover:opacity-60"
           >
             {t('footer.top')} ↑
           </button>

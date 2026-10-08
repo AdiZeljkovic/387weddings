@@ -1,19 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Image, Package, Quote, Mail, ArrowRight } from 'lucide-react';
+import { Image, Mail, ArrowRight, BookOpen } from 'lucide-react';
 
 interface Stats {
   gallery: number;
-  packages: number;
-  testimonials: number;
+  stories: number;
   total_submissions: number;
   new_submissions: number;
 }
 
 const statCards = [
   { key: 'gallery', label: 'Slike u galeriji', icon: Image, path: '/admin/gallery', color: 'text-blue-400' },
-  { key: 'packages', label: 'Aktivnih paketa', icon: Package, path: '/admin/packages', color: 'text-purple-400' },
-  { key: 'testimonials', label: 'Recenzija', icon: Quote, path: '/admin/testimonials', color: 'text-green-400' },
+  { key: 'stories', label: 'Objavljenih priča', icon: BookOpen, path: '/admin/stories', color: 'text-purple-400' },
   { key: 'total_submissions', label: 'Ukupno upita', icon: Mail, path: '/admin/submissions', color: 'text-gold-400' },
 ];
 
@@ -83,11 +81,8 @@ export default function Dashboard() {
           <Link to="/admin/gallery" className="flex items-center gap-2 text-white/40 hover:text-white text-sm transition-colors py-2">
             <Image size={14} /> Dodaj sliku
           </Link>
-          <Link to="/admin/packages" className="flex items-center gap-2 text-white/40 hover:text-white text-sm transition-colors py-2">
-            <Package size={14} /> Uredi paket
-          </Link>
-          <Link to="/admin/testimonials" className="flex items-center gap-2 text-white/40 hover:text-white text-sm transition-colors py-2">
-            <Quote size={14} /> Dodaj recenziju
+          <Link to="/admin/stories" className="flex items-center gap-2 text-white/40 hover:text-white text-sm transition-colors py-2">
+            <BookOpen size={14} /> Dodaj priču
           </Link>
           <Link to="/admin/submissions" className="flex items-center gap-2 text-white/40 hover:text-white text-sm transition-colors py-2">
             <Mail size={14} /> Provjeri upite

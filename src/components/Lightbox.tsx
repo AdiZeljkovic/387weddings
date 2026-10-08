@@ -80,7 +80,7 @@ const Lightbox = ({ images, index, onIndex, onClose, title, meta, closeLabel = '
           ref={closeRef}
           type="button"
           onClick={onClose}
-          className="text-white text-[11px] lg:text-[12px] font-medium tracking-[0.24em] uppercase border-b border-white/50 pb-1 transition-opacity duration-250 hover:opacity-70"
+          className="text-white text-[11px] lg:text-[12px] font-medium tracking-[0.24em] uppercase border-b border-white/50 pb-1 min-h-11 px-2 transition-opacity duration-250 hover:opacity-70"
         >
           {closeLabel} ✕
         </button>

@@ -53,6 +53,7 @@ const PAGE_LABELS: Record<string, string> = {
   about:     'O Nama',
   contact:   'Upit',
   story:     'Priča (zajedničke oznake)',
+  privacy:   'Privatnost i kolačići',
   footer:    'Footer',
 };
 
@@ -63,6 +64,7 @@ const PAGE_PATHS: Record<string, string> = {
   about:     '/about',
   contact:   '/contact',
   story:     '/prica/...',
+  privacy:   '/privacy',
   footer:    '(sve stranice)',
 };
 
@@ -78,12 +80,9 @@ const SECTION_LABELS: Record<string, string> = {
   invite:        'Poziv na kontakt',
   facts:         'Sitnice o nama (ne prikazuje se)',
   philosophy:    'Filozofija',
-  investment:    'Investicija & Paketi',
-  promo:         'Promocija',
   faq:           'Česta pitanja (FAQ)',
   approach:      'Pristup & Uvod',
   connect:       'Kontakt info',
-  testimonials:  'Recenzije klijenata',
   about_section: 'O nama sekcija (naslovna)',
   experience:    'Kako radimo (koraci)',
   cta:           'CTA — poziv na akciju',
@@ -95,6 +94,8 @@ const SECTION_LABELS: Record<string, string> = {
   nav:           'Navigacija',
   contact:       'Kontakt kolona',
   labels:        'Oznake i navigacija',
+  page:          'Tekst stranice',
+  cookie:        'Cookie baner',
   instagram:     'Instagram blok',
   legal:         'Copyright & Legal',
 };
@@ -106,6 +107,7 @@ const SECTION_ORDER: Record<string, string[]> = {
   portfolio: ['hero', 'approach', 'filter'],
   contact:   ['hero', 'connect', 'form'],
   story:     ['labels'],
+  privacy:   ['page', 'cookie'],
   footer:    ['brand', 'nav', 'contact', 'instagram', 'legal'],
 };
 

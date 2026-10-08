@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
 import { respImg } from '../lib/img';
-import { OliveBranch, SectionLabel } from '../components/ornaments';
+import { OliveBranch, Rings, SectionLabel } from '../components/ornaments';
+import Reveal from '../components/Reveal';
 
 const FALLBACK = [
   'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1800',
@@ -50,24 +51,26 @@ const MOSAIC_PHONE = [
 const SLIDE_MS = 6000;
 const SLIDES = 5;
 
-const Frame = ({ src, alt, className = '', style, sizes = '50vw', eager = false }: {
-  src: string; alt: string; className?: string; style?: React.CSSProperties; sizes?: string; eager?: boolean;
+const Frame = ({ src, alt, className = '', style, sizes = '50vw', eager = false, delay = 0, focus }: {
+  src: string; alt: string; className?: string; style?: React.CSSProperties;
+  sizes?: string; eager?: boolean; delay?: number; focus?: string;
 }) => {
   const r = respImg(src, [480, 768, 1280]);
   return (
-    <div className={`overflow-hidden bg-rule ${className}`} style={style}>
+    <Reveal kind="mask" delay={delay} className={`overflow-hidden bg-rule ${className}`} style={style}>
       <img
         src={r.src}
         srcSet={r.srcSet}
         sizes={sizes}
         alt={alt}
+        style={focus ? { objectPosition: focus } : undefined}
         className="w-full h-full object-cover"
         loading={eager ? 'eager' : 'lazy'}
         decoding="async"
         draggable={false}
         referrerPolicy="no-referrer"
       />
-    </div>
+    </Reveal>
   );
 };
 
@@ -93,6 +96,9 @@ const Home = () => {
     settings[`img.home.hero.${i + 1}`] || FALLBACK[i]
   );
   const mosaicSrc = (key: string, i: number) => settings[key] || FALLBACK[i % FALLBACK.length];
+  // Alt text lives beside each image slot as "<key>.alt"
+  const altFor = (key: string) => settings[`${key}.alt`] || '';
+  const focusFor = (key: string) => settings[`${key}.focus`] || '';
 
   const aboutMain = respImg(settings['img.home.team.aldin'] || FALLBACK[1], [480, 768, 1100]);
   const aboutDetail = respImg(settings['img.home.team.melisa'] || FALLBACK[6], [320, 640]);
@@ -119,10 +125,16 @@ const Home = () => {
               src={r.src}
               srcSet={r.srcSet}
               sizes="100vw"
-              alt=""
-              aria-hidden="true"
-              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-[1200ms] ease-in-out motion-reduce:transition-none"
-              style={{ opacity: i === slide ? 1 : 0 }}
+              // Only the frame on screen is announced; the other four are decoration
+              alt={i === slide ? (settings[`img.home.hero.${i + 1}.alt`] || '') : ''}
+              aria-hidden={i === slide ? undefined : 'true'}
+              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-[1200ms] ease-in-out motion-reduce:transition-none motion-reduce:animate-none"
+              style={{
+                opacity: i === slide ? 1 : 0,
+                // Only the visible frame animates, and it restarts on each turn
+                animation: i === slide ? `heroZoom ${SLIDE_MS + 1200}ms ease-out both` : undefined,
+                objectPosition: settings[`img.home.hero.${i + 1}.focus`] || undefined,
+              }}
               loading={i === 0 ? 'eager' : 'lazy'}
               fetchPriority={i === 0 ? 'high' : 'low'}
               decoding="async"
@@ -147,7 +159,7 @@ const Home = () => {
                 <span
                   className="inline-block opacity-0 animate-[wordUp_1.1s_cubic-bezier(.2,.6,.2,1)_both] motion-reduce:opacity-100 motion-reduce:animate-none"
                   style={{
-                    animationDelay: `${0.25 + i * 0.25}s`,
+                    animationDelay: `calc(var(--intro-delay, 0s) + ${0.25 + i * 0.25}s)`,
                     fontStyle: hw.italic ? 'italic' : undefined,
                     ...getContentStyle(hw.italic ? 'hero.title.part2' : 'hero.title.part1'),
                   }}
@@ -161,7 +173,7 @@ const Home = () => {
           <span aria-hidden="true" className="lg:hidden w-10 h-px bg-gold-600 mb-6" />
 
           <p
-            style={{ animationDelay: '1.7s', ...getContentStyle('hero.desc') }}
+            style={{ animationDelay: 'calc(var(--intro-delay, 0s) + 1.7s)', ...getContentStyle('hero.desc') }}
             className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none text-[14px] lg:text-[19px] font-light leading-[1.75] m-0 mb-10 lg:mb-13 text-[#ece5d9] max-w-[260px] lg:max-w-none lg:whitespace-nowrap"
           >
             {t('hero.desc')}
@@ -170,14 +182,14 @@ const Home = () => {
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 lg:gap-10 w-full max-w-[300px] lg:max-w-none">
             <Link
               to="/portfolio"
-              style={{ animationDelay: '2s', ...getContentStyle('hero.portfolio') }}
+              style={{ animationDelay: 'calc(var(--intro-delay, 0s) + 2s)', ...getContentStyle('hero.portfolio') }}
               className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none bg-cream text-ink-900 text-center text-[11px] lg:text-[12px] font-semibold tracking-[0.22em] uppercase px-0 lg:px-10 py-[19px] lg:py-[22px] border border-cream transition-colors duration-250 hover:bg-white"
             >
               {t('hero.portfolio')} →
             </Link>
             <Link
               to="/contact"
-              style={{ animationDelay: '2.2s', ...getContentStyle('hero.inquire') }}
+              style={{ animationDelay: 'calc(var(--intro-delay, 0s) + 2.2s)', ...getContentStyle('hero.inquire') }}
               className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none text-white text-center text-[11px] lg:text-[12px] font-medium tracking-[0.22em] uppercase py-[19px] lg:py-3.5 border lg:border-0 lg:border-b border-white/55 lg:border-b-white/50 transition-colors duration-250 hover:text-cream"
             >
               {t('hero.inquire')} →
@@ -188,7 +200,7 @@ const Home = () => {
         {/* Five ticks — bottom right on desktop, centred on phones */}
         <div
           aria-hidden="true"
-          className="absolute z-[3] bottom-9 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-24 lg:bottom-[68px] flex gap-2.5"
+          className="absolute z-[3] bottom-5 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-24 lg:bottom-[52px] flex gap-2.5"
         >
           {Array.from({ length: SLIDES }, (_, i) => (
             <button
@@ -196,12 +208,14 @@ const Home = () => {
               type="button"
               onClick={() => setSlide(i)}
               aria-label={`Slika ${i + 1}`}
-              className="block w-7 lg:w-11 h-0.5 bg-white/30 overflow-hidden p-0 border-0 cursor-pointer"
+              className="flex items-center h-11 w-7 lg:w-11 p-0 border-0 cursor-pointer group"
             >
-              <span
-                className="block h-full bg-white origin-left transition-transform duration-[600ms] ease-linear"
-                style={{ transform: `scaleX(${i === slide ? 1 : 0})` }}
-              />
+              <span className="block w-full h-0.5 bg-white/30 overflow-hidden">
+                <span
+                  className="block h-full bg-white origin-left transition-transform duration-[600ms] ease-linear"
+                  style={{ transform: `scaleX(${i === slide ? 1 : 0})` }}
+                />
+              </span>
             </button>
           ))}
         </div>
@@ -230,7 +244,7 @@ const Home = () => {
                 {t('home.featured.title')}
               </SectionLabel>
 
-              <h2 className="font-serif font-normal text-[40px] lg:text-[64px] leading-[1.08] m-0">
+              <Reveal as="h2" className="font-serif font-normal text-[40px] lg:text-[64px] leading-[1.08] m-0">
                 {(['part1', 'part2'] as const).map(part => (
                   <React.Fragment key={part}>
                     <span style={getContentStyle(`home.featured.heading.${part}`)}>
@@ -252,7 +266,7 @@ const Home = () => {
                     </svg>
                   </span>
                 </span>
-              </h2>
+              </Reveal>
             </div>
 
             {/* Desktop grid — ratios straight from the board */}
@@ -268,9 +282,11 @@ const Home = () => {
                 <Frame
                   key={tile.key}
                   src={mosaicSrc(tile.key, i)}
-                  alt=""
+                  alt={altFor(tile.key)}
                   sizes="28vw"
                   eager={i < 3}
+                  delay={i * 0.09}
+                  focus={focusFor(tile.key)}
                   className={`${tile.area} min-w-0`}
                 />
               ))}
@@ -283,8 +299,10 @@ const Home = () => {
               <Frame
                 key={tile.key}
                 src={mosaicSrc(tile.key, i + 6)}
-                alt=""
+                alt={altFor(tile.key)}
                 sizes="33vw"
+                delay={i * 0.09}
+                focus={focusFor(tile.key)}
                 className="min-w-0"
                 style={{ flex: `${tile.grow} 1 0` }}
               />
@@ -297,20 +315,24 @@ const Home = () => {
               <Frame
                 key={`${tile.key}-${i}`}
                 src={mosaicSrc(tile.key, i)}
-                alt=""
+                alt={altFor(tile.key)}
                 sizes="50vw"
                 eager={i < 2}
+                delay={i * 0.07}
+                focus={focusFor(tile.key)}
                 className={tile.span ? 'col-span-2' : ''}
                 style={{ aspectRatio: tile.ratio }}
               />
             ))}
           </div>
 
-          <div className="flex justify-center mt-11 lg:mt-14">
+          <div className="relative flex justify-center mt-11 lg:mt-14">
+            {/* The second ornament the brief names, set behind the button */}
+            <Rings className="hidden lg:block absolute -top-10 left-1/2 -translate-x-1/2 w-[200px] animate-[drift_16s_ease-in-out_infinite_alternate] motion-reduce:animate-none" />
             <Link
               to="/portfolio"
               style={getContentStyle('home.featured.cta')}
-              className="inline-block border border-ink-900 text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.2em] uppercase px-7 lg:px-10 py-[18px] lg:py-[22px] transition-colors duration-250 hover:bg-ink-900 hover:text-white"
+              className="relative inline-block border border-ink-900 text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.2em] uppercase px-7 lg:px-10 py-[18px] lg:py-[22px] transition-colors duration-250 hover:bg-ink-900 hover:text-white"
             >
               {t('home.featured.cta')} →
             </Link>
@@ -331,22 +353,24 @@ const Home = () => {
               {t('home.about.tag')}
             </SectionLabel>
 
-            <h2 className="font-serif font-normal text-[34px] lg:text-[56px] leading-[1.12] m-0 mb-6 lg:mb-9">
+            <Reveal as="h2" className="font-serif font-normal text-[34px] lg:text-[56px] leading-[1.12] m-0 mb-6 lg:mb-9">
               <span style={getContentStyle('home.about.heading.part1')}>{t('home.about.heading.part1')}</span>
               <br />
               <span className="italic" style={getContentStyle('home.about.heading.part2')}>
                 {t('home.about.heading.part2')}
               </span>
-            </h2>
+            </Reveal>
 
             {(['1', '2'] as const).map((n, i) => (
-              <p
+              <Reveal
+                as="p"
                 key={n}
+                delay={0.08 + i * 0.08}
                 style={getContentStyle(`home.about.desc.${n}`)}
                 className={`text-[15px] lg:text-[18px] font-light leading-[1.8] lg:leading-[1.75] text-ink-700 max-w-[480px] mx-auto lg:mx-0 m-0 ${i === 0 ? 'mb-5 lg:mb-6' : 'mb-9 lg:mb-12'}`}
               >
                 {t(`home.about.desc.${n}`)}
-              </p>
+              </Reveal>
             ))}
 
             <Link
@@ -369,7 +393,7 @@ const Home = () => {
                 src={aboutMain.src}
                 srcSet={aboutMain.srcSet}
                 sizes="(min-width: 1024px) 40vw, 90vw"
-                alt={t('home.about.heading.part1')}
+                alt={settings['img.home.team.aldin.alt'] || t('home.about.heading.part1')}
                 className="w-full h-full object-cover"
                 loading="lazy"
                 decoding="async"

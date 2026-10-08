@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
@@ -80,7 +79,7 @@ const Navbar = () => {
             onClick={() => setLanguage(lang)}
             aria-pressed={language === lang}
             className={cn(
-              'cursor-pointer transition-colors duration-250 py-2',
+              'cursor-pointer transition-colors duration-250 min-h-11 px-1 flex items-center',
               language === lang
                 ? light ? 'text-white font-semibold' : 'text-ink-900 font-semibold'
                 : light ? 'text-white/65 hover:text-white' : 'text-ink-500 hover:text-ink-900',
@@ -126,7 +125,7 @@ const Navbar = () => {
                 aria-current={active ? 'page' : undefined}
                 style={getContentStyle(link.styleKey)}
                 className={cn(
-                  'py-[14px] text-[12px] uppercase tracking-[0.22em] transition-colors duration-250',
+                  'py-[14px] min-h-11 flex items-center text-[12px] uppercase tracking-[0.22em] transition-colors duration-250',
                   'hover:shadow-[inset_0_-1px_0_var(--color-gold-600)]',
                   active
                     ? overHero
@@ -167,18 +166,13 @@ const Navbar = () => {
       </header>
 
       {/* ── Full-screen mobile menu ─────────────────────────────────────────── */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.25 } }}
-            transition={{ duration: 0.3, ease: [0.2, 0.6, 0.2, 1] }}
-            className="fixed inset-0 z-[1010] bg-cream flex flex-col lg:hidden overflow-hidden"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Meni"
-          >
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-[1010] bg-cream flex flex-col lg:hidden overflow-hidden animate-[fadeIn_0.3s_cubic-bezier(.2,.6,.2,1)_both] motion-reduce:animate-none"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Meni"
+        >
             <div className="flex items-center justify-between px-5 pt-3 pb-[10px] border-b border-ink-900/[0.07]">
               <Link to="/" onClick={() => setIsMobileMenuOpen(false)} aria-label="387 Weddings">
                 <Logo size={22} color="currentColor" />
@@ -239,9 +233,8 @@ const Navbar = () => {
                 @{instagramHandle}
               </a>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
     </>
   );
 };

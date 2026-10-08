@@ -224,6 +224,10 @@ export default function ImagesManager() {
                         fallback={img.fallback}
                         value={urls[img.key] || ''}
                         onChange={v => setUrl(img.key, v)}
+                        alt={urls[`${img.key}.alt`] || ''}
+                        onAltChange={v => setUrl(`${img.key}.alt`, v)}
+                        focus={urls[`${img.key}.focus`] || ''}
+                        onFocusChange={v => setUrl(`${img.key}.focus`, v)}
                         portrait={img.key.includes('.mobile.')}
                       />
                     ))}
@@ -253,25 +257,44 @@ export default function ImagesManager() {
 // ── ImageSlot ─────────────────────────────────────────────────────────────────
 
 function ImageSlot({
-  imageKey, label, fallback, value, onChange, portrait = false,
+  imageKey, label, fallback, value, onChange, alt, onAltChange, focus, onFocusChange, portrait = false,
 }: {
   imageKey: string;
   label: string;
   fallback: string;
   value: string;
   onChange: (v: string) => void;
+  alt: string;
+  onAltChange: (v: string) => void;
+  focus: string;
+  onFocusChange: (v: string) => void;
   portrait?: boolean;
 }) {
   const fileRef  = useRef<HTMLInputElement>(null);
   const [uploading, setUploading]       = useState(false);
   const [urlInput, setUrlInput]         = useState(value);
+  const [altInput, setAltInput]         = useState(alt);
+  const [picking, setPicking]           = useState(false);
   const [imgError, setImgError]         = useState(false);
   const [uploadError, setUploadError]   = useState<string | null>(null);
 
   // keep local URL input in sync when parent state changes (on initial load)
   useEffect(() => { setUrlInput(value); }, [value]);
+  useEffect(() => { setAltInput(alt); }, [alt]);
 
   const displaySrc = (value || fallback);
+  const focusPos = focus || '50% 50%';
+
+  // Click the preview to say which part of the photo must stay in frame when
+  // it gets cropped. Stored as a CSS object-position string.
+  const pickFocus = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!picking) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const x = Math.round(((e.clientX - r.left) / r.width) * 100);
+    const y = Math.round(((e.clientY - r.top) / r.height) * 100);
+    onFocusChange(`${Math.min(100, Math.max(0, x))}% ${Math.min(100, Math.max(0, y))}%`);
+    setPicking(false);
+  };
 
   const handleFile = async (file: File) => {
     setUploading(true);
@@ -329,7 +352,11 @@ function ImageSlot({
       {/* Thumbnail */}
       <div
         className={cn("relative group rounded-sm overflow-hidden bg-moody-900 border border-white/10 cursor-pointer", portrait ? "aspect-[3/4]" : "aspect-[4/3]")}
-        onClick={() => !uploading && fileRef.current?.click()}
+        onClick={e => {
+          if (uploading) return;
+          if (picking) { pickFocus(e); return; }
+          fileRef.current?.click();
+        }}
         onDragOver={e => e.preventDefault()}
         onDrop={handleDrop}
       >
@@ -348,6 +375,7 @@ function ImageSlot({
               <img
                 src={displaySrc}
                 alt={label}
+                style={{ objectPosition: focusPos }}
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
                 onError={() => setImgError(true)}
@@ -362,10 +390,30 @@ function ImageSlot({
               </div>
             </div>
 
+            {/* Focus marker */}
+            {focus && !picking && (
+              <span
+                aria-hidden="true"
+                className="absolute w-3 h-3 -ml-1.5 -mt-1.5 rounded-full border-2 border-gold-400 bg-black/30 pointer-events-none"
+                style={{ left: focusPos.split(' ')[0], top: focusPos.split(' ')[1] }}
+              />
+            )}
+
             {/* Custom image indicator */}
             {value && (
               <div className="absolute top-1.5 left-1.5 w-2 h-2 rounded-full bg-gold-400 shadow-md" title="Vlastita slika" />
             )}
+
+            {/* Focus picker toggle */}
+            <button
+              onClick={e => { e.stopPropagation(); setPicking(v => !v); }}
+              className={`absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-sm text-[9px] tracking-wider uppercase transition-colors ${
+                picking ? 'bg-gold-600 text-white' : 'bg-black/60 text-white/60 hover:text-white opacity-0 group-hover:opacity-100'
+              }`}
+              title="Odaberi tačku fokusa — dio slike koji mora ostati vidljiv pri izrezivanju"
+            >
+              {picking ? 'Klikni na sliku' : 'Fokus'}
+            </button>
 
             {/* Clear button */}
             {value && (
@@ -408,6 +456,17 @@ function ImageSlot({
           className="flex-1 min-w-0 bg-moody-900 border border-white/10 rounded-sm px-2 py-1.5 text-white/60 text-[10px] focus:outline-none focus:border-gold-600/40 transition-colors placeholder:text-white/15 font-mono"
         />
       </div>
+
+      {/* Alt text — the audit found 11 of 12 homepage images without one */}
+      <input
+        type="text"
+        value={altInput}
+        onChange={e => setAltInput(e.target.value)}
+        onBlur={() => onAltChange(altInput.trim())}
+        onKeyDown={e => e.key === 'Enter' && onAltChange(altInput.trim())}
+        placeholder="Opis slike (alt tekst)"
+        className="w-full bg-moody-900 border border-white/10 rounded-sm px-2 py-1.5 text-white/60 text-[10px] focus:outline-none focus:border-gold-600/40 transition-colors placeholder:text-white/15"
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
 import { respImg } from '../lib/img';
 import { OliveBranch, SectionLabel } from '../components/ornaments';
+import Reveal from '../components/Reveal';
 
 const FALLBACK_MELISA = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=1200';
 const FALLBACK_ALDIN  = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=1200';
@@ -19,11 +20,12 @@ const filled = (value: string) => Boolean(value) && !value.startsWith('about.');
 
 // One biography: portrait with an offset gold frame beside a lead paragraph in
 // Playfair and two body paragraphs. `flip` mirrors it for the second person.
-const Bio = ({ n, portrait, ratio, flip }: {
+const Bio = ({ n, portrait, ratio, flip, altText }: {
   n: 1 | 2;
   portrait: { src: string; srcSet?: string };
   ratio: string;
   flip?: boolean;
+  altText?: string;
 }) => {
   const { t, getContentStyle } = useLanguage();
   const base = `about.bio.${n}`;
@@ -36,19 +38,19 @@ const Bio = ({ n, portrait, ratio, flip }: {
           aria-hidden="true"
           className={`hidden lg:block absolute top-14 bottom-0 border border-gold-600 ${flip ? 'left-0 right-14' : 'left-14 right-0'}`}
         />
-        <div className="relative overflow-hidden bg-rule" style={{ aspectRatio: ratio }}>
+        <Reveal kind="mask" className="relative overflow-hidden bg-rule" style={{ aspectRatio: ratio }}>
           <img
             src={portrait.src}
             srcSet={portrait.srcSet}
             sizes="(min-width: 1024px) 40vw, 100vw"
-            alt={t(`${base}.title.part2`)}
+            alt={altText || t(`${base}.title.part2`)}
             className="w-full h-full object-cover"
             loading="lazy"
             decoding="async"
             draggable={false}
             referrerPolicy="no-referrer"
           />
-        </div>
+        </Reveal>
       </div>
 
       <div className={`flex-1 min-w-0 basis-full lg:basis-[440px] ${flip ? 'order-1' : 'order-2'}`}>
@@ -56,33 +58,37 @@ const Bio = ({ n, portrait, ratio, flip }: {
           {t(`${base}.tag`)}
         </SectionLabel>
 
-        <Heading className="font-serif font-normal text-[40px] lg:text-[72px] leading-[1.06] lg:leading-[1.02] m-0 mb-7 lg:mb-10">
+        <Reveal as={Heading} className="font-serif font-normal text-[40px] lg:text-[72px] leading-[1.06] lg:leading-[1.02] m-0 mb-7 lg:mb-10">
           <span className="block" style={getContentStyle(`${base}.title.part1`)}>
             {t(`${base}.title.part1`)}
           </span>
           <span className="block italic text-love" style={getContentStyle(`${base}.title.part2`)}>
             {t(`${base}.title.part2`)}
           </span>
-        </Heading>
+        </Reveal>
 
         {/* Lead paragraph is set in Playfair, the rest in the body face */}
         {filled(t(`${base}.p1`)) && (
-          <p
+          <Reveal
+            as="p"
+            delay={0.08}
             style={getContentStyle(`${base}.p1`)}
             className="font-serif font-normal text-[20px] lg:text-[26px] leading-[1.5] text-[#2a2622] max-w-[520px] m-0 mb-6 lg:mb-7"
           >
             {t(`${base}.p1`)}
-          </p>
+          </Reveal>
         )}
         {(['p2', 'p3'] as const).map((p, i) => (
           filled(t(`${base}.${p}`)) ? (
-            <p
+            <Reveal
+              as="p"
               key={p}
+              delay={0.14 + i * 0.07}
               style={getContentStyle(`${base}.${p}`)}
               className={`text-[15px] lg:text-[18px] font-light leading-[1.8] text-ink-700 max-w-[500px] m-0 ${i === 0 ? 'mb-5 lg:mb-[22px]' : ''}`}
             >
               {t(`${base}.${p}`)}
-            </p>
+            </Reveal>
           ) : null
         ))}
       </div>
@@ -109,13 +115,13 @@ const About = () => {
       {/* ── Melisa — portrait left ─────────────────────────────────────────── */}
       <section className="relative overflow-hidden px-6 lg:px-24 pt-[72px] lg:pt-30 pb-[72px] lg:pb-32">
         <OliveBranch className="hidden lg:block absolute right-24 bottom-2.5 w-[300px] animate-[drift_16s_ease-in-out_infinite_alternate] motion-reduce:animate-none" />
-        <Bio n={1} portrait={melisa} ratio="4 / 5" />
+        <Bio n={1} portrait={melisa} ratio="4 / 5" altText={imgs['img.about.melisa.alt']} />
       </section>
 
       {/* ── Aldin — mirrored, on the lighter band ──────────────────────────── */}
       <section className="relative overflow-hidden bg-cream-light px-6 lg:px-24 py-[72px] lg:py-32">
         <OliveBranch className="hidden lg:block absolute left-24 bottom-6 w-[170px] animate-[drift_16s_ease-in-out_infinite_alternate] motion-reduce:animate-none" flip />
-        <Bio n={2} portrait={aldin} ratio="3 / 4" flip />
+        <Bio n={2} portrait={aldin} ratio="3 / 4" flip altText={imgs['img.about.aldin.alt']} />
       </section>
 
       {/* ── Closing invitation, framed by three photographs ────────────────── */}

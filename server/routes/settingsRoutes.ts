@@ -61,18 +61,16 @@ router.put('/', requireAuth, async (req, res) => {
 // GET /api/stats — admin dashboard
 router.get('/stats', requireAuth, async (_req, res) => {
   try {
-    const [gallery, packages, testimonials, submissions, newSubmissions] = await Promise.all([
+    const [gallery, stories, submissions, newSubmissions] = await Promise.all([
       pool.query('SELECT COUNT(*) FROM gallery_images WHERE is_active = TRUE'),
-      pool.query('SELECT COUNT(*) FROM packages WHERE is_active = TRUE'),
-      pool.query('SELECT COUNT(*) FROM testimonials WHERE is_active = TRUE'),
+      pool.query('SELECT COUNT(*) FROM stories WHERE is_published = TRUE'),
       pool.query('SELECT COUNT(*) FROM contact_submissions'),
       pool.query("SELECT COUNT(*) FROM contact_submissions WHERE status = 'new'"),
     ]);
 
     res.json({
       gallery: parseInt(gallery.rows[0].count),
-      packages: parseInt(packages.rows[0].count),
-      testimonials: parseInt(testimonials.rows[0].count),
+      stories: parseInt(stories.rows[0].count),
       total_submissions: parseInt(submissions.rows[0].count),
       new_submissions: parseInt(newSubmissions.rows[0].count),
     });

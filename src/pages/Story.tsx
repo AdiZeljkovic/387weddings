@@ -5,6 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
 import { respImg } from '../lib/img';
 import { OliveBranch, SectionLabel, DiamondRule } from '../components/ornaments';
+import Reveal from '../components/Reveal';
 import Lightbox, { LightboxImage } from '../components/Lightbox';
 
 const CARD_LABEL_KEYS: Record<string, string> = {
@@ -156,9 +157,9 @@ const Story = () => {
             </SectionLabel>
           )}
 
-          <h1 className="font-serif font-normal text-[44px] lg:text-[96px] leading-[1.05] m-0 mb-7 lg:mb-10">
+          <Reveal as="h1" className="font-serif font-normal text-[44px] lg:text-[96px] leading-[1.05] m-0 mb-7 lg:mb-10">
             <CoupleName name={story.couple} />
-          </h1>
+          </Reveal>
 
           <div className="flex flex-wrap items-center justify-center gap-x-6 lg:gap-x-9 gap-y-3 text-[11px] font-medium tracking-[0.26em] uppercase text-ink-500">
             {[story.location, story.date_text, story.tag].filter(Boolean).map((v, i, arr) => (
@@ -174,7 +175,7 @@ const Story = () => {
       {/* Cover 3:2 */}
       {story.cover_url && (
         <section className="px-5 lg:px-24">
-          <div className="max-w-[1248px] mx-auto aspect-[3/2] overflow-hidden bg-rule">
+          <Reveal kind="mask" className="max-w-[1248px] mx-auto aspect-[3/2] overflow-hidden bg-rule">
             <img
               src={cover.src}
               srcSet={cover.srcSet}
@@ -187,7 +188,7 @@ const Story = () => {
               draggable={false}
               referrerPolicy="no-referrer"
             />
-          </div>
+          </Reveal>
         </section>
       )}
 
@@ -201,19 +202,21 @@ const Story = () => {
 
             <div className="flex-1 min-w-0 basis-full lg:basis-[520px]">
               {quote && (
-                <p className="font-serif font-normal text-[22px] lg:text-[30px] leading-[1.45] text-[#2a2622] m-0 mb-7 lg:mb-9">
+                <Reveal as="p" className="font-serif font-normal text-[22px] lg:text-[30px] leading-[1.45] text-[#2a2622] m-0 mb-7 lg:mb-9">
                   {quote}
-                </p>
+                </Reveal>
               )}
               {paragraphs.map((para, i) => (
-                <p
+                <Reveal
+                  as="p"
                   key={i}
+                  delay={0.08 + i * 0.07}
                   className={`text-[15px] lg:text-[18px] font-light leading-[1.85] text-ink-700 max-w-[560px] m-0 ${
                     i < paragraphs.length - 1 ? 'mb-5 lg:mb-[22px]' : ''
                   }`}
                 >
                   {para}
-                </p>
+                </Reveal>
               ))}
             </div>
           </div>

@@ -11,10 +11,12 @@ type Tab = 'contact' | 'general' | 'social' | 'seo' | 'technical';
 
 
 const SEO_PAGES = [
-  { key: 'home',      label: 'Naslovna', path: '/',          defaultTitle: 'Art in the Moments | 387 Cinematic Weddings' },
-  { key: 'about',     label: 'O nama',   path: '/about',     defaultTitle: 'About Us | 387 Cinematic Weddings' },
-  { key: 'portfolio', label: 'Portfolio', path: '/portfolio', defaultTitle: 'Portfolio | 387 Cinematic Weddings' },
-  { key: 'contact',   label: 'Kontakt',  path: '/contact',   defaultTitle: 'Inquire | 387 Cinematic Weddings' },
+  { key: 'home',      label: 'Naslovna', path: '/',          defaultTitle: 'Art in the Moments | 387 Weddings' },
+  { key: 'about',     label: 'O nama',   path: '/about',     defaultTitle: 'About Us | 387 Weddings' },
+  { key: 'portfolio', label: 'Portfolio', path: '/portfolio', defaultTitle: 'Portfolio | 387 Weddings' },
+  { key: 'contact',   label: 'Kontakt',  path: '/contact',   defaultTitle: 'Inquire | 387 Weddings' },
+  { key: 'story',     label: 'Priča',      path: '/prica/...', defaultTitle: 'Priča | 387 Weddings' },
+  { key: 'privacy',   label: 'Privatnost', path: '/privacy',   defaultTitle: 'Politika privatnosti | 387 Weddings' },
 ];
 
 export default function AdminSettings() {
@@ -106,6 +108,9 @@ export default function AdminSettings() {
               value={settings['email'] ?? ''} onChange={v => set('email', v)} />
             <Field label="Telefon" placeholder="+387 61 000 000"
               value={settings['phone'] ?? ''} onChange={v => set('phone', v)} />
+            <Field label="Upiti stižu na" placeholder="upiti@387weddings.ba"
+              value={settings['contact_recipient'] ?? ''} onChange={v => set('contact_recipient', v)}
+              hint="Adresa na koju se šalje obavijest kad neko pošalje kontakt formu. Upit se uvijek sprema i u panel, pod Upiti." />
           </div>
 
           {/* Instagram */}
@@ -273,7 +278,7 @@ export default function AdminSettings() {
                   <div className="md:hidden text-[9px] tracking-widest uppercase text-gold-500/40 font-bold mb-1.5">BOS</div>
                   <SeoField value={settings[`seo.${page.key}.title.bs`] ?? ''}
                     onChange={v => set(`seo.${page.key}.title.bs`, v)}
-                    maxChars={60} placeholder={`${page.label} | 387 Cinematic Weddings`} />
+                    maxChars={60} placeholder={`${page.label} | 387 Weddings`} />
                 </div>
               </div>
 

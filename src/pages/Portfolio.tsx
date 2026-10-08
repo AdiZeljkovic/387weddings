@@ -5,6 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
 import { respImg } from '../lib/img';
 import { OliveBranch, SectionLabel, DiamondRule } from '../components/ornaments';
+import Reveal from '../components/Reveal';
 
 const categories = ['ALL', 'WEDDINGS', 'STUDIO', 'PORTRAITS'] as const;
 type Category = typeof categories[number];
@@ -109,7 +110,8 @@ const Portfolio = () => {
             {t('portfolio.approach.title')}
           </SectionLabel>
 
-          <h1
+          <Reveal
+            as="h1"
             style={getContentStyle('portfolio.hero.title')}
             className="font-serif font-normal text-[48px] lg:text-[96px] leading-[1.05] lg:tracking-[0.005em] m-0 mb-6 lg:mb-9"
           >
@@ -117,14 +119,16 @@ const Portfolio = () => {
             <span className="italic text-love" style={getContentStyle('portfolio.hero.subtitle')}>
               {t('portfolio.hero.subtitle')}
             </span>
-          </h1>
+          </Reveal>
 
-          <p
+          <Reveal
+            as="p"
+            delay={0.1}
             style={getContentStyle('portfolio.approach.desc')}
             className="text-[15px] lg:text-[18px] font-light leading-[1.8] lg:leading-[1.85] text-ink-700 max-w-[320px] lg:max-w-[560px] mx-auto text-balance"
           >
             {t('portfolio.approach.desc')}
-          </p>
+          </Reveal>
         </div>
       </section>
 
@@ -144,7 +148,7 @@ const Portfolio = () => {
                   onClick={() => setActiveFilter(c)}
                   aria-pressed={active}
                   style={getContentStyle(CATEGORY_KEYS[c])}
-                  className={`text-[11px] lg:text-[12px] tracking-[0.2em] lg:tracking-[0.24em] uppercase px-3 lg:px-7 py-4 lg:py-[18px] transition-colors duration-250 ${
+                  className={`text-[11px] lg:text-[12px] tracking-[0.2em] lg:tracking-[0.24em] uppercase px-3 lg:px-7 py-4 lg:py-[18px] min-h-11 transition-colors duration-250 ${
                     active
                       ? 'text-ink-900 font-semibold border-b-2 border-love -mb-px'
                       : 'text-ink-500 font-medium hover:text-ink-900'
@@ -184,7 +188,11 @@ const Portfolio = () => {
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       <Card key={item.id} {...(cardProps as any)} className="group block text-ink-900">
                         <div className="overflow-hidden">
-                          <div className={`${ASPECT[item.cover_layout || 'TALL'] ?? ASPECT.TALL} overflow-hidden bg-rule`}>
+                          <Reveal
+                            kind="mask"
+                            delay={ci * 0.12 + col.indexOf(col.find(x => x.item.id === item.id)!) * 0.06}
+                            className={`${ASPECT[item.cover_layout || 'TALL'] ?? ASPECT.TALL} overflow-hidden bg-rule`}
+                          >
                             <img
                               src={r.src}
                               srcSet={r.srcSet}
@@ -196,10 +204,10 @@ const Portfolio = () => {
                               draggable={false}
                               referrerPolicy="no-referrer"
                             />
-                          </div>
+                          </Reveal>
                         </div>
 
-                        <div className="flex items-baseline gap-3.5 mt-[18px] lg:mt-5">
+                        <Reveal className="flex items-baseline gap-3.5 mt-[18px] lg:mt-5" delay={ci * 0.12 + 0.1}>
                           <span className="text-[11px] font-medium tracking-[0.2em] text-gold-600">
                             {String(n).padStart(2, '0')}
                           </span>
@@ -217,13 +225,15 @@ const Portfolio = () => {
                               →
                             </span>
                           )}
-                        </div>
+                        </Reveal>
 
                         {item.couple && (
-                          <CoupleName
-                            name={item.couple}
-                            className="block font-serif text-[28px] lg:text-[32px] leading-[1.2] mt-1.5 lg:mt-2"
-                          />
+                          <Reveal delay={ci * 0.12 + 0.14}>
+                            <CoupleName
+                              name={item.couple}
+                              className="block font-serif text-[28px] lg:text-[32px] leading-[1.2] mt-1.5 lg:mt-2"
+                            />
+                          </Reveal>
                         )}
                       </Card>
                     );
@@ -234,7 +244,7 @@ const Portfolio = () => {
           )}
 
           {/* ── Closing Instagram block ──────────────────────────────────── */}
-          <div className="text-center mt-[72px] lg:mt-32">
+          <div className="max-w-[720px] mx-auto text-center mt-[72px] lg:mt-32">
             <DiamondRule className="mb-6 lg:mb-7" />
             <div
               style={getContentStyle('instagram.tag')}
@@ -242,12 +252,12 @@ const Portfolio = () => {
             >
               {t('instagram.tag')}
             </div>
-            <h2 className="font-serif font-normal text-[32px] lg:text-[44px] leading-[1.2] m-0 mb-7">
+            <Reveal as="h2" className="font-serif font-normal text-[32px] lg:text-[44px] leading-[1.2] m-0 mb-7">
               <span style={getContentStyle('instagram.title.part1')}>{t('instagram.title.part1')}</span>{' '}
               <span className="italic" style={getContentStyle('instagram.title.part2')}>
                 {t('instagram.title.part2')}
               </span>
-            </h2>
+            </Reveal>
             <a
               href={instagramUrl}
               target="_blank"
