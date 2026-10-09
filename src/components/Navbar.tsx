@@ -67,7 +67,8 @@ const Navbar = () => {
     };
   }, [onHome]);
 
-  const overHero = onHome && !scrolled;
+  // Over the open menu the bar is cream, so its contents must read dark
+  const overHero = onHome && !scrolled && !isMobileMenuOpen;
 
   const handleLinkClick = (path: string) => {
     setIsMobileMenuOpen(false);
@@ -114,14 +115,19 @@ const Navbar = () => {
     <>
       <header
         className={cn(
-          'top-0 left-0 right-0 z-30 flex items-center justify-between gap-6',
+          'top-0 left-0 right-0 flex items-center justify-between gap-6',
           'px-5 sm:px-8 lg:px-24 transition-colors duration-300',
           // Home lays it over the hero, so it has to leave the flow; elsewhere
           // sticky keeps its own space above the page's first section.
           onHome ? 'fixed' : 'sticky',
-          overHero
-            ? 'pt-4 lg:pt-9 pb-0 text-white'
-            : 'pt-3 lg:pt-[22px] pb-[10px] text-ink-900 bg-[rgba(249,245,238,0.94)] backdrop-blur-[10px] border-b border-ink-900/[0.07] shadow-[0_1px_12px_rgba(21,19,17,0.05)]',
+          // Above the open menu, which is the same header the menu uses
+          isMobileMenuOpen ? 'z-[1020]' : 'z-30',
+          isMobileMenuOpen
+            // Solid while the menu is open, or the page reads through the bar
+            ? 'pt-3 lg:pt-[22px] pb-[10px] text-ink-900 bg-cream border-b border-ink-900/[0.07]'
+            : overHero
+              ? 'pt-4 lg:pt-9 pb-0 text-white'
+              : 'pt-3 lg:pt-[22px] pb-[10px] text-ink-900 bg-[rgba(249,245,238,0.94)] backdrop-blur-[10px] border-b border-ink-900/[0.07] shadow-[0_1px_12px_rgba(21,19,17,0.05)]',
         )}
       >
         <Link
@@ -176,14 +182,26 @@ const Navbar = () => {
           <LangSwitch light={overHero} size={10} />
           <button
             type="button"
-            onClick={() => setIsMobileMenuOpen(true)}
-            aria-label="Meni"
+            onClick={() => setIsMobileMenuOpen(o => !o)}
+            aria-label={isMobileMenuOpen ? 'Zatvori' : 'Meni'}
             aria-expanded={isMobileMenuOpen}
-            className="flex flex-col items-end gap-[7px] px-1 py-3 min-w-11 min-h-11 justify-center"
+            className={cn(
+              'px-1 py-3 min-w-11 min-h-11 justify-center',
+              isMobileMenuOpen ? 'relative flex items-center' : 'flex flex-col items-end gap-[7px]',
+            )}
           >
-            <span className={cn('block w-[26px] h-px', overHero ? 'bg-white' : 'bg-ink-900')} />
-            <span className={cn('block w-[26px] h-px', overHero ? 'bg-white' : 'bg-ink-900')} />
-            <span className={cn('block w-[18px] h-px', overHero ? 'bg-white' : 'bg-ink-900')} />
+            {isMobileMenuOpen ? (
+              <>
+                <span className="absolute w-[26px] h-px bg-ink-900 rotate-45" />
+                <span className="absolute w-[26px] h-px bg-ink-900 -rotate-45" />
+              </>
+            ) : (
+              <>
+                <span className={cn('block w-[26px] h-px', overHero ? 'bg-white' : 'bg-ink-900')} />
+                <span className={cn('block w-[26px] h-px', overHero ? 'bg-white' : 'bg-ink-900')} />
+                <span className={cn('block w-[18px] h-px', overHero ? 'bg-white' : 'bg-ink-900')} />
+              </>
+            )}
           </button>
         </div>
       </header>
@@ -196,23 +214,9 @@ const Navbar = () => {
           aria-modal="true"
           aria-label="Meni"
         >
-            <div className="flex items-center justify-between px-5 pt-3 pb-[10px] border-b border-ink-900/[0.07]">
-              <Link to="/" onClick={() => setIsMobileMenuOpen(false)} aria-label="387 Weddings">
-                <Logo size={22} color="currentColor" />
-              </Link>
-              <div className="flex items-center gap-[14px]">
-                <LangSwitch size={11} />
-                <button
-                  type="button"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  aria-label="Zatvori"
-                  className="relative w-11 h-11 flex items-center justify-center"
-                >
-                  <span className="absolute w-[26px] h-px bg-ink-900 rotate-45" />
-                  <span className="absolute w-[26px] h-px bg-ink-900 -rotate-45" />
-                </button>
-              </div>
-            </div>
+            {/* The header above stays put and carries the logo, the language
+                switch and the close button — the menu no longer draws its own. */}
+            <div aria-hidden="true" className="flex-none h-[58px]" />
 
             <nav aria-label="Glavni meni" className="flex-1 flex flex-col items-center justify-center gap-1 pb-5">
               {links.map(link => {

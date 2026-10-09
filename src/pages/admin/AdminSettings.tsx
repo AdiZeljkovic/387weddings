@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Check, Loader2, Globe, Instagram, Facebook, Twitter, Youtube, Music2,
+  Check, Loader2, Globe, Instagram,
   Search, Languages, BarChart2, FileText, MapPin, ExternalLink, RefreshCw,
-  Tag, AlertCircle, Copy, CheckCheck, Phone, Mail, AtSign, Share2,
+  Tag, AlertCircle, Copy, CheckCheck, Phone, Mail, AtSign,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { invalidateSettingsCache } from '../../lib/settingsCache';
@@ -178,8 +178,6 @@ export default function AdminSettings() {
               value={settings['phone'] ?? ''} onChange={v => set('phone', v)} />
             <Field label="Lokacija / Slogan" placeholder="Sarajevo — Worldwide"
               value={settings['location'] ?? ''} onChange={v => set('location', v)} />
-            <Field label="Tekst dostupnosti (Hero badge)" placeholder="Now booking 2025 & 2026"
-              value={settings['availability_text'] ?? ''} onChange={v => set('availability_text', v)} />
           </div>
         </div>
       )}
@@ -195,23 +193,9 @@ export default function AdminSettings() {
               hint="Prikazuje se u Instagram Feed sekciji na sajtu." />
           </SocialGroup>
 
-          <SocialGroup icon={<Facebook size={15} />} label="Facebook">
-            <Field label="URL stranice" placeholder="https://facebook.com/387cinematic"
-              value={settings['facebook'] ?? ''} onChange={v => set('facebook', v)} />
-          </SocialGroup>
-
-          <SocialGroup icon={<Youtube size={15} />} label="YouTube">
-            <Field label="URL kanala" placeholder="https://youtube.com/@387cinematic"
-              value={settings['youtube'] ?? ''} onChange={v => set('youtube', v)} />
-          </SocialGroup>
-
-          <SocialGroup icon={<Music2 size={15} />} label="TikTok">
-            <Field label="URL profila" placeholder="https://tiktok.com/@387cinematic"
-              value={settings['tiktok'] ?? ''} onChange={v => set('tiktok', v)} />
-          </SocialGroup>
-
           <div className="bg-moody-950/40 border border-white/5 rounded-sm px-4 py-3 text-[10px] text-white/25 leading-relaxed">
-            U footeru se prikazuju samo <strong className="text-white/40">Instagram, Facebook, YouTube i Pinterest</strong> — i to samo oni kojima je upisan URL.
+            Maketa u footeru ima <strong className="text-white/40">samo Instagram</strong>, pa su ostale
+            mreže uklonjene iz panela.
           </div>
         </div>
       )}

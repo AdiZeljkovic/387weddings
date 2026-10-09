@@ -95,6 +95,26 @@ async function startServer() {
     });
   }
 
+  // ── Language in the path, not the query ────────────────────────────────────
+  // English used to be ?lang=en on the same address, so hreflang and canonical
+  // pointed at query strings. Anything still carrying ?lang moves permanently
+  // to its own address, which keeps indexed links and old shares working.
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/') || req.path.startsWith('/img/')) {
+      return next();
+    }
+    const lang = req.query.lang;
+    if (lang !== 'en' && lang !== 'bs') return next();
+
+    const bare = req.path === '/en' ? '/' : req.path.startsWith('/en/') ? req.path.slice(3) || '/' : req.path;
+    const target = lang === 'en' ? (bare === '/' ? '/en' : `/en${bare}`) : bare;
+
+    const params = new URLSearchParams(req.query as Record<string, string>);
+    params.delete('lang');
+    const qs = params.toString();
+    res.redirect(301, qs ? `${target}?${qs}` : target);
+  });
+
   // ── CORS ───────────────────────────────────────────────────────────────────
   const allowedOrigins = isProd
     ? [process.env.SITE_URL || 'https://387weddings.ba']
@@ -172,8 +192,14 @@ async function startServer() {
     // like real pages to crawlers (soft 404) and /favicon.ico returned HTML.
     // Known routes still get the shell; anything else gets a real 404.
     const KNOWN_ROUTES = new Set(['/', '/portfolio', '/about', '/contact', '/privacy']);
-    const isKnownRoute = (p: string) =>
-      KNOWN_ROUTES.has(p.replace(/\/$/, '') || '/') || p.startsWith('/admin') || p.startsWith('/portfolio/');
+    // English lives under /en, so a route check looks at the path without it
+    const stripLang = (p: string) =>
+      p === '/en' ? '/' : p.startsWith('/en/') ? p.slice(3) || '/' : p;
+    const isKnownRoute = (p: string) => {
+      const q = stripLang(p);
+      return KNOWN_ROUTES.has(q.replace(/\/$/, '') || '/')
+        || q.startsWith('/admin') || q.startsWith('/portfolio/');
+    };
 
     const shell = path.join(process.cwd(), 'dist', 'index.html');
 
@@ -187,7 +213,7 @@ async function startServer() {
       // A story URL is only real if that slug is published. Without this check
       // every /portfolio/<anything> answered 200, which is a soft 404.
       let ok = isKnownRoute(req.path);
-      const story = req.path.match(/^\/portfolio\/([^/]+)\/?$/);
+      const story = stripLang(req.path).match(/^\/portfolio\/([^/]+)\/?$/);
       if (story) {
         try {
           const { rowCount } = await pool.query(
@@ -207,7 +233,7 @@ async function startServer() {
 
       // Meta tags are written in before the HTML leaves, so crawlers and link
       // previews see this page rather than the homepage's defaults.
-      const lang = req.query.lang === 'en' ? 'en' : 'bs';
+      const lang = req.path === '/en' || req.path.startsWith('/en/') ? 'en' : 'bs';
       try {
         const html = await renderShell(req.path, lang);
         res.status(ok ? 200 : 404).type('html').send(html);

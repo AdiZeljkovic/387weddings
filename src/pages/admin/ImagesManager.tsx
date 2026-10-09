@@ -12,7 +12,7 @@ const SECTIONS = [
     page: 'home', label: 'Naslovna',
     groups: [
       {
-        label: 'Hero — Desktop', hint: 'Naslovna trenutno prikazuje samo Slajd 1. Preporučeno: 2400×1600 px, pejzažna (horizontalna) orijentacija. Slajdovi 2–5 se čuvaju za slideshow i trenutno se ne prikazuju.',
+        label: 'Hero — Desktop', hint: 'Smjenjuju se svake 4 sekunde — prikazuju se samo oni slotovi koje napuniš, a dok ni jedan nije postavljen stoje privremene slike. Preporučeno: 2400×1600 px, pejzažna (horizontalna) orijentacija. Obavezno postavi točku fokusa, jer hero prekriva cijeli ekran.',
         images: [
           { key: 'img.home.hero.1', label: 'Slajd 1', fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
           { key: 'img.home.hero.2', label: 'Slajd 2', fallback: 'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=800' },
@@ -22,7 +22,7 @@ const SECTIONS = [
         ],
       },
       {
-        label: 'Hero — Mobilna verzija', hint: 'Naslovna na mobitelu prikazuje samo Mob slajd 1. Preporučeno: 900×1200 px, portretna (vertikalna) orijentacija. Ako se ostavi prazno, koristi se desktop slika.',
+        label: 'Hero — Mobilna verzija', hint: 'Uspravni kadar za uski ekran, slot po slot uz desktop verziju. Preporučeno: 1200×1800 px, portretna (vertikalna) orijentacija. Ako ostaviš prazno, koristi se desktop slika — ali će na visokom ekranu izgledati mekše, jer se širina odrezuje.',
         images: [
           { key: 'img.home.hero.mobile.1', label: 'Mob slajd 1', fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
           { key: 'img.home.hero.mobile.2', label: 'Mob slajd 2', fallback: 'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=800' },

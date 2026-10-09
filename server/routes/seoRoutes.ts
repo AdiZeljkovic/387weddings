@@ -29,17 +29,22 @@ router.get('/sitemap.xml', async (_req, res) => {
       ...stories.rows.map(r => ({ path: `/portfolio/${r.slug}`, changefreq: 'monthly', priority: '0.7' })),
     ];
 
-    // Each entry declares both language variants, matching the hreflang tags
-    const urls = pages.map(p => `
+    // Both languages are listed as their own addresses, each pointing at the
+    // other. They used to share one address with ?lang=en, which search
+    // engines read as a single page with a parameter rather than two documents.
+    const enPath = (p: string) => (p === '/' ? '/en' : `/en${p}`);
+    const entry = (loc: string, p: { path: string; changefreq: string; priority: string }) => `
   <url>
-    <loc>${baseUrl}${p.path}</loc>
+    <loc>${baseUrl}${loc}</loc>
     <xhtml:link rel="alternate" hreflang="bs" href="${baseUrl}${p.path}"/>
-    <xhtml:link rel="alternate" hreflang="en" href="${baseUrl}${p.path}?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="en" href="${baseUrl}${enPath(p.path)}"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="${baseUrl}${p.path}"/>
     <lastmod>${today}</lastmod>
     <changefreq>${p.changefreq}</changefreq>
     <priority>${p.priority}</priority>
-  </url>`).join('');
+  </url>`;
+    const urls = pages.map(p => entry(p.path, p)).join('')
+      + pages.map(p => entry(enPath(p.path), p)).join('');
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"

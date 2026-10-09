@@ -5,6 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
 import { respImg } from '../lib/img';
 import { OliveBranch } from '../components/ornaments';
+import Reveal from '../components/Reveal';
 
 const HERO_FALLBACK =
   'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=1600';
@@ -51,8 +52,10 @@ const Label = ({ htmlFor, children, required, style }: {
 );
 
 // Group heading: small gold caps followed by a rule that fills the row
-const GroupLabel = ({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) => (
-  <div className="flex items-center gap-4 -mb-1">
+const GroupLabel = ({ children, style, delay = 0 }: {
+  children: React.ReactNode; style?: React.CSSProperties; delay?: number;
+}) => (
+  <Reveal delay={delay} className="flex items-center gap-4 -mb-1">
     <span
       style={style}
       className="text-[11px] font-medium tracking-[0.3em] uppercase text-gold-label whitespace-nowrap"
@@ -60,7 +63,7 @@ const GroupLabel = ({ children, style }: { children: React.ReactNode; style?: Re
       {children}
     </span>
     <span aria-hidden="true" className="flex-1 h-px bg-[#e6e2db]" />
-  </div>
+  </Reveal>
 );
 
 const Contact = () => {
@@ -137,7 +140,7 @@ const Contact = () => {
   const videoOptions = optionsFor('contact.form.video', 3);
 
   const heading = (
-    <h1 className="font-serif font-light text-[clamp(24px,8vw,32px)] lg:text-[clamp(32px,3.2vw,42px)] leading-[1.2] lg:leading-[1.25] tracking-[0.04em] lg:tracking-[0.1em] uppercase m-0 mb-3.5 max-w-full break-words">
+    <Reveal as="h1" className="font-serif font-light text-[clamp(24px,8vw,32px)] lg:text-[clamp(32px,3.2vw,42px)] leading-[1.2] lg:leading-[1.25] tracking-[0.04em] lg:tracking-[0.1em] uppercase m-0 mb-3.5 max-w-full break-words">
       <span className="block" style={getContentStyle('contact.hero.title.part1')}>
         {t('contact.hero.title.part1')}
       </span>
@@ -147,24 +150,26 @@ const Contact = () => {
           {t('contact.hero.title.part3')}
         </span>
       </span>
-    </h1>
+    </Reveal>
   );
 
   const ornament = (
     <div aria-hidden="true" className="flex items-center justify-center gap-3 mb-7 lg:mb-9">
-      <span className="w-12 lg:w-16 h-px bg-gold-600 opacity-60" />
+      <Reveal as="span" kind="line" className="block w-12 lg:w-16 h-px bg-gold-600 opacity-60" />
       <span className="w-1.5 h-1.5 bg-love rotate-45" />
-      <span className="w-12 lg:w-16 h-px bg-gold-600 opacity-60" />
+      <Reveal as="span" kind="line" className="block w-12 lg:w-16 h-px bg-gold-600 opacity-60" />
     </div>
   );
 
   const intro = (
-    <p
+    <Reveal
+      as="p"
+      delay={0.1}
       style={getContentStyle('contact.hero.desc')}
       className="text-[13px] lg:text-[14px] font-light leading-[1.95] lg:leading-[27.5px] text-[#6b6b6b] max-w-[340px] lg:max-w-[384px] m-0"
     >
       {t('contact.hero.desc')}
-    </p>
+    </Reveal>
   );
 
   return (
@@ -178,7 +183,7 @@ const Contact = () => {
           {heading}{ornament}{intro}
         </div>
 
-        <div className="relative flex-none w-full h-[220px] lg:w-[661px] lg:h-auto overflow-hidden">
+        <Reveal kind="mask" className="rv-zoom relative flex-none w-full h-[220px] lg:w-[661px] lg:h-auto overflow-hidden">
           <picture className="block w-full h-full">
             <source media="(min-width: 1024px)" srcSet={heroDesktop.srcSet || heroDesktop.src} sizes="46vw" />
             <img
@@ -193,7 +198,7 @@ const Contact = () => {
           {/* Phones: it fades into the page above and the form below */}
           <span aria-hidden="true" className="lg:hidden absolute inset-x-0 top-0 h-24 bg-[linear-gradient(#f7f6f3,rgba(247,246,243,0))]" />
           <span aria-hidden="true" className="lg:hidden absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(rgba(255,255,255,0),#ffffff)]" />
-        </div>
+        </Reveal>
       </section>
 
       {/* ── The form ───────────────────────────────────────────────────────── */}
@@ -233,7 +238,7 @@ const Contact = () => {
           className="max-w-[768px] mx-auto flex flex-col gap-7"
         >
           {/* About you */}
-          <GroupLabel style={getContentStyle('contact.group.you')}>{t('contact.group.you')}</GroupLabel>
+          <GroupLabel delay={0.06} style={getContentStyle('contact.group.you')}>{t('contact.group.you')}</GroupLabel>
 
           <div>
             <Label htmlFor="c-name" required style={getContentStyle('contact.form.name')}>{t('contact.form.name')}</Label>
@@ -266,7 +271,7 @@ const Contact = () => {
           </div>
 
           {/* About the wedding */}
-          <GroupLabel style={getContentStyle('contact.group.wedding')}>{t('contact.group.wedding')}</GroupLabel>
+          <GroupLabel delay={0.12} style={getContentStyle('contact.group.wedding')}>{t('contact.group.wedding')}</GroupLabel>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-7">
             <div>
@@ -313,7 +318,7 @@ const Contact = () => {
           </div>
 
           {/* Your story */}
-          <GroupLabel style={getContentStyle('contact.group.story')}>{t('contact.group.story')}</GroupLabel>
+          <GroupLabel delay={0.18} style={getContentStyle('contact.group.story')}>{t('contact.group.story')}</GroupLabel>
 
           <div>
             <Label htmlFor="c-places" style={getContentStyle('contact.form.places')}>{t('contact.form.places')}</Label>
@@ -365,12 +370,13 @@ const Contact = () => {
       <section className="relative overflow-hidden bg-white lg:bg-[#f7f6f3] text-center px-6 pt-14 lg:pt-[72px] pb-0 lg:pb-20">
         <OliveBranch className="hidden lg:block absolute top-10 w-[300px] left-[calc(50%-620px)] animate-[drift_16s_ease-in-out_infinite_alternate] motion-reduce:animate-none" />
         <OliveBranch className="hidden lg:block absolute top-10 w-[300px] right-[calc(50%-620px)] animate-[drift_16s_ease-in-out_infinite_alternate] motion-reduce:animate-none" flip />
-        <p
+        <Reveal
+          as="p"
           style={getContentStyle('contact.response.note')}
           className="relative text-[14px] font-light leading-[26px] text-[#6b6b6b] max-w-[460px] mx-auto whitespace-pre-line"
         >
           {t('contact.response.note')}
-        </p>
+        </Reveal>
       </section>
     </div>
   );

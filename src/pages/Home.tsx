@@ -19,21 +19,20 @@ const FALLBACK = [
   'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&q=80&w=1200',
 ];
 
-// The mosaic, as the board lays it out: a tall portrait on the left beside two
-// columns of three landscape frames, then a row of two underneath. The three
-// columns start at different heights, which is the `shift` below.
-const MOSAIC_MAIN = [
-  { key: 'img.home.grid.1', col: 1, row: 1, span: 3, shift: -34 },  // 2:3 portrait
-  { key: 'img.home.grid.2', col: 2, row: 1, span: 1, shift: 0 },
-  { key: 'img.home.grid.3', col: 2, row: 2, span: 1, shift: 0 },
-  { key: 'img.home.grid.4', col: 2, row: 3, span: 1, shift: 0 },
-  { key: 'img.home.grid.5', col: 3, row: 1, span: 1, shift: 34 },
-  { key: 'img.home.grid.6', col: 3, row: 2, span: 1, shift: 34 },
-  { key: 'img.home.grid.7', col: 3, row: 3, span: 1, shift: 34 },
+// The mosaic exactly as the board builds it: a 396px-wide upright frame on the
+// left, 596px tall and lifted 34px, beside two flexible columns of three 190px
+// frames, the third column dropped 34px. A grid with `fr` columns was giving
+// the big frame 297px instead of 396 — fr shares out the row, it does not hold
+// a width — so this follows the board's own flex layout.
+const MOSAIC_COLS = [
+  { px: 'px-big',  width: '0 0 396px', top: -34, keys: ['img.home.grid.1'], h: 596 },
+  { px: 'px-colA', width: '1 1 0',     top: 0,   keys: ['img.home.grid.2', 'img.home.grid.3', 'img.home.grid.4'], h: 190 },
+  { px: 'px-colB', width: '1 1 0',     top: 34,  keys: ['img.home.grid.5', 'img.home.grid.6', 'img.home.grid.7'], h: 190 },
 ];
+// The closing row: a wide frame beside a narrow upright one, 352px tall
 const MOSAIC_FOOT = [
-  { key: 'img.home.grid.8', grow: 2, ratio: '3 / 2' },   // wide
-  { key: 'img.home.grid.9', grow: 1, ratio: '2 / 3' },   // narrow portrait
+  { key: 'img.home.grid.8', grow: 2 },
+  { key: 'img.home.grid.9', grow: 1 },
 ];
 
 // Phones: wide, two, two, wide, two, wide — nine frames, 12px apart
@@ -58,7 +57,7 @@ const Frame = ({ src, alt, className = '', style, sizes = '50vw', eager = false,
 }) => {
   const r = respImg(src);
   return (
-    <Reveal kind="mask" delay={delay} className={`relative overflow-hidden bg-rule ${className}`} style={style}>
+    <Reveal kind="mask" delay={delay} className={`rv-zoom zoom relative bg-rule ${className}`} style={style}>
       <img
         src={r.src}
         srcSet={r.srcSet}
@@ -302,13 +301,13 @@ const Home = () => {
             <div className="w-full lg:w-auto lg:flex-none text-center lg:text-left">
               <SectionLabel
                 centered
-                className="lg:hidden mb-6 justify-center"
+                className="mb-6 lg:mb-7 justify-center lg:justify-start"
                 style={getContentStyle('home.featured.title')}
               >
                 {t('home.featured.title')}
               </SectionLabel>
 
-              <Reveal as="h2" className="font-serif font-normal text-[40px] lg:text-[64px] leading-[1.08] m-0">
+              <Reveal as="h2" className="font-serif font-normal text-[clamp(26px,8vw,34px)] lg:text-[clamp(38px,3.4vw,48px)] leading-[1.1] m-0">
                 {(['part1', 'part2'] as const).map(part => (
                   <React.Fragment key={part}>
                     <span style={getContentStyle(`home.featured.heading.${part}`)}>
@@ -335,46 +334,44 @@ const Home = () => {
 
             {/* Desktop: tall portrait beside two columns of three */}
             <div
-              className="hidden lg:grid flex-1 min-w-0"
-              style={{
-                gridTemplateColumns: '396fr 414fr 414fr',
-                gridTemplateRows: 'repeat(3, 190px)',
-                gap: '12px',
-                flexBasis: '852px',
-                paddingTop: '34px',
-                paddingBottom: '34px',
-              }}
+              className="hidden lg:flex flex-1 min-w-0 items-start gap-3"
+              style={{ flexBasis: '560px' }}
             >
-              {MOSAIC_MAIN.map((tile, i) => (
-                <Frame
-                  key={tile.key}
-                  src={mosaicSrc(tile.key, i)}
-                  alt={altFor(tile.key)}
-                  sizes="(min-width: 1024px) 32vw, 100vw"
-                  delay={i * 0.06}
-                  focus={focusFor(tile.key)}
-                  className={`min-w-0 ${tile.col === 1 ? 'px-big' : tile.col === 2 ? 'px-colA' : 'px-colB'}`}
-                  style={{
-                    gridColumn: tile.col,
-                    gridRow: `${tile.row} / span ${tile.span}`,
-                    transform: `translateY(${tile.shift}px)`,
-                  }}
-                />
+              {MOSAIC_COLS.map((col, ci) => (
+                <div
+                  key={col.px}
+                  className={`${col.px} min-w-0 flex flex-col gap-3`}
+                  style={{ flex: col.width, marginTop: col.top > 0 ? col.top : undefined,
+                           position: 'relative', top: col.top < 0 ? col.top : undefined }}
+                >
+                  {col.keys.map((key, ri) => (
+                    <Frame
+                      key={key}
+                      src={mosaicSrc(key, ci * 3 + ri)}
+                      alt={altFor(key)}
+                      sizes={ci === 0 ? '396px' : '(min-width: 1024px) 28vw, 100vw'}
+                      delay={(ci * 3 + ri) * 0.06}
+                      focus={focusFor(key)}
+                      className="min-w-0"
+                      style={{ height: col.h }}
+                    />
+                  ))}
+                </div>
               ))}
             </div>
           </div>
 
-          {/* Desktop closing row: one wide, one narrow portrait */}
-          <div className="hidden lg:flex gap-3 h-[300px]">
+          {/* Desktop closing row: one wide, one narrow upright */}
+          <div className="hidden lg:flex gap-3 h-[352px] mt-[46px]">
             {MOSAIC_FOOT.map((tile, i) => (
               <Frame
                 key={tile.key}
                 src={mosaicSrc(tile.key, i + 7)}
                 alt={altFor(tile.key)}
-                sizes="(min-width: 1024px) 50vw, 100vw"
+                sizes={i === 0 ? '(min-width: 1024px) 64vw, 100vw' : '(min-width: 1024px) 32vw, 100vw'}
                 delay={i * 0.06}
                 focus={focusFor(tile.key)}
-                className="min-w-0"
+                className="min-w-0 h-full"
                 style={{ flex: `${tile.grow} 1 0` }}
               />
             ))}
@@ -396,11 +393,11 @@ const Home = () => {
             ))}
           </div>
 
-          <div className="relative flex justify-center mt-11 lg:mt-14">
+          <div className="relative flex justify-center mt-11 lg:mt-16">
             <Link
               to="/portfolio"
               style={getContentStyle('home.featured.cta')}
-              className="btn relative inline-block border border-ink-900 text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.2em] uppercase px-7 lg:px-10 py-[18px] lg:py-[22px] hover:text-white"
+              className="btn relative inline-block border border-ink-900 text-ink-900 text-[12px] font-medium tracking-[0.2em] uppercase px-7 lg:px-7 py-4 hover:text-white"
             >
               {t('home.featured.cta')} →
             </Link>
@@ -421,7 +418,7 @@ const Home = () => {
               {t('home.about.tag')}
             </SectionLabel>
 
-            <Reveal as="h2" className="font-serif font-normal text-[34px] lg:text-[56px] leading-[1.12] m-0 mb-6 lg:mb-9">
+            <Reveal as="h2" className="font-serif font-normal text-[clamp(26px,8vw,34px)] lg:text-[clamp(38px,3.2vw,46px)] leading-[1.12] m-0 mb-6 lg:mb-8">
               <span style={getContentStyle('home.about.heading.part1')}>{t('home.about.heading.part1')}</span>
               <br />
               <span className="italic" style={getContentStyle('home.about.heading.part2')}>
@@ -435,7 +432,7 @@ const Home = () => {
                 key={n}
                 delay={0.08 + i * 0.08}
                 style={getContentStyle(`home.about.desc.${n}`)}
-                className={`text-[15px] lg:text-[18px] font-light leading-[1.8] lg:leading-[1.75] text-ink-700 max-w-[480px] mx-auto lg:mx-0 m-0 ${i === 0 ? 'mb-5 lg:mb-6' : 'mb-9 lg:mb-12'}`}
+                className={`text-[15px] lg:text-[16px] font-light leading-[1.8] lg:leading-[1.75] text-ink-700 max-w-[480px] mx-auto lg:mx-0 m-0 ${i === 0 ? 'mb-5 lg:mb-6' : 'mb-9 lg:mb-12'}`}
               >
                 {t(`home.about.desc.${n}`)}
               </Reveal>
@@ -444,7 +441,7 @@ const Home = () => {
             <Link
               to="/about"
               style={getContentStyle('home.about.cta')}
-              className="btn btn-solid inline-block bg-ink-900 text-white text-[11px] lg:text-[12px] font-semibold tracking-[0.22em] uppercase px-8 lg:px-10 py-[19px] lg:py-[22px]"
+              className="btn btn-solid inline-block bg-ink-900 text-white text-[12px] font-semibold tracking-[0.22em] uppercase px-8 lg:px-[38px] py-4 lg:py-[22px]"
             >
               {t('home.about.cta')} →
             </Link>
@@ -456,7 +453,7 @@ const Home = () => {
               aria-hidden="true"
               className="hidden lg:block absolute top-10 -right-6 bottom-24 left-24 border border-gold-600"
             />
-            <div className="relative aspect-[4/5] overflow-hidden bg-rule">
+            <Reveal kind="mask" className="rv-zoom zoom relative aspect-[4/5] bg-rule">
               <img
                 src={aboutMain.src}
                 srcSet={aboutMain.srcSet}
@@ -468,8 +465,8 @@ const Home = () => {
                 draggable={false}
                 referrerPolicy="no-referrer"
               />
-            </div>
-            <div className="absolute left-0 bottom-0 w-[36%] aspect-[2/3] overflow-hidden bg-rule border-8 border-cream-light">
+            </Reveal>
+            <Reveal kind="mask" delay={0.14} className="rv-zoom zoom absolute left-0 bottom-0 w-[36%] aspect-[2/3] bg-rule border-8 border-cream-light">
               <img
                 src={aboutDetail.src}
                 srcSet={aboutDetail.srcSet}
@@ -482,7 +479,7 @@ const Home = () => {
                 draggable={false}
                 referrerPolicy="no-referrer"
               />
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>

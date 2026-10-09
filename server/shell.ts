@@ -59,7 +59,12 @@ export async function renderShell(pathname: string, lang: 'bs' | 'en'): Promise<
 
   const base = (s['sitemap.base_url']?.trim() || 'https://387weddings.ba').replace(/\/$/, '');
   const siteName = s['seo.site_name']?.trim() || '387 Weddings';
-  const clean = pathname.replace(/\/$/, '') || '/';
+  // English sits under /en; the page is the same, so the key comes off the
+  // path with the prefix removed.
+  const bare = pathname === '/en' ? '/' : pathname.startsWith('/en/') ? pathname.slice(3) || '/' : pathname;
+  const clean = bare.replace(/\/$/, '') || '/';
+  const bsPath = clean;
+  const enPath = clean === '/' ? '/en' : `/en${clean}`;
 
   let title = `${siteName}`;
   let desc = '';
@@ -87,7 +92,7 @@ export async function renderShell(pathname: string, lang: 'bs' | 'en'): Promise<
   const meta: Meta = {
     title,
     desc,
-    url: `${base}${pathname}${lang === 'en' ? '?lang=en' : ''}`,
+    url: `${base}${lang === 'en' ? enPath : bsPath}`,
     image: s['seo.og_image']?.trim() || '',
     locale: lang === 'en' ? 'en_US' : 'bs_BA',
   };
@@ -126,11 +131,12 @@ export async function renderShell(pathname: string, lang: 'bs' | 'en'): Promise<
     }
   }
 
-  // hreflang, so the two language variants are declared in the source
+  // hreflang, so the two language variants are declared in the source. Each is
+  // its own address now rather than the same one with a parameter.
   const alts = [
-    `<link rel="alternate" hreflang="bs" href="${esc(base + pathname)}" />`,
-    `<link rel="alternate" hreflang="en" href="${esc(base + pathname)}?lang=en" />`,
-    `<link rel="alternate" hreflang="x-default" href="${esc(base + pathname)}" />`,
+    `<link rel="alternate" hreflang="bs" href="${esc(base + bsPath)}" />`,
+    `<link rel="alternate" hreflang="en" href="${esc(base + enPath)}" />`,
+    `<link rel="alternate" hreflang="x-default" href="${esc(base + bsPath)}" />`,
   ].join('\n    ');
   html = html.replace('</head>', `  ${alts}\n  </head>`);
 

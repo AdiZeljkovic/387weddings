@@ -48,13 +48,15 @@ const Bio = ({ n, portrait, ratio, flip, altText }: {
           flip ? 'lg:order-2 lg:pr-0 lg:pl-14' : 'lg:order-1 lg:pr-14'
         }`}
       >
-        <span
+        <Reveal
+          as="span"
+          delay={0.18}
           aria-hidden="true"
           className={`absolute top-6 lg:top-14 bottom-0 border border-gold-600 left-6 right-0 ${
             flip ? 'lg:left-0 lg:right-14' : 'lg:left-14 lg:right-0'
           }`}
         />
-        <Reveal kind="mask" className="relative overflow-hidden bg-rule" style={{ aspectRatio: ratio }}>
+        <Reveal kind="mask" className="rv-zoom zoom relative bg-rule" style={{ aspectRatio: ratio }}>
           <img
             src={portrait.src}
             srcSet={portrait.srcSet}

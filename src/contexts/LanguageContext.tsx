@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-
-type Language = 'ENG' | 'BOS';
+import { langFromPath, pathFor, type Language } from '../lib/lang';
 
 interface LanguageContextType {
   language: Language;
@@ -229,10 +228,13 @@ const FONT_FAMILIES: Record<string, string> = {
 };
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  // Each language needs its own address for hreflang to mean anything, so
-  // ?lang= wins over the remembered choice when it is present.
+  // The address decides the language: /en/... is English, everything else is
+  // Bosnian. A remembered choice only applies when the address says nothing,
+  // so a shared link always opens in the language it was written in.
   const [language, setLanguageState] = useState<Language>(() => {
     try {
+      if (langFromPath(window.location.pathname) === 'ENG') return 'ENG';
+      // ?lang= is still honoured for links sent before the move to /en
       const fromUrl = new URLSearchParams(window.location.search).get('lang');
       if (fromUrl === 'en') return 'ENG';
       if (fromUrl === 'bs') return 'BOS';
@@ -270,15 +272,23 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => { loadContent().then(data => { if (data) applyContent(data); }); }, [applyContent]);
 
   const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
     try { localStorage.setItem('387_language', lang); } catch {}
-    // Reflect the choice in the address so the page can be linked and indexed
+    if (lang === language) return;
+
+    // Switching language moves to that language's address. The Router is
+    // mounted with the prefix as its basename, which is fixed for the life of
+    // the document, so this is a real navigation rather than a state change —
+    // and it lets the server render the right meta tags for the new address.
     try {
+      const target = pathFor(lang, window.location.pathname);
       const url = new URL(window.location.href);
-      if (lang === 'ENG') url.searchParams.set('lang', 'en');
-      else url.searchParams.delete('lang');
-      window.history.replaceState({}, '', url.toString());
-    } catch {}
+      url.pathname = target;
+      url.searchParams.delete('lang');  // the path carries it now
+      window.location.assign(url.toString());
+      return;
+    } catch {
+      setLanguageState(lang);
+    }
   };
 
   // Keep the document language in step with the switch — it was hardcoded to

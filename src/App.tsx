@@ -7,6 +7,7 @@ import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import BackToTop from './components/BackToTop';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { routerBasename, pathFor } from './lib/lang';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/admin/ProtectedRoute';
 import { AdminLayout } from './components/admin/AdminLayout';
@@ -104,17 +105,21 @@ function PageMetadata({ title, description, pageKey, ownTitle = false }: {
       }
 
       const baseUrl = (s['sitemap.base_url']?.trim() || 'https://387weddings.ba').replace(/\/$/, '');
-      setMeta('meta[property="og:url"]',          `${baseUrl}${pathname}${langCode === 'en' ? '?lang=en' : ''}`);
+      // `pathname` comes from the Router, so it has no /en prefix on it
+      const bsPath = pathFor('BOS', pathname);
+      const enPath = pathFor('ENG', pathname);
+      const here = langCode === 'en' ? enPath : bsPath;
+
+      setMeta('meta[property="og:url"]', `${baseUrl}${here}`);
       const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
       // The canonical always points at the language actually being shown
-      const suffix = langCode === 'en' ? '?lang=en' : '';
-      if (canonical) canonical.href = `${baseUrl}${pathname}${suffix}`;
+      if (canonical) canonical.href = `${baseUrl}${here}`;
 
       // hreflang needs one address per language, plus an x-default
       const alternates: [string, string][] = [
-        ['bs', `${baseUrl}${pathname}`],
-        ['en', `${baseUrl}${pathname}?lang=en`],
-        ['x-default', `${baseUrl}${pathname}`],
+        ['bs', `${baseUrl}${bsPath}`],
+        ['en', `${baseUrl}${enPath}`],
+        ['x-default', `${baseUrl}${bsPath}`],
       ];
       document.querySelectorAll('link[rel="alternate"][hreflang]').forEach(el => el.remove());
       for (const [lang, href] of alternates) {
@@ -283,7 +288,7 @@ function App() {
     <ErrorBoundary>
     <AuthProvider>
       <LanguageProvider>
-        <Router>
+        <Router basename={routerBasename(window.location.pathname)}>
           <AnalyticsInjector />
           <ScrollToTop />
           <Routes>

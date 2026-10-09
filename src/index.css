@@ -282,6 +282,15 @@
 .rv-mask.is-in { clip-path: inset(0 0 0 0); }
 .rv-line.is-in { transform: none; }
 
+/* The curtain opens over a photograph that is settling back from 1.07.
+   This uses the standalone `scale` property rather than `transform`, so it
+   composes with the 6% hover zoom on the same image instead of fighting it. */
+.rv-zoom img {
+  scale: 1.07;
+  transition: scale 1.3s cubic-bezier(.2, .6, .2, 1);
+}
+.rv-zoom.is-in img { scale: 1; }
+
 @media (prefers-reduced-motion: reduce) {
   .rv-up, .rv-mask, .rv-line {
     opacity: 1;
@@ -290,6 +299,7 @@
     transition: none;
     transition-delay: 0s !important;
   }
+  .rv-zoom img { scale: 1; transition: none; }
 }
 
 /* Page transition: the outgoing view fades rather than snapping */

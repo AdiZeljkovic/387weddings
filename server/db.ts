@@ -149,13 +149,7 @@ export async function initDB() {
         ('phone', '+387 61 000 000'),
         ('instagram', '#'),
         ('instagram_handle', '387.weddings'),
-        ('facebook', '#'),
-        ('pinterest', '#'),
-        ('twitter', '#'),
-        ('youtube', '#'),
-        ('tiktok', '#'),
         ('coming_soon', 'false'),
-        ('availability_text', 'Now booking 2025 & 2026'),
         ('location', 'Sarajevo — Worldwide'),
         ('seo.site_name', '387 Cinematic Weddings'),
         ('seo.og_image', ''),
@@ -163,8 +157,6 @@ export async function initDB() {
         ('seo.home.desc', 'Fine art wedding photography documenting love stories with a focus on raw emotion and timeless elegance. Based in Sarajevo, traveling worldwide.'),
         ('seo.about.title', 'About Us | 387 Cinematic Weddings'),
         ('seo.about.desc', 'Get to know Melisa and Aldin — the husband-and-wife team behind 387 Cinematic Weddings.'),
-        ('seo.services.title', 'Experience | 387 Cinematic Weddings'),
-        ('seo.services.desc', 'Explore our cinematic wedding photography packages. Editorial, emotional, and timeless — two artists, one story.'),
         ('seo.portfolio.title', 'Portfolio | 387 Cinematic Weddings'),
         ('seo.portfolio.desc', 'Explore our curated collection of fine art wedding stories from Sarajevo and around the world.'),
         ('seo.contact.title', 'Inquire | 387 Cinematic Weddings'),
@@ -423,6 +415,13 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
             value_bs = replace(value_bs, 'svaki par', '*svaki par*')
         WHERE key = 'portfolio.approach.desc'
           AND value_bs NOT LIKE '%*%' AND value_en NOT LIKE '%*%';
+      -- Settings the mockup has no place for any more: the hidden /services
+      -- page, the hero availability badge, and every social network but
+      -- Instagram. Backed up in settings-backup-2026-10-09.sql.
+      DELETE FROM site_settings WHERE key IN (
+        'availability_text', 'facebook', 'youtube', 'tiktok', 'twitter', 'pinterest'
+      ) OR key LIKE 'seo.services.%';
+
       -- An empty recipient meant the owner got no notification at all and had
       -- no way to tell. Default it to the public address they already set.
       UPDATE site_settings SET value = (SELECT value FROM site_settings WHERE key = 'email')
