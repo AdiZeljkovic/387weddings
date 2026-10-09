@@ -91,6 +91,21 @@ export async function initDB() {
         sort_order INT DEFAULT 0
       );
 
+      -- ── Image dimensions ─────────────────────────────────────────────────
+      -- Read off the file at upload time and kept, so the site can set each
+      -- frame's aspect-ratio from the photograph itself. Without this the
+      -- owner had to pick a shape by hand and anything that did not fit was
+      -- cropped. Keyed by the stored file name, so settings images and story
+      -- images both find their own dimensions.
+      CREATE TABLE IF NOT EXISTS image_meta (
+        file VARCHAR(255) PRIMARY KEY,
+        width INT NOT NULL,
+        height INT NOT NULL,
+        orientation VARCHAR(10) NOT NULL
+          CHECK (orientation IN ('portrait', 'landscape', 'square')),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
       CREATE TABLE IF NOT EXISTS site_settings (
         key VARCHAR(100) PRIMARY KEY,
         value TEXT

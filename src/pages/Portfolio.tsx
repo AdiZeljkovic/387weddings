@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
-import { respImg } from '../lib/img';
+import { respImg, SIZES } from '../lib/img';
 import { OliveBranch, SectionLabel, DiamondRule } from '../components/ornaments';
 import Reveal from '../components/Reveal';
 
@@ -174,7 +174,7 @@ const Portfolio = () => {
                 <div key={ci} className="flex-1 min-w-0 flex flex-col gap-11 lg:gap-12">
                   {col.map(({ item, n }) => {
                     const src = item.cover_url || '';
-                    const r = respImg(src, [480, 768, 1100]);
+                    const r = respImg(src);
                     const label = CARD_LABEL_KEYS[item.category];
                     return (
                       <Link
@@ -191,7 +191,7 @@ const Portfolio = () => {
                             <img
                               src={r.src}
                               srcSet={r.srcSet}
-                              sizes="(min-width: 1100px) 32vw, (min-width: 700px) 48vw, 100vw"
+                              sizes={SIZES.card}
                               alt={item.cover_alt || item.couple || ''}
                               className="w-full h-full object-cover"
                               loading="lazy"

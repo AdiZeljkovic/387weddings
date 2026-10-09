@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
-import { respImg } from '../lib/img';
+import { respImg, SIZES } from '../lib/img';
 import { OliveBranch, SectionLabel } from '../components/ornaments';
 import Reveal from '../components/Reveal';
 
@@ -55,7 +55,7 @@ const Bio = ({ n, portrait, ratio, flip, altText }: {
           <img
             src={portrait.src}
             srcSet={portrait.srcSet}
-            sizes="(min-width: 1024px) 40vw, 92vw"
+            sizes={SIZES.half}
             alt={altText || t(`${base}.title.part2`)}
             className="w-full h-full object-cover"
             loading="lazy"
@@ -129,10 +129,10 @@ const About = () => {
     loadSettings().then(setImgs).catch(err => console.warn('About: settings load failed', err));
   }, []);
 
-  const melisa = respImg(imgs['img.about.melisa'] || FALLBACK_MELISA, [480, 768, 1100]);
-  const aldin  = respImg(imgs['img.about.aldin']  || FALLBACK_ALDIN,  [480, 768, 1100]);
+  const melisa = respImg(imgs['img.about.melisa'] || FALLBACK_MELISA);
+  const aldin  = respImg(imgs['img.about.aldin']  || FALLBACK_ALDIN);
   const cta = [1, 2, 3].map((n, i) =>
-    respImg(imgs[`img.about.cta.${n}`] || FALLBACK_CTA[i], [320, 640, 900])
+    respImg(imgs[`img.about.cta.${n}`] || FALLBACK_CTA[i])
   );
 
   return (

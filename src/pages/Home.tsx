@@ -56,7 +56,7 @@ const Frame = ({ src, alt, className = '', style, sizes = '50vw', eager = false,
   src: string; alt: string; className?: string; style?: React.CSSProperties;
   sizes?: string; eager?: boolean; delay?: number; focus?: string;
 }) => {
-  const r = respImg(src, [480, 768, 1200]);
+  const r = respImg(src);
   return (
     <Reveal kind="mask" delay={delay} className={`relative overflow-hidden bg-rule ${className}`} style={style}>
       <img
@@ -104,16 +104,21 @@ const Home = () => {
   // is at least one, the placeholder set stands in so the hero is never empty —
   // and the moment one real photograph is uploaded, no slide comes from
   // somebody else's server any more.
+  // Each slot may also carry a portrait crop for phones. A landscape frame under
+  // object-fit:cover on a tall screen is scaled until it covers, so most of its
+  // width is thrown away and what is left looks soft; a crop chosen for the
+  // narrow screen avoids that entirely.
   const uploaded = Array.from({ length: SLIDE_MAX }, (_, i) => ({
     n: i + 1,
     src: settings[`img.home.hero.${i + 1}`] || '',
-  })).filter(s => s.src);
+    mobile: settings[`img.home.hero.mobile.${i + 1}`] || '',
+  })).filter(s => s.src || s.mobile);
   const heroSlides = uploaded.length
-    ? uploaded
-    : FALLBACK.slice(0, SLIDE_MAX).map((src, i) => ({ n: i + 1, src }));
+    ? uploaded.map(s => ({ ...s, src: s.src || s.mobile }))
+    : FALLBACK.slice(0, SLIDE_MAX).map((src, i) => ({ n: i + 1, src, mobile: '' }));
   // Settings arrive after the first paint, so the count can shrink under us
   const active = slide % heroSlides.length;
-  const heroBlur = blurSrc(heroSlides[0].src);
+  const heroBlur = blurSrc(heroSlides[0].mobile || heroSlides[0].src);
 
   // The frames cross-fade on their own; hovering the hero holds the current one
   useEffect(() => {
@@ -127,8 +132,8 @@ const Home = () => {
   const altFor = (key: string) => settings[`${key}.alt`] || '';
   const focusFor = (key: string) => settings[`${key}.focus`] || '';
 
-  const aboutMain = respImg(settings['img.home.team.aldin'] || FALLBACK[1], [480, 768, 1100]);
-  const aboutDetail = respImg(settings['img.home.team.melisa'] || FALLBACK[6], [320, 640]);
+  const aboutMain = respImg(settings['img.home.team.aldin'] || FALLBACK[1]);
+  const aboutDetail = respImg(settings['img.home.team.melisa'] || FALLBACK[6]);
 
   const heroWords = [
     ...t('hero.title.part1').split(' ').filter(Boolean).map(w => ({ w, italic: false })),
@@ -140,7 +145,10 @@ const Home = () => {
     <div className="bg-cream">
       {/* ── Hero — five frames cross-fading behind the statement ───────────── */}
       <section
-        className="relative flex flex-col overflow-hidden w-full max-w-full bg-[#26221e] text-white min-h-[740px] lg:min-h-[900px]"
+        // Exactly the visible screen, so the hero is never half-cut and the
+        // next section always starts below the fold. 740px of fixed height
+        // pushed the second button off a 360x640 Android screen.
+        className="hero-screen relative flex flex-col overflow-hidden w-full max-w-full bg-[#26221e] text-white"
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
       >
@@ -160,31 +168,41 @@ const Home = () => {
           />
         )}
 
-        {heroSlides.map(({ n, src }, i) => {
-          const r = respImg(src, [768, 1280, 1920, 2400]);
+        {heroSlides.map(({ n, src, mobile }, i) => {
+          const r = respImg(src);
+          const m = mobile ? respImg(mobile) : null;
+          // A phone covers a 390x844 screen from a frame about 1.5 screens wide,
+          // so a flat 100vw asks for a third of the pixels it will show.
+          const wide = '100vw';
+          const narrow = mobile ? '150vw' : '200vw';
           return (
-            <img
+            <picture
               key={src + i}
-              src={r.src}
-              srcSet={r.srcSet}
-              sizes="(max-width: 1023px) 200vw, 100vw"
-              // Only the frame on screen is announced; the others are decoration
-              alt={i === active ? (settings[`img.home.hero.${n}.alt`] || '') : ''}
-              aria-hidden={i === active ? undefined : 'true'}
-              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-[1200ms] ease-in-out motion-reduce:transition-none motion-reduce:animate-none"
+              className="absolute inset-0 block transition-opacity duration-[1200ms] ease-in-out motion-reduce:transition-none"
               style={{
                 opacity: i === active ? 1 : 0,
                 // Only the visible frame animates, and it restarts on each turn
                 animation: i === active ? `heroZoom ${SLIDE_MS + 1200}ms ease-out both` : undefined,
-                objectPosition: settings[`img.home.hero.${n}.focus`] || undefined,
               }}
-              loading={i === 0 ? 'eager' : 'lazy'}
-              fetchPriority={i === 0 ? 'high' : 'low'}
-              onLoad={i === 0 ? () => setHeroReady(true) : undefined}
-              decoding="async"
-              draggable={false}
-              referrerPolicy="no-referrer"
-            />
+            >
+              {m && <source media="(max-width: 1023px)" srcSet={m.srcSet || m.src} sizes={narrow} />}
+              <img
+                src={r.src}
+                srcSet={r.srcSet}
+                sizes={`(max-width: 1023px) ${narrow}, ${wide}`}
+                // Only the frame on screen is announced; the others are decoration
+                alt={i === active ? (settings[`img.home.hero.${n}.alt`] || '') : ''}
+                aria-hidden={i === active ? undefined : 'true'}
+                className="w-full h-full object-cover motion-reduce:animate-none"
+                style={{ objectPosition: settings[`img.home.hero.${n}.focus`] || undefined }}
+                loading={i === 0 ? 'eager' : 'lazy'}
+                fetchPriority={i === 0 ? 'high' : 'low'}
+                onLoad={i === 0 ? () => setHeroReady(true) : undefined}
+                decoding="async"
+                draggable={false}
+                referrerPolicy="no-referrer"
+              />
+            </picture>
           );
         })}
 
@@ -194,8 +212,8 @@ const Home = () => {
           className="absolute inset-0 bg-[linear-gradient(180deg,rgba(14,12,10,.5)_0%,rgba(14,12,10,.15)_38%,rgba(14,12,10,.82)_100%)] lg:bg-[linear-gradient(90deg,rgba(14,12,10,.82)_0%,rgba(14,12,10,.38)_55%,rgba(14,12,10,.12)_100%)]"
         />
 
-        <div className="relative z-[2] flex-1 flex flex-col justify-end items-center lg:items-start text-center lg:text-left px-7 lg:px-24 pt-28 pb-24 lg:pb-30 max-w-[1100px] box-border">
-          <h1 className="font-serif font-normal text-[42px] leading-[1.08] lg:text-[clamp(56px,6.2vw,88px)] lg:leading-[1.02] lg:tracking-[-0.01em] m-0 mb-6 lg:mb-8">
+        <div className="relative z-[2] flex-1 flex flex-col justify-end items-center lg:items-start text-center lg:text-left px-6 lg:px-24 pt-24 pb-[clamp(72px,12vh,120px)] max-w-[1100px] box-border">
+          <h1 className="font-serif font-normal text-[clamp(30px,8.4vw,42px)] leading-[1.08] lg:text-[clamp(34px,4vw,64px)] lg:leading-[1.02] lg:tracking-[-0.01em] m-0 mb-[clamp(16px,3vh,32px)]">
             {heroWords.map((hw, i) => (
               <React.Fragment key={`${hw.w}-${i}`}>
                 {i === breakAt && <br />}
@@ -217,33 +235,36 @@ const Home = () => {
 
           <p
             style={{ animationDelay: 'calc(var(--intro-delay, 0s) + 1.7s)', ...getContentStyle('hero.desc') }}
-            className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none text-[14px] lg:text-[19px] font-light leading-[1.75] m-0 mb-auto lg:mb-13 pb-10 text-[#ece5d9] max-w-[260px] lg:max-w-none lg:whitespace-nowrap"
+            className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none text-[clamp(13px,3.6vw,16px)] font-light leading-[1.75] m-0 mb-auto lg:mb-13 pb-[clamp(20px,4vh,40px)] text-[#ece5d9] max-w-[280px] lg:max-w-none lg:whitespace-nowrap"
           >
             {t('hero.desc')}
           </p>
 
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 lg:gap-10 w-full max-w-[300px] lg:max-w-none mt-auto lg:mt-0">
+          {/* Clear of the slide ticks, which sit at the very bottom left */}
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 lg:gap-10 w-full max-w-[300px] lg:max-w-none mt-auto lg:mt-0 mb-[clamp(28px,5vh,44px)] lg:mb-0">
             <Link
               to="/portfolio"
               style={{ animationDelay: 'calc(var(--intro-delay, 0s) + 2s)', ...getContentStyle('hero.portfolio') }}
-              className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none btn btn-on-dark bg-cream text-ink-900 text-center text-[11px] lg:text-[12px] font-semibold tracking-[0.22em] uppercase px-0 lg:px-10 py-[19px] lg:py-[22px] border border-cream"
+              className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none btn btn-on-dark bg-cream text-ink-900 text-center text-[12px] font-semibold tracking-[0.22em] uppercase px-7 py-4 lg:px-[30px] lg:py-[18px] border border-cream"
             >
               {t('hero.portfolio')} →
             </Link>
+            {/* The board has this as a quiet underlined link on desktop and a
+                framed button on a phone, where a bare link is easy to miss. */}
             <Link
               to="/contact"
               style={{ animationDelay: 'calc(var(--intro-delay, 0s) + 2.2s)', ...getContentStyle('hero.inquire') }}
-              className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none btn btn-on-dark text-white text-center text-[11px] lg:text-[12px] font-medium tracking-[0.22em] uppercase px-6 py-[19px] lg:py-3.5 border border-white/55 hover:text-ink-900"
+              className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none btn btn-on-dark lg:[--btn-fill:transparent] text-white text-center text-[12px] font-medium tracking-[0.22em] uppercase px-7 py-4 border border-white/55 lg:px-0 lg:py-3.5 lg:border-0 lg:border-b lg:border-b-white/50 lg:hover:text-cream hover:text-ink-900"
             >
               {t('hero.inquire')} →
             </Link>
           </div>
         </div>
 
-        {/* One tick per frame — bottom right on desktop, centred on phones */}
+        {/* One tick per frame — bottom right on desktop, bottom left on phones */}
         <div
           aria-hidden="true"
-          className="absolute z-[3] bottom-5 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-24 lg:bottom-[52px] flex gap-2.5"
+          className="absolute z-[3] bottom-4 left-6 lg:left-auto lg:right-24 lg:bottom-[52px] flex gap-2.5"
         >
           {heroSlides.length > 1 && heroSlides.map((_, i) => (
             <button

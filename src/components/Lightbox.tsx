@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { respImg } from '../lib/img';
+import { fullImg } from '../lib/img';
 
 export interface LightboxImage {
   id: number | string;
@@ -51,7 +51,7 @@ const Lightbox = ({ images, index, onIndex, onClose, title, meta, closeLabel = '
 
   if (count === 0) return null;
   const current = images[Math.min(index, count - 1)];
-  const r = respImg(current.url, [768, 1280, 1920]);
+  const r = fullImg(current.url);
 
   const nameParts = (title || '').split(/\s*&\s*/);
 
@@ -92,7 +92,7 @@ const Lightbox = ({ images, index, onIndex, onClose, title, meta, closeLabel = '
           key={current.url}
           src={r.src}
           srcSet={r.srcSet}
-          sizes="90vw"
+          sizes="100vw"
           alt={current.alt || ''}
           className="max-w-full max-h-full object-contain"
           decoding="async"

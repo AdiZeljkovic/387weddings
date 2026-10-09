@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
-import { respImg } from '../lib/img';
+import { respImg, SIZES } from '../lib/img';
 import { OliveBranch, SectionLabel, DiamondRule } from '../components/ornaments';
 import Reveal from '../components/Reveal';
 import Lightbox, { LightboxImage } from '../components/Lightbox';
@@ -125,7 +125,7 @@ const Story = () => {
   const paragraphs = body.split(/\n{2,}|\r\n\r\n/).map(s => s.trim()).filter(Boolean);
   const categoryKey = CARD_LABEL_KEYS[story.category];
   const meta = [story.location, story.date_text].filter(Boolean).join(' · ');
-  const cover = respImg(story.cover_url || '', [768, 1280, 1920]);
+  const cover = respImg(story.cover_url || '');
 
   const handle = settings.instagram_handle || '387.weddings';
   const instagramUrl = settings.instagram && settings.instagram !== '#'
@@ -231,7 +231,7 @@ const Story = () => {
               <div key={ci} className="flex-1 min-w-0 flex flex-col gap-3">
                 {col.map(img => {
                   const flat = story.images.findIndex(x => x.id === img.id);
-                  const r = respImg(img.url, [480, 768, 1100]);
+                  const r = respImg(img.url);
                   return (
                     <button
                       key={img.id}
@@ -243,7 +243,7 @@ const Story = () => {
                       <img
                         src={r.src}
                         srcSet={r.srcSet}
-                        sizes="(min-width: 1024px) 32vw, 48vw"
+                        sizes={SIZES.gallery}
                         alt={img.alt || ''}
                         className="w-full h-full object-cover transition-[filter] duration-400 group-hover:brightness-[1.07] group-hover:saturate-[1.05]"
                         loading="lazy"

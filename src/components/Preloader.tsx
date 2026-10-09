@@ -13,10 +13,11 @@ const HARD_STOP = 3000; // never hold the page longer than this
 const CLEAR_DELAY_AT = 4800;
 
 /**
- * First-visit curtain. It never blocks: the page (and the hero image) render
+ * Opening curtain. It never blocks: the page (and the hero image) render
  * underneath while this sits on top, and a hard timer removes it even if
- * something goes wrong. Skipped on repeat views, on navigation between pages,
- * and under prefers-reduced-motion.
+ * something goes wrong. It plays on every full load of the home page, on a
+ * phone as much as on a desktop, and is skipped only on navigation between
+ * pages and under prefers-reduced-motion.
  */
 const Preloader = () => {
   const [state, setState] = useState<'hidden' | 'showing' | 'lifting'>(() => {

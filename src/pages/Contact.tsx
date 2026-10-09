@@ -106,10 +106,9 @@ const Contact = () => {
   const today = new Date().toISOString().split('T')[0];
 
   // The brief asks for a separate mobile frame so a tall crop can be chosen
-  const heroDesktop = respImg(settings['img.contact.hero'] || HERO_FALLBACK, [768, 1280, 1600]);
+  const heroDesktop = respImg(settings['img.contact.hero'] || HERO_FALLBACK);
   const heroMobile = respImg(
     settings['img.contact.hero.mobile'] || settings['img.contact.hero'] || HERO_FALLBACK,
-    [480, 768, 1100]
   );
 
   const optionsFor = (base: string, count: number) =>

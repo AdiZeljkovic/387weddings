@@ -14,9 +14,12 @@ const storage = multer.diskStorage({
   },
 });
 
+// A 6000x4000 original off a full-frame camera runs well past 10MB, which the
+// old limit rejected outright. The brief asks for originals at 2400px or more
+// on the long edge, so the ceiling has to leave room for them.
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 40 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = /jpeg|jpg|png|webp|avif/;
     const ext = allowed.test(path.extname(file.originalname).toLowerCase());
@@ -119,7 +122,7 @@ router.post('/upload', requireAuth, (req, res) => {
   upload.single('image')(req, res, async (err: any) => {
     if (err) {
       if (err.code === 'LIMIT_FILE_SIZE') {
-        res.status(400).json({ error: 'Fajl je prevelik. Maksimalna veličina je 10 MB.' });
+        res.status(400).json({ error: 'Fajl je prevelik. Maksimalna veličina je 40 MB.' });
       } else {
         res.status(400).json({ error: err.message || 'Upload nije uspio.' });
       }
@@ -131,26 +134,77 @@ router.post('/upload', requireAuth, (req, res) => {
     }
 
     const inputPath = path.join(process.cwd(), 'uploads', req.file.filename);
-    const baseName  = path.basename(req.file.filename, path.extname(req.file.filename));
-    const outName   = `${baseName}.webp`;
-    const outputPath = path.join(process.cwd(), 'uploads', outName);
 
+    // The original is KEPT, exactly as the owner sent it. It used to be
+    // resized to 1920 and re-encoded to webp here, which permanently threw
+    // away resolution the photographer had paid for and softened every frame
+    // on a retina screen. Delivery sizes are derived on demand by /img
+    // instead, so the file on disk stays the master copy.
     try {
-      await sharp(inputPath)
-        .resize(1920, 1920, { fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 82 })
-        .toFile(outputPath);
+      const meta = await sharp(inputPath).metadata();
+      // EXIF orientation 5-8 stores the image rotated a quarter turn
+      const turned = (meta.orientation ?? 1) >= 5;
+      const width  = (turned ? meta.height : meta.width) ?? 0;
+      const height = (turned ? meta.width : meta.height) ?? 0;
+      if (!width || !height) throw new Error('no dimensions');
 
-      fs.unlinkSync(inputPath);
-      res.json({ url: `/uploads/${outName}` });
+      const orientation = width === height ? 'square' : width > height ? 'landscape' : 'portrait';
+
+      await pool.query(
+        `INSERT INTO image_meta (file, width, height, orientation)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (file) DO UPDATE
+           SET width = $2, height = $3, orientation = $4`,
+        [req.file.filename, width, height, orientation]
+      );
+
+      // The brief asks the panel to say so rather than silently accept it
+      const long = Math.max(width, height);
+      res.json({
+        url: `/uploads/${req.file.filename}`,
+        width,
+        height,
+        orientation,
+        warning: long < 2000
+          ? `Fotografija je ${width}x${height} px. Preporučeno je najmanje 2000 px `
+            + `po dužoj strani, inače može izgledati mekano na velikim ekranima.`
+          : undefined,
+      });
     } catch (sharpErr) {
-      // If sharp can't process it, the file isn't a valid image we trust —
-      // delete it rather than serving an unverified upload.
-      console.error('sharp processing failed, rejecting upload:', sharpErr);
+      // If sharp can't read it, the file isn't an image we trust — delete it
+      // rather than serving an unverified upload.
+      console.error('sharp could not read the upload, rejecting it:', sharpErr);
       try { fs.unlinkSync(inputPath); } catch { /* already gone */ }
       res.status(400).json({ error: 'Datoteka nije važeća slika.' });
     }
   });
+});
+
+// GET /api/gallery/meta?files=a.jpg,b.jpg — real dimensions, so the front end
+// can reserve each frame at the photograph's own aspect ratio and never crop.
+router.get('/meta', async (req, res) => {
+  const files = String(req.query.files || '')
+    .split(',')
+    .map(f => path.basename(f.trim()))
+    .filter(Boolean)
+    .slice(0, 200);
+  if (!files.length) {
+    res.json({});
+    return;
+  }
+  try {
+    const { rows } = await pool.query(
+      'SELECT file, width, height, orientation FROM image_meta WHERE file = ANY($1)',
+      [files]
+    );
+    const out: Record<string, { width: number; height: number; orientation: string }> = {};
+    for (const r of rows) out[r.file] = { width: r.width, height: r.height, orientation: r.orientation };
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.json(out);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 export default router;

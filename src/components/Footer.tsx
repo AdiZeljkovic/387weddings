@@ -44,32 +44,32 @@ const Footer = () => {
     <footer className="bg-white text-ink-900 border-t border-rule uppercase px-6 sm:px-10 lg:px-16 pb-10">
       <div className="max-w-[1100px] mx-auto">
         {/* Three statement links — stacked and ruled on phones, in a row above */}
-        <div className="flex flex-col md:flex-row md:flex-wrap md:items-center md:justify-between gap-0 md:gap-8 pt-6 md:pt-[88px] pb-0 md:pb-20">
+        <div className="flex flex-col md:flex-row md:flex-wrap md:items-center md:justify-between gap-0 md:gap-8 pt-5 md:pt-[56px] pb-0 md:pb-12">
           {features.map((f, i) => (
             <React.Fragment key={f.to}>
               {i > 0 && (
                 <span
                   aria-hidden="true"
-                  className="hidden md:block w-px h-[120px] bg-rule flex-none"
+                  className="hidden md:block w-px h-[76px] bg-rule flex-none"
                 />
               )}
               <Link
                 to={f.to}
                 className={cn(
-                  'flex flex-col items-center text-ink-900 py-[30px] md:py-0 transition-opacity duration-250 hover:opacity-60',
+                  'flex flex-col items-center text-ink-900 py-5 md:py-0 transition-opacity duration-250 hover:opacity-60',
                   i > 0 && 'border-t border-rule-soft md:border-t-0',
                 )}
               >
                 <span
                   style={getContentStyle(f.labelKey)}
-                  className="font-serif font-normal uppercase leading-[1.1] text-[28px] md:text-[38px] tracking-[0.05em]"
+                  className="font-serif font-normal uppercase leading-[1.1] text-[20px] md:text-[26px] tracking-[0.05em]"
                 >
                   {f.label}
                 </span>
-                <span aria-hidden="true" className="w-7 md:w-8 h-px bg-gold-600 my-4 md:mt-[22px] md:mb-[18px]" />
+                <span aria-hidden="true" className="w-7 md:w-8 h-px bg-gold-600 my-3 md:mt-4 md:mb-3" />
                 <span
                   style={getContentStyle(f.subKey)}
-                  className="text-[10px] md:text-[11px] font-medium tracking-[0.24em] uppercase text-gold-label text-center"
+                  className="text-[10px] font-medium tracking-[0.24em] uppercase text-gold-label text-center"
                 >
                   {t(f.subKey)}
                 </span>

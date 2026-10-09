@@ -47,9 +47,27 @@ const Navbar = () => {
     { path: '/contact',   label: t('nav.inquire'), styleKey: 'nav.inquire' },
   ];
 
-  // The mockup lays the header over the home hero, where it scrolls away with
-  // it. Every other page keeps it stuck to the top on a near-opaque cream bar.
-  const overHero = location.pathname === '/';
+  // The header follows the user down every page. On the home hero it lies over
+  // the photograph, transparent; once that hero is behind us it takes the cream
+  // bar. It used to be absolutely positioned on the home page, so it scrolled
+  // away and never came back.
+  const [scrolled, setScrolled] = useState(false);
+  const onHome = location.pathname === '/';
+
+  useEffect(() => {
+    if (!onHome) { setScrolled(true); return; }
+    // Hand over roughly a screen in, where the hero ends
+    const read = () => setScrolled(window.scrollY > window.innerHeight * 0.72);
+    read();
+    window.addEventListener('scroll', read, { passive: true });
+    window.addEventListener('resize', read);
+    return () => {
+      window.removeEventListener('scroll', read);
+      window.removeEventListener('resize', read);
+    };
+  }, [onHome]);
+
+  const overHero = onHome && !scrolled;
 
   const handleLinkClick = (path: string) => {
     setIsMobileMenuOpen(false);
@@ -96,11 +114,14 @@ const Navbar = () => {
     <>
       <header
         className={cn(
-          'left-0 right-0 z-30 flex items-center justify-between gap-6',
-          'px-5 sm:px-8 lg:px-24',
+          'top-0 left-0 right-0 z-30 flex items-center justify-between gap-6',
+          'px-5 sm:px-8 lg:px-24 transition-colors duration-300',
+          // Home lays it over the hero, so it has to leave the flow; elsewhere
+          // sticky keeps its own space above the page's first section.
+          onHome ? 'fixed' : 'sticky',
           overHero
-            ? 'absolute top-0 pt-4 lg:pt-9 pb-0 text-white'
-            : 'sticky top-0 pt-3 lg:pt-[22px] pb-[10px] text-ink-900 bg-[rgba(249,245,238,0.94)] backdrop-blur-[10px] border-b border-ink-900/[0.07]',
+            ? 'pt-4 lg:pt-9 pb-0 text-white'
+            : 'pt-3 lg:pt-[22px] pb-[10px] text-ink-900 bg-[rgba(249,245,238,0.94)] backdrop-blur-[10px] border-b border-ink-900/[0.07] shadow-[0_1px_12px_rgba(21,19,17,0.05)]',
         )}
       >
         <Link
@@ -126,11 +147,12 @@ const Navbar = () => {
                 aria-current={active ? 'page' : undefined}
                 style={getContentStyle(link.styleKey)}
                 className={cn(
-                  'py-[14px] min-h-11 flex items-center text-[12px] uppercase tracking-[0.22em] transition-colors duration-250',
+                  'py-[14px] min-h-11 flex items-center uppercase tracking-[0.14em] transition-colors duration-250',
                   'hover:shadow-[inset_0_-1px_0_var(--color-gold-600)]',
+                  active ? 'text-[15px]' : 'text-[13px]',
                   active
                     ? overHero
-                      ? 'text-white font-medium border-b border-gold-600'
+                      ? 'text-white font-semibold border-b border-gold-600'
                       : 'text-ink-900 font-semibold border-b border-gold-600'
                     : overHero
                       ? 'text-[#e8e1d6] font-medium hover:text-white'
@@ -146,12 +168,12 @@ const Navbar = () => {
             aria-hidden="true"
             className={cn('w-px h-5 flex-none', overHero ? 'bg-white/40' : 'bg-[#c8bba8]')}
           />
-          <LangSwitch light={overHero} />
+          <LangSwitch light={overHero} size={10} />
         </nav>
 
         {/* Mobile: language sits left of the hamburger, on every page */}
         <div className="flex lg:hidden items-center gap-[14px]">
-          <LangSwitch light={overHero} size={11} />
+          <LangSwitch light={overHero} size={10} />
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
