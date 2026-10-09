@@ -277,6 +277,7 @@ function ImageSlot({
   const [picking, setPicking]           = useState(false);
   const [imgError, setImgError]         = useState(false);
   const [uploadError, setUploadError]   = useState<string | null>(null);
+  const [notice, setNotice]             = useState<string | null>(null);
 
   // keep local URL input in sync when parent state changes (on initial load)
   useEffect(() => { setUrlInput(value); }, [value]);
@@ -300,7 +301,7 @@ function ImageSlot({
     setUploading(true);
     setUploadError(null);
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
+    const timeout = setTimeout(() => controller.abort(), 180_000);
     try {
       const fd = new FormData();
       fd.append('image', file);
@@ -319,12 +320,19 @@ function ImageSlot({
       onChange(data.url);
       setUrlInput(data.url);
       setImgError(false);
+      // The original is kept as sent, so a small file stays small — say so
+      // rather than letting it look soft on a big screen later.
+      setNotice(
+        data.warning
+          || (data.width ? `Učitano u originalu: ${data.width}×${data.height} px.` : null)
+      );
     } catch (err: any) {
       clearTimeout(timeout);
       const msg = err?.name === 'AbortError'
         ? 'Upload prekinut — server nije odgovorio na vrijeme.'
         : (err?.message || 'Upload nije uspio.');
       setUploadError(msg);
+      setNotice(null);
     } finally {
       setUploading(false);
     }
@@ -437,6 +445,9 @@ function ImageSlot({
       </div>
 
       {/* Upload error */}
+      {notice && !uploadError && (
+        <p className="text-gold-500/80 text-[10px] leading-snug">{notice}</p>
+      )}
       {uploadError && (
         <p className="text-red-400 text-[10px] leading-snug">{uploadError}</p>
       )}

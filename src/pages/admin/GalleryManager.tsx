@@ -95,7 +95,7 @@ export default function GalleryManager() {
     const fd = new FormData();
     fd.append('image', file);
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
+    const timeout = setTimeout(() => controller.abort(), 180_000);
     try {
       const res = await fetch('/api/gallery/upload', {
         method: 'POST', credentials: 'include', body: fd, signal: controller.signal,

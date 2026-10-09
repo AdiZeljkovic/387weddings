@@ -8,6 +8,7 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 
 import { initDB, pool } from './server/db.js';
+import { backfillImageMeta } from './server/imageBackfill.js';
 import authRoutes from './server/routes/authRoutes.js';
 import galleryRoutes from './server/routes/galleryRoutes.js';
 import submissionRoutes from './server/routes/submissionRoutes.js';
@@ -121,6 +122,10 @@ async function startServer() {
 
   // Initialize database
   await initDB();
+
+  // Dimensions for uploads that predate image_meta. Not awaited: the site does
+  // not need it to start, and it falls back to the stored shape until it lands.
+  backfillImageMeta().catch(err => console.error('[image-meta]', err));
 
   // ── Health check ───────────────────────────────────────────────────────────
   app.get('/api/health', async (_req, res) => {

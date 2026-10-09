@@ -4,6 +4,8 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
 import { respImg, SIZES } from '../lib/img';
+import { useImageMeta, layoutFor, LAYOUT_RATIO } from '../lib/imageMeta';
+import { balanceColumns } from '../lib/masonry';
 import { OliveBranch, SectionLabel, DiamondRule } from '../components/ornaments';
 import Reveal from '../components/Reveal';
 
@@ -32,15 +34,29 @@ interface StoryCard {
   cover_url: string | null;
   cover_alt: string | null;
   cover_layout: string | null;
+  cover_focus: string | null;
 }
 
-const ASPECT: Record<string, string> = {
-  TALL:   'aspect-[3/4]',
-  WIDE:   'aspect-[4/3]',
-  SQUARE: 'aspect-square',
-};
+// One column on a phone, three above it — the brief is explicit
+const colsFor = (w: number) => (w < 820 ? 1 : w < 1100 ? 2 : 3);
 
-const colsFor = (w: number) => (w < 700 ? 1 : w < 1100 ? 2 : 3);
+// Roughly how tall the number / category / name block is, as a fraction of the
+// column width. Only used to keep the columns level, so an estimate is enough.
+const CAPTION_H = 0.2;
+
+// A word wrapped in *asterisks* is set in italic red, the way the board marks
+// the one key word in a sentence. The owner controls it from the panel.
+const Emphasis = ({ text }: { text: string }) => (
+  <>
+    {text.split(/(\*[^*]+\*)/g).map((part, i) =>
+      part.startsWith('*') && part.endsWith('*') && part.length > 2 ? (
+        <span key={i} className="italic text-love">{part.slice(1, -1)}</span>
+      ) : (
+        <React.Fragment key={i}>{part}</React.Fragment>
+      )
+    )}
+  </>
+);
 
 // "Amra & Tarik" — the ampersand is set in italic red, as in the mockup
 const CoupleName = ({ name, className = '' }: { name: string; className?: string }) => {
@@ -84,13 +100,18 @@ const Portfolio = () => {
     [stories, activeFilter]
   );
 
-  // Columns are filled round-robin, so the numbering reads 01/04/07 down the
-  // first column — exactly how the board lays it out.
+  const metaFor = useImageMeta(useMemo(() => stories.map(s => s.cover_url), [stories]));
+
+  // Masonry. Cards used to go round-robin — 1, 2, 3, 1, 2, 3 — so with mixed
+  // portrait and landscape shapes the columns ended at different heights and
+  // one hung below the others with blank space under it.
   const columns = useMemo(() => {
-    const buckets: { item: StoryCard; n: number }[][] = Array.from({ length: cols }, () => []);
-    filtered.forEach((item, i) => buckets[i % cols].push({ item, n: i + 1 }));
-    return buckets;
-  }, [filtered, cols]);
+    const laid = filtered.map(item => ({
+      item,
+      layout: layoutFor(metaFor(item.cover_url), item.cover_layout),
+    }));
+    return balanceColumns(laid, cols, c => 1 / LAYOUT_RATIO[c.layout] + CAPTION_H);
+  }, [filtered, cols, metaFor]);
 
   const handle = settings.instagram_handle || '387.weddings';
   const instagramUrl = settings.instagram && settings.instagram !== '#'
@@ -105,10 +126,15 @@ const Portfolio = () => {
         <OliveBranch className="hidden lg:block absolute right-[140px] top-[84px] w-[340px] animate-[drift_16s_ease-in-out_infinite_alternate] motion-reduce:animate-none" flip />
 
         <div className="relative">
+          {/* The board has a small ruled label above the title */}
+          <SectionLabel centered className="mb-5 lg:mb-6" style={getContentStyle('portfolio.hero.tag')}>
+            {t('portfolio.hero.tag')}
+          </SectionLabel>
+
           <Reveal
             as="h1"
             style={getContentStyle('portfolio.hero.title')}
-            className="font-serif font-normal text-[48px] lg:text-[96px] leading-[1.05] lg:tracking-[0.005em] m-0 mb-6 lg:mb-9"
+            className="font-serif font-normal text-[clamp(30px,9.8vw,38px)] lg:text-[clamp(44px,4.6vw,64px)] leading-[1.05] lg:tracking-[0.005em] m-0 mb-6 lg:mb-9"
           >
             {t('portfolio.hero.title')}{' '}
             <span className="italic text-love" style={getContentStyle('portfolio.hero.subtitle')}>
@@ -120,9 +146,9 @@ const Portfolio = () => {
             as="p"
             delay={0.1}
             style={getContentStyle('portfolio.approach.desc')}
-            className="text-[15px] lg:text-[18px] font-light leading-[1.8] lg:leading-[1.85] text-ink-700 max-w-[320px] lg:max-w-[560px] mx-auto text-balance"
+            className="font-serif font-normal text-[17px] lg:text-[21px] leading-[1.6] text-[#2a2622] max-w-[340px] lg:max-w-[620px] mx-auto text-balance"
           >
-            {t('portfolio.approach.desc')}
+            <Emphasis text={t('portfolio.approach.desc')} />
           </Reveal>
         </div>
       </section>
@@ -169,10 +195,11 @@ const Portfolio = () => {
               {t('portfolio.empty')}
             </p>
           ) : (
-            <div className="flex gap-5 lg:gap-8 items-start">
+            <div className="flex gap-8 items-start">
               {columns.map((col, ci) => (
-                <div key={ci} className="flex-1 min-w-0 flex flex-col gap-11 lg:gap-12">
-                  {col.map(({ item, n }) => {
+                <div key={ci} className="flex-1 min-w-0 flex flex-col gap-12">
+                  {col.map(({ item: { item, layout }, index }, ri) => {
+                    const n = index + 1;
                     const src = item.cover_url || '';
                     const r = respImg(src);
                     const label = CARD_LABEL_KEYS[item.category];
@@ -183,10 +210,12 @@ const Portfolio = () => {
                         className="work-card group block text-ink-900 cursor-pointer"
                       >
                         <div className="overflow-hidden">
+                          {/* The frame follows the photograph's own shape */}
                           <Reveal
                             kind="mask"
-                            delay={ci * 0.12 + col.indexOf(col.find(x => x.item.id === item.id)!) * 0.06}
-                            className={`${ASPECT[item.cover_layout || 'TALL'] ?? ASPECT.TALL} zoom bg-rule`}
+                            delay={ci * 0.12 + ri * 0.06}
+                            className="zoom bg-rule"
+                            style={{ aspectRatio: String(LAYOUT_RATIO[layout]) }}
                           >
                             <img
                               src={r.src}
@@ -194,6 +223,7 @@ const Portfolio = () => {
                               sizes={SIZES.card}
                               alt={item.cover_alt || item.couple || ''}
                               className="w-full h-full object-cover"
+                              style={{ objectPosition: item.cover_focus || undefined }}
                               loading="lazy"
                               decoding="async"
                               draggable={false}
@@ -202,7 +232,11 @@ const Portfolio = () => {
                           </Reveal>
                         </div>
 
-                        <Reveal className="flex items-baseline gap-3.5 mt-[18px] lg:mt-5" delay={ci * 0.12 + 0.1}>
+                        {/* Centred under the card on a phone, ranged left above it */}
+                        <Reveal
+                          className="flex items-baseline justify-center lg:justify-start gap-3.5 mt-[18px] lg:mt-5"
+                          delay={ci * 0.12 + ri * 0.06 + 0.1}
+                        >
                           <span className="text-[11px] font-medium tracking-[0.2em] text-gold-600">
                             {String(n).padStart(2, '0')}
                           </span>
@@ -214,17 +248,17 @@ const Portfolio = () => {
                           </span>
                           <span
                             aria-hidden="true"
-                            className="ml-auto text-ink-900 text-sm opacity-0 -translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0"
+                            className="hidden lg:block ml-auto text-ink-900 text-sm opacity-0 -translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0"
                           >
                             →
                           </span>
                         </Reveal>
 
                         {item.couple && (
-                          <Reveal delay={ci * 0.12 + 0.14}>
+                          <Reveal delay={ci * 0.12 + ri * 0.06 + 0.14}>
                             <CoupleName
                               name={item.couple}
-                              className="block font-serif text-[28px] lg:text-[32px] leading-[1.2] mt-1.5 lg:mt-2"
+                              className="block font-serif text-[28px] lg:text-[32px] leading-[1.2] mt-1.5 lg:mt-2 text-center lg:text-left"
                             />
                           </Reveal>
                         )}

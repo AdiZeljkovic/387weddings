@@ -81,6 +81,17 @@ export async function initDB() {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
 
+      -- The focal point the owner clicks on the photograph. Where a frame's
+      -- shape differs from the photograph's by a few percent, this is what
+      -- keeps the crop off somebody's face.
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS cover_focus VARCHAR(40) DEFAULT NULL;
+      -- The type shown on the story ("Foto", "Foto i video"). It was one
+      -- untranslated column, so the English site read "PHOTO".
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS tag_bs VARCHAR(120) DEFAULT NULL;
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS tag_en VARCHAR(120) DEFAULT NULL;
+      UPDATE stories SET tag_bs = tag WHERE tag_bs IS NULL AND tag IS NOT NULL;
+      UPDATE stories SET tag_en = tag WHERE tag_en IS NULL AND tag IS NOT NULL;
+
       CREATE TABLE IF NOT EXISTS story_images (
         id SERIAL PRIMARY KEY,
         story_id INT NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
@@ -90,6 +101,8 @@ export async function initDB() {
         layout VARCHAR(20) DEFAULT 'TALL' CHECK (layout IN ('TALL', 'WIDE', 'SQUARE')),
         sort_order INT DEFAULT 0
       );
+
+      ALTER TABLE story_images ADD COLUMN IF NOT EXISTS focus VARCHAR(40) DEFAULT NULL;
 
       -- ── Image dimensions ─────────────────────────────────────────────────
       -- Read off the file at upload time and kept, so the site can set each
@@ -297,6 +310,7 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
         ('portfolio.card.wedding', 'Kartica: Oznaka "Vjenčanje"', 'portfolio', 'filter', 'text', 'Wedding', 'Vjenčanje', 10),
         ('portfolio.card.studio', 'Kartica: Oznaka "Studio"', 'portfolio', 'filter', 'text', 'Studio', 'Studio', 11),
         ('portfolio.card.portrait', 'Kartica: Oznaka "Portreti"', 'portfolio', 'filter', 'text', 'Portrait', 'Portreti', 12),
+        ('portfolio.hero.tag', 'Hero: Oznaka iznad naslova', 'portfolio', 'hero', 'text', 'Work', 'Radovi', -1),
         ('portfolio.hero.title', 'Hero: Naslov', 'portfolio', 'hero', 'text', 'Stories that', 'Priče koje', 0),
         ('portfolio.hero.subtitle', 'Hero: Podnaslov', 'portfolio', 'hero', 'text', 'last', 'traju', 1),
         ('cookie.text', 'Cookie baner: Tekst', 'privacy', 'cookie', 'textarea', 'We use cookies to understand how the site is used. Analytics only runs if you agree.', 'Koristimo kolačiće da razumijemo kako se sajt koristi. Analitika se pokreće samo ako pristanete.', 0),
@@ -395,6 +409,14 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
         SET value_en = 'These are the stories we have had the honour of telling: every frame, every moment, every couple. See what we make when you trust us with your day.',
             value_bs = 'Ovo su priče koje smo imali čast ispričati, svaki kadar, svaki trenutak, svaki par. Pogledajte šta stvaramo kad nam povjerite svoj dan.'
         WHERE key = 'portfolio.approach.desc' AND value_bs LIKE 'Od tihog iščekivanja%';
+      -- The board sets one key word of this sentence in italic red. Asterisks
+      -- around it are the marker the page reads, so the owner keeps control of
+      -- which word it is.
+      UPDATE page_content
+        SET value_en = replace(value_en, 'every couple', '*every couple*'),
+            value_bs = replace(value_bs, 'svaki par', '*svaki par*')
+        WHERE key = 'portfolio.approach.desc'
+          AND value_bs NOT LIKE '%*%' AND value_en NOT LIKE '%*%';
       UPDATE page_content SET value_en = 'Tell us', value_bs = 'Ispričajte nam'
         WHERE key = 'contact.hero.title.part1' AND value_bs IN ('Pošaljite', '');
       UPDATE page_content SET value_en = 'your', value_bs = 'svoju'

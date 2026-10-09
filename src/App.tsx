@@ -62,7 +62,13 @@ const PagesManager = lazy(() => import('./pages/admin/PagesManager'));
 const ImagesManager = lazy(() => import('./pages/admin/ImagesManager'));
 const InstagramManager = lazy(() => import('./pages/admin/InstagramManager'));
 
-function PageMetadata({ title, description, pageKey }: { title: string; description: string; pageKey: string }) {
+// `ownTitle` means the page writes its own title and link preview — a story
+// page carries its couple's name, which the server already rendered into the
+// HTML. Without it this overwrote that correct title with a generic "Priča",
+// which is what the client saw flicker.
+function PageMetadata({ title, description, pageKey, ownTitle = false }: {
+  title: string; description: string; pageKey: string; ownTitle?: boolean;
+}) {
   const { language } = useLanguage();
   const langCode = language === 'ENG' ? 'en' : 'bs';
   const { pathname } = useLocation();
@@ -77,23 +83,24 @@ function PageMetadata({ title, description, pageKey }: { title: string; descript
         || s[`seo.${pageKey}.desc`]?.trim()
         || description;
 
-      document.title = finalTitle;
-
       const setMeta = (sel: string, value: string) => {
         const el = document.querySelector(sel);
         if (el) el.setAttribute('content', value);
       };
 
-      setMeta('meta[name="description"]',        finalDesc);
-      setMeta('meta[property="og:title"]',        finalTitle);
-      setMeta('meta[property="og:description"]',  finalDesc);
-      setMeta('meta[name="twitter:title"]',       finalTitle);
-      setMeta('meta[name="twitter:description"]', finalDesc);
+      if (!ownTitle) {
+        document.title = finalTitle;
+        setMeta('meta[name="description"]',        finalDesc);
+        setMeta('meta[property="og:title"]',        finalTitle);
+        setMeta('meta[property="og:description"]',  finalDesc);
+        setMeta('meta[name="twitter:title"]',       finalTitle);
+        setMeta('meta[name="twitter:description"]', finalDesc);
 
-      const ogImage = s['seo.og_image']?.trim();
-      if (ogImage) {
-        setMeta('meta[property="og:image"]', ogImage);
-        setMeta('meta[name="twitter:image"]', ogImage);
+        const ogImage = s['seo.og_image']?.trim();
+        if (ogImage) {
+          setMeta('meta[property="og:image"]', ogImage);
+          setMeta('meta[name="twitter:image"]', ogImage);
+        }
       }
 
       const baseUrl = (s['sitemap.base_url']?.trim() || 'https://387weddings.ba').replace(/\/$/, '');
@@ -118,7 +125,7 @@ function PageMetadata({ title, description, pageKey }: { title: string; descript
         document.head.appendChild(link);
       }
     });
-  }, [title, description, pageKey, langCode, pathname]);
+  }, [title, description, pageKey, langCode, pathname, ownTitle]);
   return null;
 }
 
@@ -342,7 +349,7 @@ function App() {
                         } />
                         <Route path="/portfolio/:slug" element={
                           <>
-                            <PageMetadata title="Priča" description="Priča jednog para." pageKey="story" />
+                            <PageMetadata title="Priča" description="Priča jednog para." pageKey="story" ownTitle />
                             <Story />
                           </>
                         } />

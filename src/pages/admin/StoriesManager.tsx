@@ -29,6 +29,9 @@ interface Story {
   id: number;
   slug: string;
   couple: string;
+  tag_bs?: string | null;
+  tag_en?: string | null;
+  cover_focus?: string | null;
   category: string;
   location: string | null;
   date_text: string | null;
@@ -45,6 +48,7 @@ interface Story {
 
 const EMPTY = {
   couple: '', slug: '', category: 'WEDDINGS', location: '', date_text: '', tag: '',
+  tag_bs: '', tag_en: '', cover_focus: '',
   cover_url: '', cover_alt: '', cover_layout: 'TALL',
   quote_bs: '', quote_en: '', text_bs: '', text_en: '',
   sort_order: 0, is_published: true,
@@ -97,7 +101,7 @@ export default function StoriesManager() {
     const fd = new FormData();
     fd.append('image', file);
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
+    const timeout = setTimeout(() => controller.abort(), 180_000);
     try {
       const res = await fetch('/api/gallery/upload', {
         method: 'POST', credentials: 'include', body: fd, signal: controller.signal,
@@ -152,6 +156,8 @@ export default function StoriesManager() {
     setEditingId(s.id);
     setForm({
       couple: s.couple, slug: s.slug, category: s.category,
+      tag_bs: s.tag_bs || s.tag || '', tag_en: s.tag_en || s.tag || '',
+      cover_focus: s.cover_focus || '',
       location: s.location ?? '', date_text: s.date_text ?? '', tag: s.tag ?? '',
       cover_url: s.cover_url ?? '', cover_alt: s.cover_alt ?? '', cover_layout: s.cover_layout ?? 'TALL',
       quote_bs: s.quote_bs ?? '', quote_en: s.quote_en ?? '',
@@ -299,8 +305,12 @@ export default function StoriesManager() {
             <Field label="Datum" hint="Slobodan tekst, npr. 14. juni 2025.">
               <input className={field} placeholder="14. juni 2025." value={form.date_text}
                 onChange={e => setForm(f => ({ ...f, date_text: e.target.value }))} /></Field>
-            <Field label="Oznaka"><input className={field} placeholder="Foto i video" value={form.tag}
-              onChange={e => setForm(f => ({ ...f, tag: e.target.value }))} /></Field>
+            <Field label="Oznaka vrste (BOS)" hint='Npr. "Foto" ili "Foto i video".'>
+              <input className={field} placeholder="Foto i video" value={form.tag_bs}
+                onChange={e => setForm(f => ({ ...f, tag_bs: e.target.value }))} /></Field>
+            <Field label="Oznaka vrste (ENG)" hint='Npr. "Photo" ili "Photo and film".'>
+              <input className={field} placeholder="Photo and film" value={form.tag_en}
+                onChange={e => setForm(f => ({ ...f, tag_en: e.target.value }))} /></Field>
           </div>
 
           <div className="border-t border-white/5 pt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -318,12 +328,17 @@ export default function StoriesManager() {
             <Field label="Alt tekst naslovne" hint="Kratki opis za čitače ekrana i Google.">
               <input className={field} placeholder="Mladenci na Jahorini" value={form.cover_alt}
                 onChange={e => setForm(f => ({ ...f, cover_alt: e.target.value }))} /></Field>
-            <Field label="Omjer kartice">
+            <Field label="Omjer kartice"
+              hint="Čita se sam iz fotografije. Ovo je rezerva za slike učitane prije.">
               <select className={field} value={form.cover_layout}
                 onChange={e => setForm(f => ({ ...f, cover_layout: e.target.value }))}>
                 {LAYOUTS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
               </select>
             </Field>
+            <Field label="Točka fokusa"
+              hint='Gdje je najvažniji dio slike, npr. "50% 30%". Prazno = sredina. Koristi se samo kad se okvir za par posto razlikuje od slike, da se ne odreže lice.'>
+              <input className={field} placeholder="50% 30%" value={form.cover_focus}
+                onChange={e => setForm(f => ({ ...f, cover_focus: e.target.value }))} /></Field>
             <Field label="Redoslijed" hint="Manji broj ide prije. Određuje i broj na kartici.">
               <input type="number" className={field} value={form.sort_order}
                 onChange={e => setForm(f => ({ ...f, sort_order: Number(e.target.value) }))} /></Field>
