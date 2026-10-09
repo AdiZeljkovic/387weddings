@@ -84,7 +84,46 @@ export async function sendInquiry(s: Submission): Promise<void> {
   });
 }
 
+/**
+ * The couple's own copy. Without it the only sign the message went anywhere was
+ * a line on the page, which is gone as soon as they close the tab.
+ *
+ * The reply time quoted here has to match the site, so it is read from the same
+ * CMS row the Kontakt page shows rather than written out again.
+ */
+export async function sendConfirmation(s: Submission): Promise<void> {
+  if (!smtpConfigured() || !s.email) return;
+
+  const { rows } = await pool.query(
+    `SELECT key, value_bs FROM page_content
+      WHERE key IN ('contact.form.success.title', 'contact.response.note')`
+  );
+  const copy: Record<string, string> = {};
+  for (const r of rows) copy[r.key] = (r.value_bs || '').trim();
+
+  const title = copy['contact.form.success.title'] || 'Hvala Vam na upitu';
+  const note = copy['contact.response.note'] || 'Odgovaramo u roku od 4-8 sati.';
+
+  const html = `
+    <div style="font-family:system-ui,sans-serif;max-width:560px;color:#151311">
+      <h2 style="font-weight:400">${escape(title)}</h2>
+      <p style="font-size:14px;line-height:1.7;color:#3a352f">${escape(note).replace(/\n/g, '<br>')}</p>
+      <p style="font-size:13px;line-height:1.7;color:#6b6358">
+        Ovo je automatska potvrda da je Vaš upit primljen. Ne treba odgovarati na ovu poruku.
+      </p>
+      <p style="font-size:13px;color:#6b6358">— 387 Weddings</p>
+    </div>`;
+
+  await getTransport().sendMail({
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    to: s.email,
+    subject: title,
+    html,
+  });
+}
+
 /** Fire and forget: the visitor never waits on, or fails because of, email. */
 export function sendInquiryInBackground(s: Submission): void {
   sendInquiry(s).catch(err => console.error('[mail] inquiry notification failed:', err?.message || err));
+  sendConfirmation(s).catch(err => console.error('[mail] confirmation failed:', err?.message || err));
 }

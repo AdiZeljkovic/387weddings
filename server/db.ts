@@ -218,9 +218,9 @@ export async function initDB() {
         ('about.invite.title.part1', 'Poziv: Naslov linija 1', 'about', 'invite', 'text', 'We would love to hear', 'Želimo čuti', 0),
         ('about.invite.title.part2', 'Poziv: Naslov linija 2', 'about', 'invite', 'text', 'from you', 'vašu priču', 1),
         ('about.invite.p1', 'Poziv: Paragraf 1 (prazno = sakriveno)', 'about', 'invite', 'textarea', 'We believe the best stories begin with an honest conversation. That is why we never rush, we want to know you first.', 'Vjerujemo da najbolje priče počinju iskrenim razgovorom. Zato ne žurimo, prvo želimo upoznati vas.', 2),
-        ('about.invite.p2', 'Poziv: Paragraf 2 (prazno = sakriveno)', 'about', 'invite', 'textarea', 'Write to us and tell us how you imagined your day. We reply within 24 to 48 hours.', 'Javite nam se i ispričajte kako ste zamislili svoj dan. Odgovaramo u roku od 24 do 48 sati.', 3),
+        ('about.invite.p2', 'Poziv: Paragraf 2 (prazno = sakriveno)', 'about', 'invite', 'textarea', 'Write to us and tell us how you imagined your day. We reply within 4 to 8 hours.', 'Javite nam se i ispričajte kako ste zamislili svoj dan. Odgovaramo u roku od 4-8 sati.', 3),
         ('about.invite.button', 'Poziv: Tekst gumba', 'about', 'invite', 'text', 'Get in touch', 'Javite nam se', 4),
-        ('contact.response.note', 'Napomena o odgovoru', 'contact', 'connect', 'textarea', 'We typically respond within 24-48 hours. If you haven''t heard from us, please check your spam folder or reach out via Instagram.', 'Obično odgovaramo u roku od 4-8 sati. 
+        ('contact.response.note', 'Napomena o odgovoru', 'contact', 'connect', 'textarea', 'We typically respond within 4-8 hours. If you haven''t heard from us, please check your spam folder or reach out via Instagram.', 'Obično odgovaramo u roku od 4-8 sati. 
 Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
         ('contact.group.you', 'Obrazac: Naslov grupe 1', 'contact', 'form', 'text', 'About you', 'O vama', -3),
         ('contact.group.wedding', 'Obrazac: Naslov grupe 2', 'contact', 'form', 'text', 'About the wedding', 'O vjenčanju', -2),
@@ -311,6 +311,12 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
         ('portfolio.card.studio', 'Kartica: Oznaka "Studio"', 'portfolio', 'filter', 'text', 'Studio', 'Studio', 11),
         ('portfolio.card.portrait', 'Kartica: Oznaka "Portreti"', 'portfolio', 'filter', 'text', 'Portrait', 'Portreti', 12),
         ('portfolio.hero.tag', 'Hero: Oznaka iznad naslova', 'portfolio', 'hero', 'text', 'Work', 'Radovi', -1),
+        ('contact.err.name', 'Forma: Greška – ime', 'contact', 'form', 'text', 'Please tell us your name.', 'Molimo upišite svoje ime.', 90),
+        ('contact.err.email', 'Forma: Greška – email prazan', 'contact', 'form', 'text', 'Please enter your email address.', 'Molimo upišite svoju email adresu.', 91),
+        ('contact.err.email.bad', 'Forma: Greška – email neispravan', 'contact', 'form', 'text', 'That email address does not look right.', 'Ova email adresa ne izgleda ispravno.', 92),
+        ('contact.err.date', 'Forma: Greška – datum', 'contact', 'form', 'text', 'Please choose the date of your wedding.', 'Molimo odaberite datum vjenčanja.', 93),
+        ('contact.err.consent', 'Forma: Greška – pristanak', 'contact', 'form', 'text', 'Please agree before sending.', 'Molimo potvrdite pristanak prije slanja.', 94),
+        ('contact.form.again', 'Forma: Dugme "Novi upit"', 'contact', 'form', 'text', 'Send another message', 'Pošalji novi upit', 95),
         ('portfolio.hero.title', 'Hero: Naslov', 'portfolio', 'hero', 'text', 'Stories that', 'Priče koje', 0),
         ('portfolio.hero.subtitle', 'Hero: Podnaslov', 'portfolio', 'hero', 'text', 'last', 'traju', 1),
         ('cookie.text', 'Cookie baner: Tekst', 'privacy', 'cookie', 'textarea', 'We use cookies to understand how the site is used. Analytics only runs if you agree.', 'Koristimo kolačiće da razumijemo kako se sajt koristi. Analitika se pokreće samo ako pristanete.', 0),
@@ -417,6 +423,18 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
             value_bs = replace(value_bs, 'svaki par', '*svaki par*')
         WHERE key = 'portfolio.approach.desc'
           AND value_bs NOT LIKE '%*%' AND value_en NOT LIKE '%*%';
+      -- An empty recipient meant the owner got no notification at all and had
+      -- no way to tell. Default it to the public address they already set.
+      UPDATE site_settings SET value = (SELECT value FROM site_settings WHERE key = 'email')
+        WHERE key = 'contact_recipient'
+          AND COALESCE(btrim(value), '') = ''
+          AND COALESCE((SELECT btrim(value) FROM site_settings WHERE key = 'email'), '') <> '';
+      UPDATE page_content
+        SET value_bs = replace(replace(replace(value_bs,
+              '24 do 48 sati', '4-8 sati'), '24-48 sati', '4-8 sati'), '24–48 sati', '4-8 sati'),
+            value_en = replace(replace(replace(value_en,
+              '24 to 48 hours', '4 to 8 hours'), '24-48 hours', '4-8 hours'), '24–48 hours', '4-8 hours')
+        WHERE value_bs ~ '24.{0,4}48' OR value_en ~ '24.{0,4}48';
       UPDATE page_content SET value_en = 'Tell us', value_bs = 'Ispričajte nam'
         WHERE key = 'contact.hero.title.part1' AND value_bs IN ('Pošaljite', '');
       UPDATE page_content SET value_en = 'your', value_bs = 'svoju'

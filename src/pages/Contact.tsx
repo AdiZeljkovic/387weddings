@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { CheckCircle2, AlertCircle, Loader2, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
@@ -25,6 +25,17 @@ const AREA =
   'box-border w-full px-4 py-3.5 border border-[#e0d9cc] rounded-none bg-cream-soft ' +
   'font-sans text-[14px] font-light text-[#1a1a1a] placeholder:text-[#b3aca2] resize-none ' +
   'outline-none focus:border-gold-600 transition-colors duration-250';
+
+// The one-line reason a field is not accepted, under the field itself
+const FieldError = ({ id, message }: { id: string; message?: string }) =>
+  message ? (
+    <p id={`${id}-err`} role="alert" className="flex items-center gap-1.5 mt-1.5 text-[12px] font-light text-red-700">
+      <AlertCircle size={12} className="flex-none" aria-hidden="true" />
+      {message}
+    </p>
+  ) : null;
+
+const errRing = (bad?: string) => (bad ? ' !border-red-600 focus:!border-red-600' : '');
 
 const Label = ({ htmlFor, children, required, style }: {
   htmlFor: string; children: React.ReactNode; required?: boolean; style?: React.CSSProperties;
@@ -58,33 +69,40 @@ const Contact = () => {
   const [formData, setFormData] = useState({ ...EMPTY });
   const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<Status>('idle');
-  const [showModal, setShowModal] = useState(false);
-  const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadSettings().then(setSettings).catch(err => console.warn('Contact: settings load failed', err));
   }, []);
 
   const set = (k: keyof typeof EMPTY) => (v: string) => setFormData(p => ({ ...p, [k]: v }));
+  // Typing into a field clears its complaint rather than leaving it red
+  const clearErr = (k: string) =>
+    setErrors(p => (p[k] ? { ...p, [k]: '' } : p));
 
-  const closeModal = useCallback(() => { setShowModal(false); setStatus('idle'); }, []);
 
-  useEffect(() => {
-    if (!showModal) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal(); };
-    document.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    closeBtnRef.current?.focus();
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [showModal, closeModal]);
+  // A press on the button with an empty form used to return silently: nothing
+  // happened and nothing said what was missing.
+  const validate = () => {
+    const e: Record<string, string> = {};
+    if (!formData.name.trim()) e.name = t('contact.err.name');
+    if (!formData.email.trim()) e.email = t('contact.err.email');
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(formData.email.trim())) e.email = t('contact.err.email.bad');
+    if (!formData.date.trim()) e.date = t('contact.err.date');
+    if (!consent) e.consent = t('contact.err.consent');
+    return e;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !consent) return;
+    const found = validate();
+    setErrors(found);
+    if (Object.keys(found).length > 0) {
+      // Put the cursor on the first thing that needs filling in
+      const first = ['name', 'email', 'date', 'consent'].find(k => found[k]);
+      document.getElementById(`c-${first}`)?.focus();
+      return;
+    }
     setStatus('submitting');
     try {
       const res = await fetch('/api/contact', {
@@ -94,9 +112,10 @@ const Contact = () => {
       });
       if (!res.ok) throw new Error('Server error');
       setStatus('success');
-      setShowModal(true);
       setFormData({ ...EMPTY });
       setConsent(false);
+      setErrors({});
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
       setStatus('error');
     }
@@ -118,7 +137,7 @@ const Contact = () => {
   const videoOptions = optionsFor('contact.form.video', 3);
 
   const heading = (
-    <h1 className="font-serif font-light text-[clamp(22px,7vw,32px)] lg:text-[48px] leading-[1.2] lg:leading-[60px] tracking-[0.04em] lg:tracking-[0.1em] uppercase m-0 mb-3.5 max-w-full break-words">
+    <h1 className="font-serif font-light text-[clamp(24px,8vw,32px)] lg:text-[clamp(32px,3.2vw,42px)] leading-[1.2] lg:leading-[1.25] tracking-[0.04em] lg:tracking-[0.1em] uppercase m-0 mb-3.5 max-w-full break-words">
       <span className="block" style={getContentStyle('contact.hero.title.part1')}>
         {t('contact.hero.title.part1')}
       </span>
@@ -150,29 +169,6 @@ const Contact = () => {
 
   return (
     <div className="bg-cream">
-      {/* ── Success modal ──────────────────────────────────────────────────── */}
-      {showModal && (
-        <div className="fixed inset-0 z-[1500] flex items-center justify-center p-5"
-          role="dialog" aria-modal="true" aria-labelledby="contact-success-title">
-          <div className="absolute inset-0 bg-ink-900/55" onClick={closeModal} aria-hidden="true" />
-          <div className="relative w-full max-w-md bg-white border border-rule px-7 py-10 text-center shadow-2xl">
-            <button ref={closeBtnRef} onClick={closeModal} aria-label={t('contact.form.close')}
-              className="absolute top-3.5 right-3.5 w-11 h-11 flex items-center justify-center text-ink-400 hover:text-ink-900 transition-colors">
-              <X size={17} />
-            </button>
-            <CheckCircle2 size={38} strokeWidth={1.2} className="text-gold-600 mx-auto mb-5" aria-hidden="true" />
-            <h2 id="contact-success-title" style={getContentStyle('contact.form.success.title')}
-              className="text-2xl font-serif font-light text-ink-900 mb-3">
-              {t('contact.form.success.title')}
-            </h2>
-            <p style={getContentStyle('contact.form.success.desc')}
-              className="text-ink-500 text-sm font-light leading-relaxed">
-              {t('contact.form.success.desc')}
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* ── Hero — text beside a slowly zooming frame on desktop, above its own
           frame on a phone. The title, ornament and intro are one set of
           elements; only the box around them changes. The two crops the brief
@@ -182,7 +178,7 @@ const Contact = () => {
           {heading}{ornament}{intro}
         </div>
 
-        <div className="relative flex-none w-full h-[320px] lg:w-[661px] lg:h-auto overflow-hidden">
+        <div className="relative flex-none w-full h-[220px] lg:w-[661px] lg:h-auto overflow-hidden">
           <picture className="block w-full h-full">
             <source media="(min-width: 1024px)" srcSet={heroDesktop.srcSet || heroDesktop.src} sizes="46vw" />
             <img
@@ -201,7 +197,35 @@ const Contact = () => {
       </section>
 
       {/* ── The form ───────────────────────────────────────────────────────── */}
-      <section className="bg-white px-5 lg:px-6 pt-14 lg:pt-24 pb-16 lg:pb-20">
+      <section className="bg-white px-5 lg:px-6 pt-12 lg:pt-24 pb-14 lg:pb-20">
+        {status === 'success' ? (
+          <div
+            role="status"
+            className="max-w-[560px] mx-auto border border-rule bg-cream-soft text-center px-6 lg:px-10 py-14 lg:py-16"
+          >
+            <CheckCircle2 size={38} strokeWidth={1.2} className="text-gold-600 mx-auto mb-5" aria-hidden="true" />
+            <h2
+              style={getContentStyle('contact.form.success.title')}
+              className="font-serif font-light text-[24px] lg:text-[28px] text-ink-900 m-0 mb-3"
+            >
+              {t('contact.form.success.title')}
+            </h2>
+            <p
+              style={getContentStyle('contact.form.success.desc')}
+              className="text-ink-500 text-[14px] font-light leading-[1.85] max-w-[400px] mx-auto m-0"
+            >
+              {t('contact.form.success.desc')}
+            </p>
+            <button
+              type="button"
+              onClick={() => setStatus('idle')}
+              style={getContentStyle('contact.form.again')}
+              className="btn mt-9 inline-block border border-ink-900/30 text-ink-900 text-[11px] font-medium tracking-[0.22em] uppercase px-8 py-3.5 hover:text-white"
+            >
+              {t('contact.form.again')}
+            </button>
+          </div>
+        ) : (
         <form
           onSubmit={handleSubmit}
           method="post"
@@ -213,17 +237,25 @@ const Contact = () => {
 
           <div>
             <Label htmlFor="c-name" required style={getContentStyle('contact.form.name')}>{t('contact.form.name')}</Label>
-            <input id="c-name" name="name" type="text" required autoComplete="name" className={INPUT}
+            <input id="c-name" name="name" type="text" autoComplete="name"
+              aria-invalid={Boolean(errors.name)}
+              aria-describedby={errors.name ? 'c-name-err' : undefined}
+              className={INPUT + errRing(errors.name)}
               placeholder={t('contact.form.name.placeholder')}
-              value={formData.name} onChange={e => set('name')(e.target.value)} />
+              value={formData.name} onChange={e => { set('name')(e.target.value); clearErr('name'); }} />
+            <FieldError id="c-name" message={errors.name} />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-7">
             <div>
               <Label htmlFor="c-email" required style={getContentStyle('contact.form.email')}>{t('contact.form.email')}</Label>
-              <input id="c-email" name="email" type="email" required autoComplete="email" className={INPUT}
+              <input id="c-email" name="email" type="email" autoComplete="email"
+                aria-invalid={Boolean(errors.email)}
+                aria-describedby={errors.email ? 'c-email-err' : undefined}
+                className={INPUT + errRing(errors.email)}
                 placeholder={t('contact.form.email.placeholder')}
-                value={formData.email} onChange={e => set('email')(e.target.value)} />
+                value={formData.email} onChange={e => { set('email')(e.target.value); clearErr('email'); }} />
+              <FieldError id="c-email" message={errors.email} />
             </div>
             <div>
               <Label htmlFor="c-phone" style={getContentStyle('contact.form.phone')}>{t('contact.form.phone')}</Label>
@@ -239,11 +271,12 @@ const Contact = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-7">
             <div>
               <Label htmlFor="c-date" required style={getContentStyle('contact.form.date')}>{t('contact.form.date')}</Label>
-              <input id="c-date" name="date" type="text" required min={today} className={INPUT}
-                placeholder={t('contact.form.date.placeholder')}
-                onFocus={e => { e.target.type = 'date'; }}
-                onBlur={e => { if (!e.target.value) e.target.type = 'text'; }}
-                value={formData.date} onChange={e => set('date')(e.target.value)} />
+              <input id="c-date" name="date" type="date" min={today}
+                aria-invalid={Boolean(errors.date)}
+                aria-describedby={errors.date ? 'c-date-err' : undefined}
+                className={INPUT + errRing(errors.date)}
+                value={formData.date} onChange={e => { set('date')(e.target.value); clearErr('date'); }} />
+              <FieldError id="c-date" message={errors.date} />
             </div>
             <div>
               <Label htmlFor="c-location" required style={getContentStyle('contact.form.location')}>{t('contact.form.location')}</Label>
@@ -295,12 +328,18 @@ const Contact = () => {
               value={formData.message} onChange={e => set('message')(e.target.value)} />
           </div>
 
-          <label htmlFor="c-consent" className="flex items-center gap-3 text-[13px] font-light text-[#6b6b6b] -mt-1 min-h-11 cursor-pointer">
-            <input id="c-consent" name="consent" type="checkbox" required checked={consent}
-              onChange={e => setConsent(e.target.checked)}
-              className="w-4 h-4 m-0 flex-none accent-ink-900 cursor-pointer" />
-            <span style={getContentStyle('contact.form.consent')}>{t('contact.form.consent')}</span>
-          </label>
+          <div className="-mt-1">
+            <label htmlFor="c-consent" className="flex items-center gap-3 text-[13px] font-light text-[#6b6b6b] min-h-11 cursor-pointer">
+              <input id="c-consent" name="consent" type="checkbox" checked={consent}
+                aria-invalid={Boolean(errors.consent)}
+                aria-describedby={errors.consent ? 'c-consent-err' : undefined}
+                onChange={e => { setConsent(e.target.checked); clearErr('consent'); }}
+                className={`w-4 h-4 m-0 flex-none accent-ink-900 cursor-pointer${
+                  errors.consent ? ' outline outline-1 outline-red-600 outline-offset-2' : ''}`} />
+              <span style={getContentStyle('contact.form.consent')}>{t('contact.form.consent')}</span>
+            </label>
+            <FieldError id="c-consent" message={errors.consent} />
+          </div>
 
           {status === 'error' && (
             <p role="alert" style={getContentStyle('contact.form.error')}
@@ -319,10 +358,11 @@ const Contact = () => {
             </button>
           </div>
         </form>
+        )}
       </section>
 
       {/* ── Response note ──────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-[#f7f6f3] text-center px-6 pt-[72px] pb-20">
+      <section className="relative overflow-hidden bg-white lg:bg-[#f7f6f3] text-center px-6 pt-14 lg:pt-[72px] pb-0 lg:pb-20">
         <OliveBranch className="hidden lg:block absolute top-10 w-[300px] left-[calc(50%-620px)] animate-[drift_16s_ease-in-out_infinite_alternate] motion-reduce:animate-none" />
         <OliveBranch className="hidden lg:block absolute top-10 w-[300px] right-[calc(50%-620px)] animate-[drift_16s_ease-in-out_infinite_alternate] motion-reduce:animate-none" flip />
         <p

@@ -37,18 +37,21 @@ const Bio = ({ n, portrait, ratio, flip, altText }: {
   const right = !flip;  // Melisa reads from the right edge on a phone
 
   return (
-    <div className="max-w-[1248px] mx-auto flex flex-wrap items-center gap-9 lg:gap-26">
+    <div className="max-w-[1248px] mx-auto flex flex-wrap items-center gap-10 lg:gap-26">
       {/* Portrait — second on a phone, and on desktop whichever side `flip` says */}
+      {/* On a phone the board gives both portraits the same arrangement: the
+          photograph flush with the page's left edge and the gold frame offset
+          down and to the right. Aldin's only mirrors from lg up, where the two
+          biographies sit on opposite sides. */}
       <div
-        className={`flex-1 min-w-0 basis-full lg:basis-[440px] relative order-2 pb-6 lg:pb-14 ${
-          flip ? 'lg:order-2 pl-6 lg:pl-14' : 'lg:order-1 pr-6 lg:pr-14'
+        className={`flex-1 min-w-0 basis-full lg:basis-[440px] relative order-2 pr-6 pb-6 lg:pb-14 ${
+          flip ? 'lg:order-2 lg:pr-0 lg:pl-14' : 'lg:order-1 lg:pr-14'
         }`}
       >
-        {/* Offset gold frame — on phones too, at a smaller offset */}
         <span
           aria-hidden="true"
-          className={`absolute top-6 lg:top-14 bottom-0 border border-gold-600 ${
-            flip ? 'left-0 right-6 lg:right-14' : 'left-6 lg:left-14 right-0'
+          className={`absolute top-6 lg:top-14 bottom-0 border border-gold-600 left-6 right-0 ${
+            flip ? 'lg:left-0 lg:right-14' : 'lg:left-14 lg:right-0'
           }`}
         />
         <Reveal kind="mask" className="relative overflow-hidden bg-rule" style={{ aspectRatio: ratio }}>
@@ -94,7 +97,7 @@ const Bio = ({ n, portrait, ratio, flip, altText }: {
             as="p"
             delay={0.08}
             style={getContentStyle(`${base}.p1`)}
-            className={`font-serif font-normal text-[20px] lg:text-[26px] leading-[1.5] text-[#2a2622] max-w-[520px] m-0 mb-6 lg:mb-7 ${
+            className={`font-serif font-normal text-[21px] lg:text-[26px] leading-[1.5] text-[#2a2622] max-w-[520px] m-0 mb-[22px] lg:mb-7 ${
               right ? 'ml-auto lg:ml-0' : ''
             }`}
           >
@@ -108,8 +111,8 @@ const Bio = ({ n, portrait, ratio, flip, altText }: {
               key={p}
               delay={0.14 + i * 0.07}
               style={getContentStyle(`${base}.${p}`)}
-              className={`text-[15px] lg:text-[18px] font-light leading-[1.8] text-ink-700 max-w-[500px] m-0 ${
-                i === 0 ? 'mb-5 lg:mb-[22px]' : ''
+              className={`text-[16px] lg:text-[18px] font-light leading-[1.8] text-ink-700 max-w-[500px] m-0 ${
+                i === 0 ? 'mb-4 lg:mb-[22px]' : ''
               } ${right ? 'ml-auto lg:ml-0' : ''}`}
             >
               {t(`${base}.${p}`)}
@@ -138,13 +141,13 @@ const About = () => {
   return (
     <div className="bg-cream">
       {/* ── Melisa — portrait left ─────────────────────────────────────────── */}
-      <section className="relative overflow-hidden px-6 lg:px-24 pt-[72px] lg:pt-30 pb-[72px] lg:pb-32">
+      <section className="relative overflow-hidden px-6 lg:px-24 pt-14 lg:pt-30 pb-16 lg:pb-32">
         <OliveBranch className="hidden lg:block absolute right-24 bottom-2.5 w-[300px] animate-[drift_16s_ease-in-out_infinite_alternate] motion-reduce:animate-none" />
         <Bio n={1} portrait={melisa} ratio="4 / 5" altText={imgs['img.about.melisa.alt']} />
       </section>
 
       {/* ── Aldin — mirrored, on the lighter band ──────────────────────────── */}
-      <section className="relative overflow-hidden bg-cream-light px-6 lg:px-24 py-[72px] lg:py-32">
+      <section className="relative overflow-hidden bg-cream-light px-6 lg:px-24 pt-14 lg:pt-32 pb-16 lg:pb-32">
         <OliveBranch className="hidden lg:block absolute left-24 bottom-6 w-[170px] animate-[drift_16s_ease-in-out_infinite_alternate] motion-reduce:animate-none" flip />
         <Bio n={2} portrait={aldin} ratio="3 / 4" flip altText={imgs['img.about.aldin.alt']} />
       </section>
@@ -155,7 +158,7 @@ const About = () => {
           frames sit in a row between the title and the copy. `lg:contents`
           dissolves the phone row on desktop so the frames can be absolutely
           placed against this section — one set of elements, two layouts.     */}
-      <section className="bg-white text-ink-900 text-center px-6 py-[72px] lg:py-28">
+      <section className="bg-white text-ink-900 text-center px-5 lg:px-6 py-16 lg:py-28">
         <div className="relative max-w-[1250px] mx-auto lg:h-[424px]">
           <h2 className="font-serif font-light text-[30px] lg:text-[41.6px] leading-[1.2] lg:leading-[1.15] tracking-[0.05em] uppercase max-w-[490px] mx-auto m-0 mb-7 lg:mb-8">
             <span className="block" style={getContentStyle('about.invite.title.part1')}>{t('about.invite.title.part1')}</span>
