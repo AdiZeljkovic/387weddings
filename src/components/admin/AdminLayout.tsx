@@ -11,9 +11,7 @@ const navItems = [
   { path: '/admin',              label: 'Dashboard',   icon: LayoutDashboard, exact: true },
   { path: '/admin/pages',        label: 'Stranice',    icon: FileEdit },
   { path: '/admin/images',       label: 'Fotografije', icon: Images },
-  { path: '/admin/instagram',    label: 'Instagram',   icon: Instagram },
   { path: '/admin/stories',      label: 'Priče',       icon: BookOpen },
-  { path: '/admin/gallery',      label: 'Galerija',    icon: Image },
   { path: '/admin/submissions',  label: 'Upiti',       icon: Mail },
   { path: '/admin/settings',     label: 'Postavke',    icon: Settings },
 ];

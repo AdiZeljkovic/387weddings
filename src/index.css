@@ -221,7 +221,12 @@
 /* The hero is exactly the visible screen. svh excludes a phone's collapsible
    address bar, so nothing is hidden behind it; dvh then vh are the fallbacks
    for browsers that do not know svh. */
-.hero-screen { height: 100vh; height: 100dvh; height: 100svh; }
+.hero-screen {
+  height: calc(100vh - var(--consent-h, 0px));
+  height: calc(100dvh - var(--consent-h, 0px));
+  height: calc(100svh - var(--consent-h, 0px));
+  transition: height .35s ease;
+}
 
 /* ── Photographs ─────────────────────────────────────────
    Any image inside a .zoom box grows 6% on hover; work cards go further.     */
@@ -250,6 +255,8 @@
     .px-big  { animation: driftBig  linear both; animation-timeline: view(); animation-range: cover; }
     .px-colA { animation: driftColA linear both; animation-timeline: view(); animation-range: cover; }
     .px-colB { animation: driftColB linear both; animation-timeline: view(); animation-range: cover; }
+    @keyframes driftDetail { from { translate: 0 -26px; } to { translate: 0 26px; } }
+    .px-detail { animation: driftDetail linear both; animation-timeline: view(); animation-range: cover; }
   }
 }
 
@@ -260,6 +267,27 @@
 }
 .lightbox-in { animation: lightboxIn .3s cubic-bezier(.2,.6,.2,1) both; }
 @media (prefers-reduced-motion: reduce) { .lightbox-in { animation: none; } }
+
+/* ── Home "O nama" block ─────────────────────────────────
+   The board orders it heading, paragraphs, photograph, button on a phone, and
+   keeps the button under the paragraphs beside the photograph on a desktop.
+   One set of elements, placed by grid areas, rather than two copies.        */
+.home-about {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "text" "image" "btn";
+}
+.home-about > .ha-text  { grid-area: text; }
+.home-about > .ha-image { grid-area: image; }
+.home-about > .ha-btn   { grid-area: btn; }
+@media (min-width: 1024px) {
+  .home-about {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: 1fr auto auto 1fr;
+    grid-template-areas: ". image" "text image" "btn image" ". image";
+    column-gap: 104px;
+  }
+}
 
 /* ── Scroll reveals ────────────────────────────────────────────────────────
    Driven by one IntersectionObserver (see Reveal.tsx), which adds `is-in`.
@@ -278,6 +306,12 @@
   transform-origin: center;
   transition: transform 0.8s cubic-bezier(.2, .6, .2, 1);
 }
+.rv-frame {
+  opacity: 0;
+  transform: translate(-28px, 28px);
+  transition: opacity 0.9s ease, transform 0.9s cubic-bezier(.2, .6, .2, 1);
+}
+.rv-frame.is-in { opacity: 1; transform: none; }
 .rv-up.is-in   { opacity: 1; transform: none; }
 .rv-mask.is-in { clip-path: inset(0 0 0 0); }
 .rv-line.is-in { transform: none; }
@@ -292,7 +326,7 @@
 .rv-zoom.is-in img { scale: 1; }
 
 @media (prefers-reduced-motion: reduce) {
-  .rv-up, .rv-mask, .rv-line {
+  .rv-up, .rv-mask, .rv-line, .rv-frame {
     opacity: 1;
     transform: none;
     clip-path: none;
@@ -322,6 +356,15 @@
   from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: none; }
 }
+/* The mark's two parts rise in one after the other, 14px, 0.35s apart */
+.logo-in {
+  opacity: 0;
+  animation: introFade 0.6s ease both;
+}
+.logo-in-1 { animation-delay: 0.1s; }
+.logo-in-2 { animation-delay: 0.45s; }
+@media (prefers-reduced-motion: reduce) { .logo-in { opacity: 1; animation: none; } }
+
 @keyframes introLine {
   from { transform: scaleX(0); }
   to   { transform: scaleX(1); }
@@ -332,9 +375,22 @@
 }
 
 /* Hero frames drift from 1.06 to 1 while they are on screen (brief: up to 6%) */
+/* Each hero frame drifts in towards the viewer while it is on screen, up to
+   6%, as the board's slideshow does. */
 @keyframes heroZoom {
-  from { transform: scale(1.06); }
+  from { transform: scale(1); }
+  to   { transform: scale(1.06); }
+}
+/* The first frame, under the opening curtain, settles from 1.12 as the sheet
+   lifts away. */
+@keyframes heroIntro {
+  from { transform: scale(1.12); }
   to   { transform: scale(1); }
+}
+/* A slide tick fills over exactly the time its frame is shown */
+@keyframes tickFill {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
 }
 @keyframes slowZoom {
   from { transform: scale(1); }

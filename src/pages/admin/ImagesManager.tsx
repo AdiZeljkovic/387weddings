@@ -7,68 +7,58 @@ import { invalidateSettingsCache } from '../../lib/settingsCache';
 // key   → stored in site_settings
 // fallback → shown if no custom image set yet (current Unsplash placeholders)
 
+// Every slot says where on the site it appears and the shape it is shown at,
+// so the owner can choose a photograph that fits rather than one that gets
+// cropped. The shapes follow the mockup boards. Groups for sections the site
+// no longer has (a "Kako radimo" process strip, a Radovi hero, a Kontakt
+// ornament image) were removed — nothing on the site read them.
 const SECTIONS = [
   {
     page: 'home', label: 'Naslovna',
     groups: [
       {
-        label: 'Hero — Desktop', hint: 'Smjenjuju se svake 4 sekunde — prikazuju se samo oni slotovi koje napuniš, a dok ni jedan nije postavljen stoje privremene slike. Preporučeno: 2400×1600 px, pejzažna (horizontalna) orijentacija. Obavezno postavi točku fokusa, jer hero prekriva cijeli ekran.',
+        label: 'Hero — desktop',
+        hint: 'Smjenjuju se svake 4 sekunde; prikazuju se samo slotovi koje napuniš. Hero prekriva cijeli ekran, pa obavezno postavi točku fokusa (lica, mladenci). Najbolje vodoravna fotografija, 2400 px ili više po dužoj strani.',
         images: [
-          { key: 'img.home.hero.1', label: 'Slajd 1', fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.hero.2', label: 'Slajd 2', fallback: 'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.hero.3', label: 'Slajd 3', fallback: 'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.hero.4', label: 'Slajd 4 (opcija)', fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.hero.5', label: 'Slajd 5 (opcija)', fallback: 'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.hero.1', label: 'Slajd 1', ratio: '16:9 · cijeli ekran', fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.hero.2', label: 'Slajd 2', ratio: '16:9 · cijeli ekran', fallback: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.hero.3', label: 'Slajd 3', ratio: '16:9 · cijeli ekran', fallback: 'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.hero.4', label: 'Slajd 4', ratio: '16:9 · cijeli ekran', fallback: 'https://images.unsplash.com/photo-1544078751-58fee2d8a03b?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.hero.5', label: 'Slajd 5', ratio: '16:9 · cijeli ekran', fallback: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=800' },
         ],
       },
       {
-        label: 'Hero — Mobilna verzija', hint: 'Uspravni kadar za uski ekran, slot po slot uz desktop verziju. Preporučeno: 1200×1800 px, portretna (vertikalna) orijentacija. Ako ostaviš prazno, koristi se desktop slika — ali će na visokom ekranu izgledati mekše, jer se širina odrezuje.',
+        label: 'Hero — mobitel (opciono, uz svaki slot)',
+        hint: 'Uspravni kadar istog slajda za uski ekran. Ako ostaviš prazno, koristi se desktop slika, ali na telefonu se od nje vidi samo uzak isječak.',
         images: [
-          { key: 'img.home.hero.mobile.1', label: 'Mob slajd 1', fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.hero.mobile.2', label: 'Mob slajd 2', fallback: 'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.hero.mobile.3', label: 'Mob slajd 3', fallback: 'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.hero.mobile.4', label: 'Mob slajd 4 (opcija)', fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.hero.mobile.5', label: 'Mob slajd 5 (opcija)', fallback: 'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.hero.mobile.1', label: 'Mob slajd 1', ratio: '2:3 · uspravno', fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.hero.mobile.2', label: 'Mob slajd 2', ratio: '2:3 · uspravno', fallback: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.hero.mobile.3', label: 'Mob slajd 3', ratio: '2:3 · uspravno', fallback: 'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.hero.mobile.4', label: 'Mob slajd 4', ratio: '2:3 · uspravno', fallback: 'https://images.unsplash.com/photo-1544078751-58fee2d8a03b?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.hero.mobile.5', label: 'Mob slajd 5', ratio: '2:3 · uspravno', fallback: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=800' },
         ],
       },
       {
-        label: 'Istaknuti radovi — mozaik (9 slika)', hint: 'Mozaik uz naslov "Istaknuti radovi". Redovi 1 i 2 stoje desno od naslova, red 3 ide punom širinom. Preporučeno: 1400×1000 px, pejzažna orijentacija (slike se režu u okvir).',
+        label: 'Istaknuti radovi — mozaik (9 slika)',
+        hint: 'Desktop: lijevo jedna velika uspravna, pa dva stupca po tri vodoravne, pa red od dvije ispod. Mobitel: široka, dvije, dvije, široka, dvije, široka. Omjer uz svaki slot je onaj u kojem se prikazuje na desktopu.',
         images: [
-          { key: 'img.home.grid.1', label: 'Red 1 — lijevo',   fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.grid.2', label: 'Red 1 — sredina',  fallback: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.grid.3', label: 'Red 1 — desno',    fallback: 'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.grid.4', label: 'Red 2 — lijevo (usko)', fallback: 'https://images.unsplash.com/photo-1544078751-58fee2d8a03b?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.grid.5', label: 'Red 2 — sredina (široko)', fallback: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.grid.6', label: 'Red 2 — desno',    fallback: 'https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.grid.7', label: 'Red 3 — lijevo',   fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.grid.8', label: 'Red 3 — sredina',  fallback: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.grid.9', label: 'Red 3 — desno',    fallback: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.grid.1', label: '1 · velika lijevo', ratio: '2:3', fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.grid.2', label: '2 · stupac 1, gore', ratio: '3:2', fallback: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.grid.3', label: '3 · stupac 1, sredina', ratio: '3:2', fallback: 'https://images.unsplash.com/photo-1510076857177-7470076d4098?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.grid.4', label: '4 · stupac 1, dolje', ratio: '3:2', fallback: 'https://images.unsplash.com/photo-1544078751-58fee2d8a03b?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.grid.5', label: '5 · stupac 2, gore', ratio: '3:2', fallback: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.grid.6', label: '6 · stupac 2, sredina', ratio: '3:2', fallback: 'https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.grid.7', label: '7 · stupac 2, dolje', ratio: '3:2', fallback: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.grid.8', label: '8 · donji red, široka', ratio: '5:2', fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.grid.9', label: '9 · donji red, uska', ratio: '5:4', fallback: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=800' },
         ],
       },
       {
-        label: 'Proces — fotografije koraka', hint: 'Slike uz tekstualne blokove u sekciji "Kako radimo". Preporučeno: 1200×1500 px.',
+        label: 'Sekcija "O nama" na naslovnoj',
+        hint: 'Velika uspravna fotografija uz tekst "Više od fotografija", i mala koja na desktopu preklapa njen donji lijevi ugao (na mobitelu se ne prikazuje).',
         images: [
-          { key: 'img.home.process.1', label: 'Korak 01', fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.process.2', label: 'Korak 02', fallback: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.process.3', label: 'Korak 03', fallback: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=800' },
-        ],
-      },
-      {
-        label: 'Sekcija "O nama" na naslovnoj', hint: 'Dvije fotografije uz tekst "Više od fotografija". Velika je pejzažna (preporučeno 1600×1280 px), mala je portretna i preklapa njen donji lijevi ugao (preporučeno 600×800 px).',
-        images: [
-          { key: 'img.home.team.aldin',  label: 'Velika fotografija',            fallback: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.home.team.melisa', label: 'Mala fotografija (sa 387 oznakom)', fallback: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=800' },
-        ],
-      },
-    ],
-  },
-  {
-    page: 'portfolio', label: 'Radovi',
-    groups: [
-      {
-        label: 'Hero pozadina', hint: 'Velika fotografija u pozadini header-a stranice "Radovi". Preporučeno: 2400×1600 px, pejzažna orijentacija.',
-        images: [
-          { key: 'img.portfolio.hero', label: 'Hero', fallback: 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.team.aldin', label: 'Velika fotografija', ratio: '4:5', fallback: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.home.team.melisa', label: 'Mala fotografija (detalj)', ratio: '2:3', fallback: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=800' },
         ],
       },
     ],
@@ -77,18 +67,20 @@ const SECTIONS = [
     page: 'about', label: 'O nama',
     groups: [
       {
-        label: 'Portreti uz biografije', hint: 'Po jedan portret uz svaku biografiju. Prikazuju se crno-bijelo (sajt ih sam prebacuje), pa boja originala nije bitna. Preporučeno: 1100×1375 px, portretna orijentacija.',
+        label: 'Portreti uz biografije',
+        hint: 'Po jedan portret uz svaku biografiju, u boji kako ga učitaš.',
         images: [
-          { key: 'img.about.melisa', label: 'Portret uz biografiju 1', fallback: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.about.aldin',  label: 'Portret uz biografiju 2', fallback: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.about.melisa', label: 'Portret uz biografiju 1', ratio: '4:5', fallback: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.about.aldin', label: 'Portret uz biografiju 2', ratio: '3:4', fallback: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800' },
         ],
       },
       {
-        label: 'Poziv na kontakt — tri fotografije', hint: 'Fotografije oko završnog bloka "Želimo čuti vašu priču". Prikazuju se samo na širim ekranima. Preporučeno: 900×1200 px, portretna orijentacija.',
+        label: 'Poziv "Želimo čuti vašu priču" — tri fotografije',
+        hint: 'Na desktopu stoje oko teksta (velika lijevo, mala preklapa njen donji desni ugao, visoka desno); na mobitelu tri u redu iznad teksta.',
         images: [
-          { key: 'img.about.cta.1', label: 'Lijevo — velika',  fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.about.cta.2', label: 'Lijevo — mala',    fallback: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.about.cta.3', label: 'Desno',            fallback: 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.about.cta.1', label: 'Lijevo — velika', ratio: '3:4', fallback: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.about.cta.2', label: 'Lijevo — mala', ratio: '3:4', fallback: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.about.cta.3', label: 'Desno — visoka', ratio: '3:4', fallback: 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&q=80&w=800' },
         ],
       },
     ],
@@ -97,16 +89,11 @@ const SECTIONS = [
     page: 'contact', label: 'Kontakt',
     groups: [
       {
-        label: 'Hero fotografija', hint: 'Desktop verzija stoji desno od naslova (preporučeno 1400×950 px, pejzažna). Mobilna je zasebna da možeš izabrati uži kadar (preporučeno 800×900 px); ako je ostaviš praznu, koristi se desktop slika.',
+        label: 'Hero fotografija',
+        hint: 'Desktop slika stoji desno od naslova i stapa se u pozadinu. Mobilna je zasebna, da za uski ekran izabereš kadar koji odgovara; ako je ostaviš praznu, koristi se desktop slika.',
         images: [
-          { key: 'img.contact.hero', label: 'Hero', fallback: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.contact.hero.mobile', label: 'Hero — mobitel', fallback: '' },
-        ],
-      },
-      {
-        label: 'Ukrasna grančica (opciono)', hint: 'Ilustracija u gornjem lijevom uglu hero sekcije. Mora biti PNG ili SVG s prozirnom pozadinom, preporučeno 600×500 px. Ako se ostavi prazno, prikazuje se ugrađena maslinova grančica.',
-        images: [
-          { key: 'img.contact.ornament', label: 'Grančica', fallback: '' },
+          { key: 'img.contact.hero', label: 'Hero — desktop', ratio: '3:2', fallback: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.contact.hero.mobile', label: 'Hero — mobitel', ratio: '16:9', fallback: '' },
         ],
       },
     ],
@@ -120,7 +107,7 @@ export default function ImagesManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
   const [saved, setSaved]     = useState(false);
-  const [openPages, setOpenPages] = useState<Record<string, boolean>>({ home: true, portfolio: true, services: true, about: true, contact: true });
+  const [openPages, setOpenPages] = useState<Record<string, boolean>>({ home: true, about: true, contact: true });
 
   useEffect(() => {
     fetch('/api/settings', { credentials: 'include' })
@@ -228,7 +215,7 @@ export default function ImagesManager() {
                         onAltChange={v => setUrl(`${img.key}.alt`, v)}
                         focus={urls[`${img.key}.focus`] || ''}
                         onFocusChange={v => setUrl(`${img.key}.focus`, v)}
-                        portrait={img.key.includes('.mobile.')}
+                        ratio={img.ratio}
                       />
                     ))}
                   </div>
@@ -257,7 +244,7 @@ export default function ImagesManager() {
 // ── ImageSlot ─────────────────────────────────────────────────────────────────
 
 function ImageSlot({
-  imageKey, label, fallback, value, onChange, alt, onAltChange, focus, onFocusChange, portrait = false,
+  imageKey, label, fallback, value, onChange, alt, onAltChange, focus, onFocusChange, ratio,
 }: {
   imageKey: string;
   label: string;
@@ -268,9 +255,13 @@ function ImageSlot({
   onAltChange: (v: string) => void;
   focus: string;
   onFocusChange: (v: string) => void;
-  portrait?: boolean;
+  /** The shape the site shows this slot at, e.g. "3:4" or "16:9 · cijeli ekran" */
+  ratio: string;
 }) {
   const fileRef  = useRef<HTMLInputElement>(null);
+  const imgRef   = useRef<HTMLImageElement>(null);
+  // "3:4 · uspravno" -> 3 / 4, for the preview box
+  const [rw, rh] = (ratio.match(/(\d+):(\d+)/)?.slice(1).map(Number) ?? [4, 3]) as number[];
   const [uploading, setUploading]       = useState(false);
   const [urlInput, setUrlInput]         = useState(value);
   const [altInput, setAltInput]         = useState(alt);
@@ -290,10 +281,21 @@ function ImageSlot({
   // it gets cropped. Stored as a CSS object-position string.
   const pickFocus = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!picking) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    const x = Math.round(((e.clientX - r.left) / r.width) * 100);
-    const y = Math.round(((e.clientY - r.top) / r.height) * 100);
-    onFocusChange(`${Math.min(100, Math.max(0, x))}% ${Math.min(100, Math.max(0, y))}%`);
+    const box = e.currentTarget.getBoundingClientRect();
+    const im = imgRef.current;
+    // Where the whole photograph sits inside the box while it is shown uncropped
+    let left = box.left, top = box.top, w = box.width, h = box.height;
+    if (im && im.naturalWidth && im.naturalHeight) {
+      const scale = Math.min(box.width / im.naturalWidth, box.height / im.naturalHeight);
+      w = im.naturalWidth * scale;
+      h = im.naturalHeight * scale;
+      left = box.left + (box.width - w) / 2;
+      top = box.top + (box.height - h) / 2;
+    }
+    const x = Math.round(((e.clientX - left) / w) * 100);
+    const y = Math.round(((e.clientY - top) / h) * 100);
+    if (x < 0 || x > 100 || y < 0 || y > 100) return;  // a click beside the photo
+    onFocusChange(`${x}% ${y}%`);
     setPicking(false);
   };
 
@@ -359,7 +361,8 @@ function ImageSlot({
     <div className="space-y-2">
       {/* Thumbnail */}
       <div
-        className={cn("relative group rounded-sm overflow-hidden bg-moody-900 border border-white/10 cursor-pointer", portrait ? "aspect-[3/4]" : "aspect-[4/3]")}
+        className={cn("relative group rounded-sm overflow-hidden bg-moody-900 border border-white/10", picking ? "cursor-crosshair" : "cursor-pointer")}
+        style={{ aspectRatio: `${rw} / ${rh}` }}
         onClick={e => {
           if (uploading) return;
           if (picking) { pickFocus(e); return; }
@@ -381,10 +384,13 @@ function ImageSlot({
               </div>
             ) : (
               <img
+                ref={imgRef}
                 src={displaySrc}
                 alt={label}
-                style={{ objectPosition: focusPos }}
-                className="w-full h-full object-cover"
+                // Uncropped while choosing the focal point, cropped as the
+                // site will show it the rest of the time
+                style={picking ? undefined : { objectPosition: focusPos }}
+                className={cn('w-full h-full', picking ? 'object-contain' : 'object-cover')}
                 referrerPolicy="no-referrer"
                 onError={() => setImgError(true)}
               />
@@ -452,8 +458,13 @@ function ImageSlot({
         <p className="text-red-400 text-[10px] leading-snug">{uploadError}</p>
       )}
 
-      {/* Label */}
-      <p className="text-white/40 text-[10px] tracking-widest uppercase font-bold">{label}</p>
+      {/* Label, and the shape the site shows this slot at */}
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-white/40 text-[10px] tracking-widest uppercase font-bold">{label}</p>
+        <span className="flex-none text-gold-500/70 text-[9px] tracking-wider" title="Omjer u kojem se slika prikazuje na sajtu">
+          {ratio}
+        </span>
+      </div>
 
       {/* URL input */}
       <div className="flex gap-1">

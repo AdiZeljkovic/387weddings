@@ -50,6 +50,7 @@ const Bio = ({ n, portrait, ratio, flip, altText }: {
       >
         <Reveal
           as="span"
+          kind="frame"
           delay={0.18}
           aria-hidden="true"
           className={`absolute top-6 lg:top-14 bottom-0 border border-gold-600 left-6 right-0 ${
@@ -78,13 +79,13 @@ const Bio = ({ n, portrait, ratio, flip, altText }: {
       >
         {/* Ranged right, the rule belongs on the label's left — hence the reversed row */}
         <SectionLabel
-          className={`mb-6 lg:mb-7 ${right ? 'flex-row-reverse lg:flex-row' : ''}`}
+          className={`mb-5 lg:mb-7 ${right ? 'flex-row-reverse lg:flex-row' : ''}`}
           style={getContentStyle(`${base}.tag`)}
         >
           {t(`${base}.tag`)}
         </SectionLabel>
 
-        <Reveal as={Heading} className="font-serif font-normal text-[46px] lg:text-[72px] leading-[1.06] lg:leading-[1.02] m-0 mb-7 lg:mb-10">
+        <Reveal as={Heading} className="font-serif font-normal text-[clamp(30px,9.2vw,36px)] lg:text-[clamp(44px,3.9vw,56px)] leading-[1.08] lg:leading-[1.06] m-0 mb-6 lg:mb-8">
           <span className="block" style={getContentStyle(`${base}.title.part1`)}>
             {t(`${base}.title.part1`)}
           </span>
@@ -99,7 +100,7 @@ const Bio = ({ n, portrait, ratio, flip, altText }: {
             as="p"
             delay={0.08}
             style={getContentStyle(`${base}.p1`)}
-            className={`font-serif font-normal text-[21px] lg:text-[26px] leading-[1.5] text-[#2a2622] max-w-[520px] m-0 mb-[22px] lg:mb-7 ${
+            className={`font-serif font-normal text-[18px] lg:text-[22px] leading-[1.5] text-[#2a2622] max-w-[520px] m-0 mb-[22px] lg:mb-7 ${
               right ? 'ml-auto lg:ml-0' : ''
             }`}
           >
@@ -113,7 +114,7 @@ const Bio = ({ n, portrait, ratio, flip, altText }: {
               key={p}
               delay={0.14 + i * 0.07}
               style={getContentStyle(`${base}.${p}`)}
-              className={`text-[16px] lg:text-[18px] font-light leading-[1.8] text-ink-700 max-w-[500px] m-0 ${
+              className={`text-[15px] lg:text-[16px] font-light leading-[1.8] text-ink-700 max-w-[500px] m-0 ${
                 i === 0 ? 'mb-4 lg:mb-[22px]' : ''
               } ${right ? 'ml-auto lg:ml-0' : ''}`}
             >
@@ -162,37 +163,43 @@ const About = () => {
           placed against this section — one set of elements, two layouts.     */}
       <section className="bg-white text-ink-900 text-center px-5 lg:px-6 py-16 lg:py-28">
         <div className="relative max-w-[1250px] mx-auto lg:h-[424px]">
-          <h2 className="font-serif font-light text-[30px] lg:text-[41.6px] leading-[1.2] lg:leading-[1.15] tracking-[0.05em] uppercase max-w-[490px] mx-auto m-0 mb-7 lg:mb-8">
+          <Reveal as="h2" className="font-serif font-light text-[clamp(26px,7.7vw,30px)] lg:text-[41.6px] leading-[1.2] lg:leading-[1.15] tracking-[0.05em] uppercase max-w-[490px] mx-auto m-0 mb-8">
             <span className="block" style={getContentStyle('about.invite.title.part1')}>{t('about.invite.title.part1')}</span>
             <span className="block" style={getContentStyle('about.invite.title.part2')}>{t('about.invite.title.part2')}</span>
-          </h2>
+          </Reveal>
 
-          <div className="flex gap-2 mb-8 lg:contents">
+          {/* The small frame is 157x215 with no border; a 4px white border
+              inside that box is what left only 149x207 of photograph showing. */}
+          <div className="flex items-end gap-2 mb-9 lg:contents">
             {[
               { i: 0, place: 'lg:left-0 lg:top-0 lg:w-[260px] lg:h-[348px]' },
-              { i: 1, place: 'lg:left-[154px] lg:top-[198px] lg:w-[157px] lg:h-[215px] lg:border-4 lg:border-white' },
+              { i: 1, place: 'lg:left-[154px] lg:top-[198px] lg:w-[157px] lg:h-[215px]' },
               { i: 2, place: 'lg:right-0 lg:top-0 lg:w-[318px] lg:h-[424px]' },
             ].map(({ i, place }) => (
-              <div
+              <Reveal
+                kind="mask"
                 key={i}
-                className={`flex-1 min-w-0 aspect-[3/4] overflow-hidden bg-rule lg:flex-none lg:absolute lg:aspect-auto ${place}`}
+                delay={i * 0.08}
+                className={`rv-zoom zoom flex-1 min-w-0 aspect-[3/4] bg-rule lg:flex-none lg:absolute lg:aspect-auto ${place}`}
               >
                 <img src={cta[i].src} srcSet={cta[i].srcSet} sizes="(min-width: 1024px) 320px, 30vw"
                   alt="" aria-hidden="true"
                   className="w-full h-full object-cover" loading="lazy" decoding="async" draggable={false} referrerPolicy="no-referrer" />
-              </div>
+              </Reveal>
             ))}
           </div>
 
-          <div className="max-w-[384px] mx-auto">
-            {(['p1', 'p2'] as const).map(p => (
-              <p key={p} style={getContentStyle(`about.invite.${p}`)}
-                className="text-[14px] lg:text-[13.5px] font-light leading-[1.95] lg:leading-[2.05] text-[#6b6b6b] m-0 mb-5">
+          <div className="max-w-[300px] lg:max-w-[384px] mx-auto">
+            {(['p1', 'p2'] as const).map((p, i) => (
+              <Reveal as="p" key={p} delay={0.08 + i * 0.07} style={getContentStyle(`about.invite.${p}`)}
+                className={`text-[14px] lg:text-[13.5px] font-light leading-[1.9] lg:leading-[2.05] text-[#6b6b6b] m-0 ${
+                  i === 0 ? 'mb-4 lg:mb-5' : 'mb-[22px] lg:mb-5'
+                }`}>
                 {t(`about.invite.${p}`)}
-              </p>
+              </Reveal>
             ))}
             <Link to="/contact" style={getContentStyle('about.invite.button')}
-              className="btn inline-block border border-ink-900/30 text-ink-900 text-[11px] font-medium tracking-[0.25em] uppercase px-10 lg:px-11 py-4 lg:py-3.5 mt-3 hover:text-white">
+              className="btn inline-block border border-ink-900/30 text-ink-900 text-[11px] font-medium tracking-[0.22em] lg:tracking-[0.25em] uppercase px-10 lg:px-11 py-3.5 lg:mt-3 hover:text-white">
               {t('about.invite.button')}
             </Link>
           </div>

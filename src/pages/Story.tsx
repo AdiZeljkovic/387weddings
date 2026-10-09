@@ -173,33 +173,33 @@ const Story = () => {
   return (
     <div className="bg-cream">
       {/* Back */}
-      <div className="px-6 lg:px-24 pt-8 lg:pt-11">
+      <div className="px-5 lg:px-24 pt-6 lg:pt-11">
         <Link
           to="/portfolio"
           style={getContentStyle('story.back')}
-          className="inline-flex items-center gap-3 text-ink-900 text-[11px] font-medium tracking-[0.24em] uppercase border-b border-[#bfb3a0] pb-1.5 transition-opacity duration-250 hover:opacity-60"
+          className="inline-flex items-center gap-2.5 lg:gap-3 text-ink-900 text-[10px] lg:text-[11px] font-medium tracking-[0.24em] uppercase border-b border-[#bfb3a0] pb-1.5 transition-opacity duration-250 hover:opacity-60"
         >
           ← {t('story.back')}
         </Link>
       </div>
 
       {/* Title */}
-      <section className="relative overflow-hidden text-center px-6 lg:px-24 pt-10 lg:pt-14 pb-10 lg:pb-[72px]">
+      <section className="relative overflow-hidden text-center px-5 lg:px-24 pt-9 lg:pt-14 pb-9 lg:pb-[72px]">
         <OliveBranch className="hidden lg:block absolute left-24 top-[70px] w-[300px] animate-[drift_16s_ease-in-out_infinite_alternate] motion-reduce:animate-none" />
         <OliveBranch className="hidden lg:block absolute right-24 top-[70px] w-[300px] animate-[drift_16s_ease-in-out_infinite_alternate] motion-reduce:animate-none" flip />
 
         <div className="relative">
           {categoryKey && (
-            <SectionLabel centered className="mb-6 lg:mb-7" style={getContentStyle(categoryKey)}>
+            <SectionLabel centered line="lg:w-10" className="mb-[22px] lg:mb-7" style={getContentStyle(categoryKey)}>
               {t(categoryKey)}
             </SectionLabel>
           )}
 
-          <Reveal as="h1" className="font-serif font-normal text-[clamp(30px,9.8vw,38px)] lg:text-[clamp(44px,4.6vw,64px)] leading-[1.05] m-0 mb-7 lg:mb-10">
+          <Reveal as="h1" className="font-serif font-normal text-[clamp(30px,9.8vw,38px)] lg:text-[clamp(44px,4.6vw,64px)] leading-[1.1] lg:leading-[1.08] m-0 mb-[22px] lg:mb-8">
             <CoupleName name={story.couple} />
           </Reveal>
 
-          <div className="flex flex-wrap items-center justify-center gap-x-6 lg:gap-x-9 gap-y-3 text-[11px] font-medium tracking-[0.26em] uppercase text-ink-500">
+          <div className="flex flex-wrap items-center justify-center gap-x-5 lg:gap-x-9 gap-y-2 lg:gap-y-3 text-[10px] lg:text-[11px] font-medium tracking-[0.22em] lg:tracking-[0.26em] uppercase text-ink-500">
             {[story.location, story.date_text, typeLabel].filter(Boolean).map((v, i, arr) => (
               <React.Fragment key={`${v}-${i}`}>
                 <span>{v}</span>
@@ -215,14 +215,14 @@ const Story = () => {
           the card in Radovi and as the link preview image, and repeating it
           full width above the text was pushing the story itself off screen. */}
       {(quote || paragraphs.length > 0) && (
-        <section className="px-6 py-[56px] lg:py-24">
+        <section className="px-6 py-[52px] lg:pt-12 lg:pb-32">
           <div className="max-w-[760px] mx-auto text-center">
-            <SectionLabel centered className="mb-7 lg:mb-9" style={getContentStyle('story.tag')}>
+            <SectionLabel centered line="lg:w-10" className="mb-7 lg:mb-10" style={getContentStyle('story.tag')}>
               {t('story.tag')}
             </SectionLabel>
 
             {quote && (
-              <Reveal as="p" className="font-serif font-normal text-[21px] lg:text-[30px] leading-[1.45] text-[#2a2622] max-w-[620px] mx-auto m-0 mb-7 lg:mb-9">
+              <Reveal as="p" className="font-serif font-normal text-[20px] lg:text-[26px] leading-[1.45] text-[#2a2622] max-w-[620px] mx-auto m-0 mb-7 lg:mb-9">
                 {quote}
               </Reveal>
             )}
@@ -231,7 +231,7 @@ const Story = () => {
                 as="p"
                 key={i}
                 delay={0.08 + i * 0.07}
-                className={`text-[16px] lg:text-[18px] font-light leading-[1.85] text-ink-700 max-w-[620px] mx-auto m-0 ${
+                className={`text-[15px] lg:text-[16px] font-light leading-[1.85] text-ink-700 max-w-[620px] mx-auto m-0 ${
                   i < paragraphs.length - 1 ? 'mb-5 lg:mb-[22px]' : ''
                 }`}
               >
@@ -245,14 +245,17 @@ const Story = () => {
       {/* Gallery — edge to edge, as on the reference story page. Click opens
           the lightbox. */}
       {story.images.length > 0 && (
-        <div className="flex gap-1 lg:gap-1.5 items-start px-1 lg:px-1.5 pb-[56px] lg:pb-24">
+        <div className="flex gap-1 lg:gap-1.5 items-start px-1 lg:px-1.5 pb-[56px] lg:pb-32">
           {columns.map((col, ci) => (
             <div key={ci} className="flex-1 min-w-0 flex flex-col gap-1 lg:gap-1.5">
               {col.map(({ item: { img, ratio }, index: i }) => {
                 const r = respImg(img.url);
                 return (
-                  <button
+                  <Reveal
+                    as="button"
+                    kind="mask"
                     key={img.id}
+                    delay={Math.min(i, 10) * 0.04}
                     type="button"
                     onClick={() => setLightbox(i)}
                     aria-label={img.alt || `Fotografija ${i + 1}`}
@@ -273,7 +276,7 @@ const Story = () => {
                       draggable={false}
                       referrerPolicy="no-referrer"
                     />
-                  </button>
+                  </Reveal>
                 );
               })}
             </div>
@@ -322,15 +325,15 @@ const Story = () => {
           )}
 
           {/* Instagram */}
-          <div className="max-w-[720px] mx-auto mt-16 lg:mt-24 text-center">
+          <div className="max-w-[720px] mx-auto mt-[72px] lg:mt-24 text-center">
             <DiamondRule className="mb-7 lg:mb-8" />
             <div
               style={getContentStyle('instagram.tag')}
-              className="text-[11px] lg:text-[12px] tracking-[0.32em] uppercase text-gold-label mb-4"
+              className="text-[11px] lg:text-[12px] tracking-[0.32em] uppercase text-gold-label mb-5"
             >
               {t('instagram.tag')}
             </div>
-            <Reveal as="h2" className="font-serif font-normal text-[30px] lg:text-[44px] leading-[1.2] m-0 mb-7">
+            <Reveal as="h2" className="font-serif font-normal text-[clamp(26px,7.7vw,30px)] lg:text-[38px] leading-[1.18] m-0 mb-[30px]">
               <span style={getContentStyle('instagram.title.part1')}>{t('instagram.title.part1')}</span>{' '}
               <span className="italic" style={getContentStyle('instagram.title.part2')}>
                 {t('instagram.title.part2')}
@@ -340,7 +343,7 @@ const Story = () => {
               href={instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn inline-flex items-center gap-3 border border-ink-900 text-ink-900 text-[12px] font-medium tracking-[0.2em] uppercase px-7 lg:px-[30px] py-4 lg:py-[18px] hover:text-white"
+              className="btn inline-flex items-center gap-3.5 border border-ink-900 text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.22em] uppercase px-7 py-4 hover:text-white"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
                 <rect x="3" y="3" width="18" height="18" rx="5" />

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { fullImg } from '../lib/img';
 
 export interface LightboxImage {
@@ -13,16 +14,27 @@ interface Props {
   index: number;
   onIndex: (i: number) => void;
   onClose: () => void;
-  /** Couple name shown under the frame; "&" is set in italic */
+  /** Used for the dialog's accessible name */
   title?: string;
-  /** Location · date line */
+  /** Kept for callers; the board shows no meta line in the viewer */
   meta?: string;
   closeLabel?: string;
 }
 
 const SWIPE_PX = 50;
 
-const Lightbox = ({ images, index, onIndex, onClose, title, meta, closeLabel = 'Zatvori' }: Props) => {
+/**
+ * Full-screen viewer, as the "Priča – lightbox" board draws it and as the
+ * reference site does it: the photograph takes the whole height of the screen
+ * at its own shape, the arrows are bare characters against the edges, "Zatvori
+ * ✕" sits in the top corner and a small counter at the bottom. It covers the
+ * header completely, and a click on the dark surround closes it.
+ *
+ * The earlier version framed the photograph in a box well inside the screen,
+ * put the arrows in circles and the counter at the top — all three were on
+ * the client's list.
+ */
+const Lightbox = ({ images, index, onIndex, onClose, title, closeLabel = 'Zatvori' }: Props) => {
   const touchX = useRef<number | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const count = images.length;
@@ -49,18 +61,38 @@ const Lightbox = ({ images, index, onIndex, onClose, title, meta, closeLabel = '
     };
   }, [go, onClose]);
 
+  // The next and previous photographs start loading now, so stepping through
+  // a story does not wait on each one
+  useEffect(() => {
+    if (count < 2) return;
+    for (const d of [1, -1]) {
+      const n = images[(index + d + count) % count];
+      if (!n) continue;
+      const pre = new Image();
+      const r = fullImg(n.url);
+      if (r.srcSet) { pre.srcset = r.srcSet; pre.sizes = '100vw'; }
+      pre.src = r.src;
+    }
+  }, [index, count, images]);
+
   if (count === 0) return null;
   const current = images[Math.min(index, count - 1)];
   const r = fullImg(current.url);
+  const caption = current.caption?.trim();
 
-  const nameParts = (title || '').split(/\s*&\s*/);
-
-  return (
+  // Rendered straight into <body>. Inside the page it sat in the page-fade
+  // wrapper, whose entrance animation forms its own stacking context — so no
+  // z-index could lift the viewer above the sticky header, and the header (with
+  // "Zatvori ✕" under it) stayed on top of the photograph.
+  return createPortal(
     <div
-      className="lightbox-in fixed inset-0 z-[2000] bg-[#0e0c0a] text-white"
+      className="lightbox-in fixed inset-0 z-[2000] bg-[#0e0c0a] text-white select-none"
       role="dialog"
       aria-modal="true"
       aria-label={title || 'Galerija'}
+      // A click on the dark surround closes; clicks on the photograph and the
+      // controls stop before they get here
+      onClick={onClose}
       onTouchStart={e => { touchX.current = e.changedTouches[0].clientX; }}
       onTouchEnd={e => {
         if (touchX.current === null) return;
@@ -69,80 +101,68 @@ const Lightbox = ({ images, index, onIndex, onClose, title, meta, closeLabel = '
         touchX.current = null;
       }}
     >
-      {/* Counter and close */}
-      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 lg:px-14 py-6 lg:py-9 z-10">
-        <span className="text-[11px] lg:text-[12px] tracking-[0.3em] text-rule">
-          {String(index + 1).padStart(2, '0')}
-          <span className="text-ink-400">&nbsp;/&nbsp;</span>
-          {String(count).padStart(2, '0')}
-        </span>
-        <button
-          ref={closeRef}
-          type="button"
-          onClick={onClose}
-          className="text-white text-[11px] lg:text-[12px] font-medium tracking-[0.24em] uppercase border-b border-white/50 pb-1 min-h-11 px-2 transition-opacity duration-250 hover:opacity-70"
-        >
-          {closeLabel} ✕
-        </button>
-      </div>
-
-      {/* Frame */}
-      <div className="absolute inset-x-5 lg:inset-x-[180px] top-[88px] lg:top-[110px] bottom-[120px] lg:bottom-[130px] flex items-center justify-center">
+      {/* The photograph: full height, its own shape, never cropped */}
+      <div className={`absolute left-0 right-0 top-3 flex items-center justify-center pointer-events-none ${
+        caption ? 'bottom-16' : 'bottom-11'
+      }`}>
         <img
           key={current.url}
           src={r.src}
           srcSet={r.srcSet}
           sizes="100vw"
           alt={current.alt || ''}
-          className="max-w-full max-h-full object-contain"
+          onClick={e => e.stopPropagation()}
+          className="max-w-full max-h-full w-auto h-auto object-contain pointer-events-auto"
           decoding="async"
           draggable={false}
           referrerPolicy="no-referrer"
         />
       </div>
 
+      <button
+        ref={closeRef}
+        type="button"
+        onClick={e => { e.stopPropagation(); onClose(); }}
+        className="absolute top-3.5 right-[18px] z-10 min-h-11 px-1 text-white text-[11px] font-medium tracking-[0.2em] uppercase transition-opacity duration-250 hover:opacity-70"
+      >
+        {closeLabel} ✕
+      </button>
+
       {count > 1 && (
         <>
           <button
             type="button"
-            onClick={() => go(-1)}
+            onClick={e => { e.stopPropagation(); go(-1); }}
             aria-label="Prethodna"
-            className="absolute top-1/2 -translate-y-1/2 left-3 lg:left-14 w-11 h-11 lg:w-14 lg:h-14 rounded-full border border-white/40 flex items-center justify-center text-xl transition-colors duration-250 hover:bg-white hover:text-ink-900"
+            className="absolute top-1/2 -translate-y-1/2 left-3.5 z-10 p-3 text-[30px] leading-none text-white transition-opacity duration-250 hover:opacity-70"
           >
             ←
           </button>
           <button
             type="button"
-            onClick={() => go(1)}
+            onClick={e => { e.stopPropagation(); go(1); }}
             aria-label="Sljedeća"
-            className="absolute top-1/2 -translate-y-1/2 right-3 lg:right-14 w-11 h-11 lg:w-14 lg:h-14 rounded-full border border-white/40 flex items-center justify-center text-xl transition-colors duration-250 hover:bg-white hover:text-ink-900"
+            className="absolute top-1/2 -translate-y-1/2 right-3.5 z-10 p-3 text-[30px] leading-none text-white transition-opacity duration-250 hover:opacity-70"
           >
             →
           </button>
         </>
       )}
 
-      {/* Caption */}
-      <div className="absolute left-0 right-0 bottom-9 lg:bottom-12 text-center px-6">
-        {title && (
-          <div className="font-serif text-[19px] lg:text-[22px]">
-            {nameParts.length > 1 ? (
-              <>
-                {nameParts[0]} <span className="italic text-[#d6a2a8]">&amp;</span>{' '}
-                {nameParts.slice(1).join(' & ')}
-              </>
-            ) : (
-              title
-            )}
-          </div>
+      {/* The optional caption the owner can give each photograph, then the
+          small counter at the very bottom */}
+      <div className="absolute left-0 right-0 bottom-3.5 text-center px-16 pointer-events-none">
+        {caption && (
+          <div className="text-[11px] tracking-[0.16em] text-[#d8cfc2] mb-1.5 truncate">{caption}</div>
         )}
-        {(current.caption || meta) && (
-          <div className="text-[10px] tracking-[0.28em] uppercase text-[#9a9086] mt-2">
-            {current.caption || meta}
-          </div>
-        )}
+        <div className="text-[11px] tracking-[0.24em] text-[#d8cfc2]" aria-live="polite">
+          {String(index + 1).padStart(2, '0')}
+          <span className="text-ink-400">&nbsp;/&nbsp;</span>
+          {String(count).padStart(2, '0')}
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

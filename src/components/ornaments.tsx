@@ -48,30 +48,43 @@ export const Rings = ({ className = '' }: { className?: string }) => (
 
 // Rule — red diamond — rule. Sits above the closing Instagram block.
 export const DiamondRule = ({ className = '' }: { className?: string }) => (
-  <div className={`flex items-center justify-center gap-3 ${className}`} aria-hidden="true">
-    <span className="w-11 h-px bg-gold-600" />
-    <span className="w-1.5 h-1.5 bg-love rotate-45" />
-    <span className="w-11 h-px bg-gold-600" />
+  <div className={`flex items-center justify-center gap-3.5 ${className}`} aria-hidden="true">
+    <Reveal as="span" kind="line" className="block w-12 lg:w-16 h-px bg-gold-600" />
+    <span className="w-[7px] h-[7px] bg-love rotate-45" />
+    <Reveal as="span" kind="line" className="block w-12 lg:w-16 h-px bg-gold-600" />
   </div>
 );
 
-// Gold rule + small uppercase label. `centered` adds the mirrored second rule.
+// Gold rule + small uppercase label. `centered` adds the mirrored second rule;
+// `centered="mobile"` is the board's habit of centring a label on a phone (rule
+// either side) and ranging it left with a single trailing rule above that.
+// `line` sets the rules' desktop length where a board departs from 48px.
 export const SectionLabel = ({
-  children, style, centered = false, className = '',
+  children, style, centered = false, className = '', line = 'lg:w-12',
 }: {
   children: React.ReactNode;
   style?: React.CSSProperties;
-  centered?: boolean;
+  centered?: boolean | 'mobile';
   className?: string;
+  line?: string;
 }) => (
-  <div className={`flex items-center gap-3.5 md:gap-4 ${centered ? 'justify-center' : ''} ${className}`}>
-    {centered && <Reveal as="span" kind="line" aria-hidden="true" className="block w-7 md:w-12 h-px bg-gold-600" />}
+  <div className={`flex items-center gap-3.5 lg:gap-4 ${
+    centered === 'mobile' ? 'justify-center lg:justify-start' : centered ? 'justify-center' : ''
+  } ${className}`}>
+    {centered && (
+      <Reveal
+        as="span"
+        kind="line"
+        aria-hidden="true"
+        className={`block w-7 ${line} h-px bg-gold-600 ${centered === 'mobile' ? 'lg:hidden' : ''}`}
+      />
+    )}
     <span
       style={style}
-      className="text-[11px] md:text-[12px] tracking-[0.32em] uppercase text-gold-label whitespace-nowrap"
+      className="text-[11px] lg:text-[12px] tracking-[0.32em] uppercase text-gold-label whitespace-nowrap"
     >
       {children}
     </span>
-    <Reveal as="span" kind="line" aria-hidden="true" className="block w-7 md:w-12 h-px bg-gold-600" />
+    <Reveal as="span" kind="line" aria-hidden="true" className={`block w-7 ${line} h-px bg-gold-600`} />
   </div>
 );

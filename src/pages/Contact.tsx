@@ -140,7 +140,7 @@ const Contact = () => {
   const videoOptions = optionsFor('contact.form.video', 3);
 
   const heading = (
-    <Reveal as="h1" className="font-serif font-light text-[clamp(24px,8vw,32px)] lg:text-[clamp(32px,3.2vw,42px)] leading-[1.2] lg:leading-[1.25] tracking-[0.04em] lg:tracking-[0.1em] uppercase m-0 mb-3.5 max-w-full break-words">
+    <Reveal as="h1" className="font-serif font-light text-[clamp(22px,7.2vw,28px)] lg:text-[clamp(32px,2.8vw,40px)] leading-[1.36] lg:leading-[1.3] tracking-[0.1em] uppercase m-0 mb-3.5 max-w-full break-words">
       <span className="block" style={getContentStyle('contact.hero.title.part1')}>
         {t('contact.hero.title.part1')}
       </span>
@@ -154,7 +154,7 @@ const Contact = () => {
   );
 
   const ornament = (
-    <div aria-hidden="true" className="flex items-center justify-center gap-3 mb-7 lg:mb-9">
+    <div aria-hidden="true" className="flex items-center justify-center gap-3 mb-6 lg:mb-9">
       <Reveal as="span" kind="line" className="block w-12 lg:w-16 h-px bg-gold-600 opacity-60" />
       <span className="w-1.5 h-1.5 bg-love rotate-45" />
       <Reveal as="span" kind="line" className="block w-12 lg:w-16 h-px bg-gold-600 opacity-60" />
@@ -179,7 +179,7 @@ const Contact = () => {
           elements; only the box around them changes. The two crops the brief
           asks for come from <picture>, so there is still a single <img>.     */}
       <section className="relative lg:flex bg-[#f7f6f3] lg:h-[464px] overflow-hidden">
-        <div className="flex-1 min-w-0 flex flex-col items-center justify-center text-center px-6 lg:px-16 pt-12 pb-9 lg:py-0">
+        <div className="flex-1 min-w-0 flex flex-col items-center justify-center text-center px-6 lg:px-16 pt-11 pb-7 lg:py-0">
           {heading}{ornament}{intro}
         </div>
 

@@ -1,22 +1,34 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
-import { requireAuth } from '../auth.js';
+import { requireAuth, verifyToken } from '../auth.js';
 
 const router = Router();
 
 // Values the front end never reads. They were being handed to every visitor.
 const PRIVATE_KEYS = new Set(['contact_recipient', 'robots_txt']);
 
-// GET /api/settings — public
-router.get('/', async (_req, res) => {
+// The panel reads its settings through this same route, so a signed-in admin
+// still gets the private keys — otherwise the field for the address the form
+// is sent to showed up empty and the owner could not see where mail was going.
+const isAdmin = (req: { cookies?: Record<string, string> }) => {
+  const token = req.cookies?.admin_token;
+  if (!token) return false;
+  try { verifyToken(token); return true; } catch { return false; }
+};
+
+// GET /api/settings — public, plus the private keys for a signed-in admin
+router.get('/', async (req, res) => {
   try {
+    const admin = isAdmin(req);
     const result = await pool.query('SELECT key, value FROM site_settings');
     const settings: Record<string, string> = {};
     for (const row of result.rows) {
-      if (PRIVATE_KEYS.has(row.key)) continue;
+      if (!admin && PRIVATE_KEYS.has(row.key)) continue;
       settings[row.key] = row.value;
     }
-    res.setHeader('Cache-Control', 'public, max-age=60');
+    // The admin's copy must never sit in a shared cache
+    res.setHeader('Cache-Control', admin ? 'private, no-store' : 'public, max-age=60');
+    if (!admin) res.setHeader('Vary', 'Cookie');
     res.json(settings);
   } catch (err) {
     console.error(err);

@@ -1,51 +1,59 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'motion/react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { SectionLabel, OliveBranch } from '../components/ornaments';
+import Reveal from '../components/Reveal';
 
+/**
+ * Not on the boards, so it borrows their vocabulary: cream ground, a ruled
+ * gold label, a Playfair title with its second line in italic, the outline and
+ * solid buttons. The old page pulled in an animation library for a single fade
+ * and set its title at 128px, which ran off a 360px phone.
+ */
 const NotFound = () => {
-  const { t } = useLanguage();
+  const { t, getContentStyle } = useLanguage();
 
   return (
-    <div className="h-screen flex flex-col items-center justify-center bg-white px-8 text-center relative overflow-hidden">
-      {/* Grain comes from the public layout in App.tsx */}
+    <div className="relative overflow-hidden bg-cream min-h-[70vh] flex flex-col items-center justify-center text-center px-6 py-24 lg:py-32">
+      <OliveBranch className="hidden lg:block absolute left-24 top-20 w-[300px] animate-[drift_16s_ease-in-out_infinite_alternate] motion-reduce:animate-none" />
+      <OliveBranch className="hidden lg:block absolute right-24 top-20 w-[300px] animate-[drift_16s_ease-in-out_infinite_alternate] motion-reduce:animate-none" flip />
 
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1.5 }}
-        className="relative z-10"
-      >
-        <span className="text-[10px] tracking-[0.8em] uppercase text-gold-600 font-bold block mb-8">
+      <div className="relative">
+        <SectionLabel centered className="mb-6 lg:mb-7" style={getContentStyle('notfound.tag')}>
           {t('notfound.tag')}
-        </span>
-        <h1 className="text-7xl md:text-9xl font-serif font-light text-moody-900 mb-8 leading-none tracking-tighter uppercase">
-          {t('notfound.title.part1')} <br />
-          <span className="italic opacity-30">{t('notfound.title.part2')}</span>
-        </h1>
-        <p className="text-moody-900/50 mb-16 max-w-md mx-auto font-light leading-relaxed">
-          {t('notfound.desc')}
-        </p>
+        </SectionLabel>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
+        <Reveal as="h1" className="font-serif font-normal text-[clamp(30px,9.8vw,38px)] lg:text-[clamp(44px,4.45vw,64px)] leading-[1.1] m-0 mb-6 lg:mb-8">
+          <span className="block" style={getContentStyle('notfound.title.part1')}>{t('notfound.title.part1')}</span>
+          <span className="block italic text-love" style={getContentStyle('notfound.title.part2')}>{t('notfound.title.part2')}</span>
+        </Reveal>
+
+        <Reveal
+          as="p"
+          delay={0.08}
+          style={getContentStyle('notfound.desc')}
+          className="text-[15px] lg:text-[16px] font-light leading-[1.8] text-ink-700 max-w-[440px] mx-auto m-0 mb-10 lg:mb-12"
+        >
+          {t('notfound.desc')}
+        </Reveal>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5">
           <Link
             to="/"
-            className="text-[11px] tracking-[0.5em] uppercase text-gold-600 font-black border-b border-gold-600/30 pb-2 hover:border-gold-600 transition-all duration-500"
+            style={getContentStyle('notfound.home')}
+            className="btn btn-solid inline-block bg-ink-900 text-white text-[11px] lg:text-[12px] font-semibold tracking-[0.2em] uppercase px-7 py-4"
           >
             {t('notfound.home')}
           </Link>
           <Link
             to="/portfolio"
-            className="text-[11px] tracking-[0.5em] uppercase text-moody-900/40 font-black hover:text-moody-900 transition-all duration-500"
+            style={getContentStyle('notfound.portfolio')}
+            className="btn inline-block border border-ink-900 text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.2em] uppercase px-7 py-4 hover:text-white"
           >
-            {t('notfound.portfolio')}
+            {t('notfound.portfolio')} →
           </Link>
         </div>
-      </motion.div>
-
-      {/* Decorative Elements */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] border border-moody-100/20 rounded-full -z-0" aria-hidden="true" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] border border-moody-100/10 rounded-full -z-0" aria-hidden="true" />
+      </div>
     </div>
   );
 };

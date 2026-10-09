@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -28,6 +28,22 @@ const write = (v: Exclude<Consent, null>) => {
 const CookieBanner = () => {
   const { t, getContentStyle } = useLanguage();
   const [visible, setVisible] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+
+  // The banner sits over the bottom of the screen, which on a phone is where the
+  // hero keeps its buttons. While it is up, its height is published as
+  // --consent-h and the hero shortens by that much, so nothing is hidden
+  // underneath it; the moment a choice is made the hero takes the room back.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    if (!visible || !box.current) { root.style.removeProperty('--consent-h'); return; }
+    const el = box.current;
+    const set = () => root.style.setProperty('--consent-h', `${el.offsetHeight}px`);
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
+    return () => { ro.disconnect(); root.style.removeProperty('--consent-h'); };
+  }, [visible]);
 
   useEffect(() => {
     // Give the page a moment so the banner never competes with the intro
@@ -41,15 +57,18 @@ const CookieBanner = () => {
 
   return (
     <div
+      ref={box}
       role="dialog"
       aria-live="polite"
       aria-label={t('cookie.title')}
-      className="fixed inset-x-0 bottom-0 z-[1200] bg-white border-t border-rule px-5 sm:px-8 py-5 shadow-[0_-2px_24px_rgba(0,0,0,0.08)]"
+      className="fixed inset-x-0 bottom-0 z-[1200] bg-white border-t border-rule px-5 sm:px-8 py-3.5 lg:py-5 shadow-[0_-2px_24px_rgba(0,0,0,0.08)]"
     >
-      <div className="max-w-[1100px] mx-auto flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8">
+      {/* Compact on a phone: the text in two short lines, both buttons beside
+          each other under it */}
+      <div className="max-w-[1100px] mx-auto flex flex-col lg:flex-row lg:items-center gap-2.5 lg:gap-8">
         <p
           style={getContentStyle('cookie.text')}
-          className="flex-1 text-[13px] font-light leading-[1.8] text-ink-700 m-0"
+          className="flex-1 text-[12px] lg:text-[13px] font-light leading-[1.6] lg:leading-[1.8] text-ink-700 m-0"
         >
           {t('cookie.text')}{' '}
           <Link to="/privacy" className="text-ink-900 border-b border-[#bfb3a0] hover:opacity-70 transition-opacity">
@@ -57,7 +76,7 @@ const CookieBanner = () => {
           </Link>
         </p>
 
-        <div className="flex items-center gap-3 flex-none">
+        <div className="flex items-center justify-end lg:justify-start gap-2 lg:gap-3 flex-none">
           <button
             type="button"
             onClick={() => decide('denied')}

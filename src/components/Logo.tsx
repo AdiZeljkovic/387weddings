@@ -18,14 +18,20 @@ const PAD = 0.08;
 type Props = {
   /** Height of the "387" glyphs in px; the wordmark scales with it */
   size?: number;
+  /** Wordmark size in px, where the brief fixes it (the intro's 88 + 30) */
+  word?: number;
   color?: string;
   className?: string;
   title?: string;
+  /** The opening curtain: numerals rise in first, the wordmark 0.35s after */
+  intro?: boolean;
 };
 
-const Logo = ({ size = 38, color = 'currentColor', className = '', title = '387 Weddings' }: Props) => {
+const Logo = ({
+  size = 38, word: wordSize, color = 'currentColor', className = '', title = '387 Weddings', intro = false,
+}: Props) => {
   const digits = ['3', '8', '7'];
-  const word = Math.round(size * WORD * 10) / 10;
+  const word = wordSize ?? Math.round(size * WORD * 10) / 10;
   const top = PAD * size;
   const stackH = top + CAP * size + (digits.length - 1) * ROW * size;
   const wordBaseline = stackH + GAP * size + word * CAP;
@@ -44,14 +50,18 @@ const Logo = ({ size = 38, color = 'currentColor', className = '', title = '387 
     >
       <title>{title}</title>
       <g fill={color} fontFamily="Anton, Oswald, Impact, sans-serif" fontWeight="400" textAnchor="middle">
-        {digits.map((d, i) => (
-          <text key={d} x={width / 2} y={top + CAP * size + i * ROW * size} fontSize={size}>
-            {d}
+        <g className={intro ? 'logo-in logo-in-1' : undefined}>
+          {digits.map((d, i) => (
+            <text key={d} x={width / 2} y={top + CAP * size + i * ROW * size} fontSize={size}>
+              {d}
+            </text>
+          ))}
+        </g>
+        <g className={intro ? 'logo-in logo-in-2' : undefined}>
+          <text x={width / 2} y={wordBaseline} fontSize={word} letterSpacing={word * (intro ? 0.08 : 0.06)}>
+            WEDDINGS
           </text>
-        ))}
-        <text x={width / 2} y={wordBaseline} fontSize={word} letterSpacing={word * 0.06}>
-          WEDDINGS
-        </text>
+        </g>
       </g>
     </svg>
   );

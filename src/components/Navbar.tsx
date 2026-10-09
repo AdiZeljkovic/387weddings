@@ -141,7 +141,10 @@ const Navbar = () => {
           <Logo size={38} className="w-[53px] lg:w-[92px] h-auto" color="currentColor" />
         </Link>
 
-        {/* Desktop navigation */}
+        {/* Right-hand side: the page links on a desktop, then one language
+            switch shared by every screen, then the hamburger on a phone. There
+            used to be a second switch, hidden, for the other screen size. */}
+        <div className="flex items-center gap-[14px] lg:gap-11">
         <nav className="hidden lg:flex items-center gap-y-2 gap-x-11">
           {links.map(link => {
             const active = location.pathname === link.path;
@@ -174,19 +177,17 @@ const Navbar = () => {
             aria-hidden="true"
             className={cn('w-px h-5 flex-none', overHero ? 'bg-white/40' : 'bg-[#c8bba8]')}
           />
-          <LangSwitch light={overHero} size={10} />
         </nav>
 
-        {/* Mobile: language sits left of the hamburger, on every page */}
-        <div className="flex lg:hidden items-center gap-[14px]">
-          <LangSwitch light={overHero} size={10} />
+        <LangSwitch light={overHero} size={10} />
+
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(o => !o)}
             aria-label={isMobileMenuOpen ? 'Zatvori' : 'Meni'}
             aria-expanded={isMobileMenuOpen}
             className={cn(
-              'px-1 py-3 min-w-11 min-h-11 justify-center',
+              'lg:hidden px-1 py-3 min-w-11 min-h-11 justify-center',
               isMobileMenuOpen ? 'relative flex items-center' : 'flex flex-col items-end gap-[7px]',
             )}
           >

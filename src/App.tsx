@@ -5,7 +5,6 @@ import { useLanguage } from './contexts/LanguageContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
-import BackToTop from './components/BackToTop';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { routerBasename, pathFor } from './lib/lang';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -55,13 +54,11 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 // Admin pages
 const AdminLogin = lazy(() => import('./pages/admin/Login'));
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
-const GalleryManager = lazy(() => import('./pages/admin/GalleryManager'));
 const StoriesManager = lazy(() => import('./pages/admin/StoriesManager'));
 const Submissions = lazy(() => import('./pages/admin/Submissions'));
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
 const PagesManager = lazy(() => import('./pages/admin/PagesManager'));
 const ImagesManager = lazy(() => import('./pages/admin/ImagesManager'));
-const InstagramManager = lazy(() => import('./pages/admin/InstagramManager'));
 
 // `ownTitle` means the page writes its own title and link preview — a story
 // page carries its couple's name, which the server already rendered into the
@@ -311,9 +308,7 @@ function App() {
                         <Route path="/" element={<Dashboard />} />
                         <Route path="/pages" element={<PagesManager />} />
                         <Route path="/images" element={<ImagesManager />} />
-                        <Route path="/instagram" element={<InstagramManager />} />
                         <Route path="/stories" element={<StoriesManager />} />
-                        <Route path="/gallery" element={<GalleryManager />} />
                         <Route path="/submissions" element={<Submissions />} />
                         <Route path="/settings" element={<AdminSettings />} />
                       </Routes>
@@ -380,7 +375,6 @@ function App() {
                     </Suspense>
                   </PageFade>
                   <Footer />
-                  <BackToTop />
                   <CookieBanner />
                 </div>
                 </ComingSoonGate>

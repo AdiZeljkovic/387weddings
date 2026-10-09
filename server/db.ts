@@ -171,22 +171,11 @@ export async function initDB() {
         ('img.home.grid.1', ''), ('img.home.grid.2', ''), ('img.home.grid.3', ''),
         ('img.home.grid.4', ''), ('img.home.grid.5', ''), ('img.home.grid.6', ''),
         ('img.home.grid.7', ''), ('img.home.grid.8', ''), ('img.home.grid.9', ''),
-        ('img.home.process.1', ''), ('img.home.process.2', ''), ('img.home.process.3', ''),
         ('img.home.team.aldin', ''), ('img.home.team.melisa', ''),
-        ('img.about.hero', ''), ('img.about.story', ''),
         ('img.about.melisa', ''), ('img.about.aldin', ''),
         ('img.about.cta.1', ''), ('img.about.cta.2', ''), ('img.about.cta.3', ''),
-        ('img.services.hero', ''), ('img.services.pkg.1', ''), ('img.services.pkg.2', ''),
-        ('img.services.cta', ''),
-        ('img.portfolio.hero', ''),
         ('img.contact.hero', ''),
-        ('img.contact.ornament', ''),
-        ('img.contact.hero.mobile', ''),
-        ('instagram_section_tag', 'Social'),
-        ('instagram_section_heading', 'Follow Our Journey'),
-        ('img.instagram.1', ''), ('img.instagram.2', ''), ('img.instagram.3', ''),
-        ('img.instagram.4', ''), ('img.instagram.5', ''), ('img.instagram.6', ''),
-        ('img.instagram.7', ''), ('img.instagram.8', '')
+        ('img.contact.hero.mobile', '')
       ON CONFLICT (key) DO NOTHING;
     `);
 
@@ -293,7 +282,7 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
         ('hero.desc', 'Hero: Kratki opis ispod naslova', 'home', 'hero', 'textarea', 'We capture the emotions that remain long after everything else has passed.', 'Zabilježimo emocije koje traju kada sve drugo prođe.', 5),
         ('home.scroll', 'Hero: Scroll indicator tekst', 'home', 'hero', 'text', 'Scroll', 'Skroluj', 10),
         ('portfolio.approach.title', 'Pristup: Tag', 'portfolio', 'approach', 'text', 'The Approach', 'Pristup', 0),
-        ('portfolio.approach.desc', 'Pristup: Opis', 'portfolio', 'approach', 'textarea', 'These are the stories we have had the honour of telling: every frame, every moment, every couple. See what we make when you trust us with your day.', 'Ovo su priče koje smo imali čast ispričati, svaki kadar, svaki trenutak, svaki par. Pogledajte šta stvaramo kad nam povjerite svoj dan.', 3),
+        ('portfolio.approach.desc', 'Pristup: Opis', 'portfolio', 'approach', 'textarea', 'These are the stories we have had the honour of telling: every frame, every moment, every *couple*. See what we make when you trust us with your day.', 'Ovo su priče koje smo imali čast ispričati, svaki kadar, svaki trenutak, svaki *par*. Pogledajte šta stvaramo kad nam povjerite svoj dan.', 3),
         ('portfolio.empty', 'Prazna kategorija', 'portfolio', 'approach', 'text', 'No images in this category', 'Nema slika u ovoj kategoriji', 10),
         ('portfolio.filter.all', 'Filter: Sve', 'portfolio', 'filter', 'text', 'ALL', 'SVE', 0),
         ('portfolio.filter.weddings', 'Filter: Vjenčanja', 'portfolio', 'filter', 'text', 'WEDDINGS', 'VJENČANJA', 1),
@@ -411,9 +400,21 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
       -- around it are the marker the page reads, so the owner keeps control of
       -- which word it is.
       UPDATE page_content
-        SET value_en = replace(value_en, 'every couple', '*every couple*'),
-            value_bs = replace(value_bs, 'svaki par', '*svaki par*')
+        SET value_en = replace(value_en, 'every couple', 'every *couple*'),
+            value_bs = replace(value_bs, 'svaki par', 'svaki *par*')
         WHERE key = 'portfolio.approach.desc'
+          AND value_bs NOT LIKE '%*%' AND value_en NOT LIKE '%*%';
+      -- The board marks only the word itself, "svaki par" with "par" in red,
+      -- so an earlier version of this marker that took both words is narrowed
+      UPDATE page_content
+        SET value_en = replace(value_en, '*every couple*', 'every *couple*'),
+            value_bs = replace(value_bs, '*svaki par*', 'svaki *par*')
+        WHERE key = 'portfolio.approach.desc';
+      -- Home About heading: "To je vaša priča." with "vaša priča." in red
+      UPDATE page_content
+        SET value_bs = replace(value_bs, 'vaša priča.', '*vaša priča.*'),
+            value_en = replace(value_en, 'your story.', '*your story.*')
+        WHERE key = 'home.about.heading.part2'
           AND value_bs NOT LIKE '%*%' AND value_en NOT LIKE '%*%';
       -- Settings the mockup has no place for any more: the hidden /services
       -- page, the hero availability badge, and every social network but
@@ -421,6 +422,22 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
       DELETE FROM site_settings WHERE key IN (
         'availability_text', 'facebook', 'youtube', 'tiktok', 'twitter', 'pinterest'
       ) OR key LIKE 'seo.services.%';
+
+      -- "Limited 2026 dates" was seeded into two SEO descriptions and has gone
+      -- stale; the owner writes availability, the seed should not claim it
+      UPDATE site_settings
+        SET value = btrim(regexp_replace(value, '\\s*Limited 2026 dates( remaining)?\\.?', '', 'g'))
+        WHERE key LIKE 'seo.%' AND value LIKE '%Limited 2026 dates%';
+
+      -- Image slots and settings for sections the site no longer has: the
+      -- "Kako radimo" process strip, the old About and Radovi heroes, the
+      -- Kontakt ornament image, /services, and an Instagram image grid the
+      -- board does not have. Backed up in settings-backup-2026-10-09.sql.
+      DELETE FROM site_settings WHERE
+        key LIKE 'img.home.process.%' OR key LIKE 'img.services.%' OR key LIKE 'img.instagram.%'
+        OR key IN ('img.about.hero', 'img.about.story', 'img.portfolio.hero', 'img.contact.ornament',
+                   'instagram_section_tag', 'instagram_section_heading')
+        OR key LIKE 'img.about.hero.%' OR key LIKE 'img.portfolio.hero.%' OR key LIKE 'img.contact.ornament.%';
 
       -- An empty recipient meant the owner got no notification at all and had
       -- no way to tell. Default it to the public address they already set.

@@ -8,6 +8,7 @@ import { useImageMeta, layoutFor, LAYOUT_RATIO } from '../lib/imageMeta';
 import { balanceColumns } from '../lib/masonry';
 import { OliveBranch, SectionLabel, DiamondRule } from '../components/ornaments';
 import Reveal from '../components/Reveal';
+import Emphasis from '../components/Emphasis';
 
 const categories = ['ALL', 'WEDDINGS', 'STUDIO', 'PORTRAITS'] as const;
 type Category = typeof categories[number];
@@ -43,20 +44,6 @@ const colsFor = (w: number) => (w < 820 ? 1 : w < 1100 ? 2 : 3);
 // Roughly how tall the number / category / name block is, as a fraction of the
 // column width. Only used to keep the columns level, so an estimate is enough.
 const CAPTION_H = 0.2;
-
-// A word wrapped in *asterisks* is set in italic red, the way the board marks
-// the one key word in a sentence. The owner controls it from the panel.
-const Emphasis = ({ text }: { text: string }) => (
-  <>
-    {text.split(/(\*[^*]+\*)/g).map((part, i) =>
-      part.startsWith('*') && part.endsWith('*') && part.length > 2 ? (
-        <span key={i} className="italic text-love">{part.slice(1, -1)}</span>
-      ) : (
-        <React.Fragment key={i}>{part}</React.Fragment>
-      )
-    )}
-  </>
-);
 
 // "Amra & Tarik" — the ampersand is set in italic red, as in the mockup
 const CoupleName = ({ name, className = '' }: { name: string; className?: string }) => {
@@ -127,14 +114,14 @@ const Portfolio = () => {
 
         <div className="relative">
           {/* The board has a small ruled label above the title */}
-          <SectionLabel centered className="mb-5 lg:mb-6" style={getContentStyle('portfolio.hero.tag')}>
+          <SectionLabel centered line="lg:w-10" className="mb-[22px] lg:mb-7" style={getContentStyle('portfolio.hero.tag')}>
             {t('portfolio.hero.tag')}
           </SectionLabel>
 
           <Reveal
             as="h1"
             style={getContentStyle('portfolio.hero.title')}
-            className="font-serif font-normal text-[clamp(30px,9.8vw,38px)] lg:text-[clamp(44px,4.6vw,64px)] leading-[1.05] lg:tracking-[0.005em] m-0 mb-6 lg:mb-9"
+            className="font-serif font-normal text-[clamp(30px,9.8vw,38px)] lg:text-[clamp(44px,4.45vw,64px)] leading-[1.1] lg:leading-[1.08] lg:tracking-[0.005em] m-0 mb-5 lg:mb-9"
           >
             {t('portfolio.hero.title')}{' '}
             <span className="italic text-love" style={getContentStyle('portfolio.hero.subtitle')}>
@@ -146,9 +133,12 @@ const Portfolio = () => {
             as="p"
             delay={0.1}
             style={getContentStyle('portfolio.approach.desc')}
-            className="font-serif font-normal text-[17px] lg:text-[21px] leading-[1.6] text-[#2a2622] max-w-[340px] lg:max-w-[620px] mx-auto text-balance"
+            className="text-[15px] lg:text-[16px] font-light leading-[1.8] lg:leading-[1.85] text-ink-700 max-w-[320px] lg:max-w-[560px] mx-auto text-balance"
           >
-            <Emphasis text={t('portfolio.approach.desc')} />
+            <Emphasis
+              text={t('portfolio.approach.desc')}
+              className="font-serif italic font-normal text-love text-[17px] lg:text-[21px]"
+            />
           </Reveal>
         </div>
       </section>
@@ -169,7 +159,7 @@ const Portfolio = () => {
                   onClick={() => setActiveFilter(c)}
                   aria-pressed={active}
                   style={getContentStyle(CATEGORY_KEYS[c])}
-                  className={`flex-none whitespace-nowrap text-[11px] lg:text-[12px] tracking-[0.12em] lg:tracking-[0.24em] uppercase px-2.5 lg:px-7 py-4 lg:py-[18px] min-h-11 transition-colors duration-250 ${
+                  className={`flex-none whitespace-nowrap text-[11px] lg:text-[12px] tracking-[0.16em] lg:tracking-[0.24em] uppercase px-3 lg:px-7 py-4 lg:py-[18px] min-h-11 transition-colors duration-250 ${
                     active
                       ? 'text-ink-900 font-semibold border-b-2 border-love -mb-px'
                       : 'text-ink-500 font-medium hover:text-ink-900'
@@ -197,7 +187,7 @@ const Portfolio = () => {
           ) : (
             <div className="flex gap-8 items-start">
               {columns.map((col, ci) => (
-                <div key={ci} className="flex-1 min-w-0 flex flex-col gap-12">
+                <div key={ci} className="flex-1 min-w-0 flex flex-col gap-11 lg:gap-12">
                   {col.map(({ item: { item, layout }, index }, ri) => {
                     const n = index + 1;
                     const src = item.cover_url || '';
@@ -272,14 +262,14 @@ const Portfolio = () => {
 
           {/* ── Closing Instagram block ──────────────────────────────────── */}
           <div className="max-w-[720px] mx-auto text-center mt-[72px] lg:mt-32">
-            <DiamondRule className="mb-6 lg:mb-7" />
+            <DiamondRule className="mb-7 lg:mb-8" />
             <div
               style={getContentStyle('instagram.tag')}
-              className="text-[11px] lg:text-[12px] tracking-[0.32em] uppercase text-gold-label mb-4"
+              className="text-[11px] lg:text-[12px] tracking-[0.32em] uppercase text-gold-label mb-5"
             >
               {t('instagram.tag')}
             </div>
-            <Reveal as="h2" className="font-serif font-normal text-[32px] lg:text-[44px] leading-[1.2] m-0 mb-7">
+            <Reveal as="h2" className="font-serif font-normal text-[clamp(26px,7.7vw,30px)] lg:text-[38px] leading-[1.18] m-0 mb-[30px]">
               <span style={getContentStyle('instagram.title.part1')}>{t('instagram.title.part1')}</span>{' '}
               <span className="italic" style={getContentStyle('instagram.title.part2')}>
                 {t('instagram.title.part2')}
@@ -289,7 +279,7 @@ const Portfolio = () => {
               href={instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn inline-flex items-center gap-3 border border-ink-900 text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.2em] uppercase px-7 lg:px-9 py-[17px] lg:py-5 hover:text-white group"
+              className="btn inline-flex items-center gap-3.5 border border-ink-900 text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.22em] uppercase px-7 py-4 hover:text-white group"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
                 <rect x="3" y="3" width="18" height="18" rx="5" />

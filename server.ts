@@ -64,8 +64,9 @@ async function startServer() {
           directives: {
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'", "'unsafe-inline'", 'https://www.googletagmanager.com', 'https://www.google-analytics.com'],
-            styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-            fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            // Fonts are self-hosted now; nothing comes from Google
+            fontSrc: ["'self'", 'data:'],
             imgSrc: ["'self'", 'data:', 'https://images.unsplash.com', 'https://www.google-analytics.com', 'https://www.googletagmanager.com'],
             connectSrc: ["'self'", 'https://www.google-analytics.com', 'https://analytics.google.com', 'https://www.googletagmanager.com'],
             frameSrc: ["'self'", 'https://www.googletagmanager.com'],

@@ -13,3 +13,28 @@ INSERT INTO site_settings (key, value) VALUES ('seo.services.title.en', 'Wedding
 INSERT INTO site_settings (key, value) VALUES ('tiktok', '#') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 INSERT INTO site_settings (key, value) VALUES ('twitter', '#') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 INSERT INTO site_settings (key, value) VALUES ('youtube', '#') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+
+-- Slotovi slika za sekcije koje sajt vise nema (provjera po maketi)
+INSERT INTO site_settings (key, value) VALUES ('img.about.hero', '/uploads/1776326286748-309811983.jpg') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('img.contact.ornament', '') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('img.home.process.1', '/uploads/1776326299436-552409690.jpg') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('img.home.process.2', '/uploads/1776326301012-448451730.jpg') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('img.home.process.3', '/uploads/1776326302360-311487280.jpg') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('img.portfolio.hero', '') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+
+-- Instagram admin stranica, /services i stari About slotovi
+INSERT INTO site_settings (key, value) VALUES ('img.about.story', '/uploads/1776326204975-191808164.jpg') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('img.instagram.1', '') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('img.instagram.2', '') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('img.instagram.3', '') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('img.instagram.4', '') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('img.instagram.5', '') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('img.instagram.6', '') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('img.instagram.7', '') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('img.instagram.8', '') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('img.services.cta', '') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('img.services.hero', '') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('img.services.pkg.1', '') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('img.services.pkg.2', '') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('instagram_section_heading', 'Follow Our Journey') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO site_settings (key, value) VALUES ('instagram_section_tag', 'Social') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
