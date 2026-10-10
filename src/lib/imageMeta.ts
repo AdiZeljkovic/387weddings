@@ -67,3 +67,20 @@ export function ratioFor(m: ImageMeta | undefined, stored?: string | null): numb
   if (m && m.width && m.height) return m.width / m.height;
   return LAYOUT_RATIO[layoutFor(undefined, stored)];
 }
+
+/**
+ * The frame ratio (width / height) of a Radovi card.
+ *
+ * The owner's explicit choice in the panel — TALL 3:4, WIDE 4:3, SQUARE 1:1 —
+ * always wins; that is what "the size I set does not change" was about. AUTO,
+ * the default, follows the photograph exactly so a landscape cover is never
+ * squeezed into a near-square box. Extreme panoramas are held to a sane range.
+ */
+export function cardRatio(layout: string | null | undefined, w?: number | null, h?: number | null): number {
+  const l = (layout || 'AUTO').toUpperCase();
+  if (l === 'TALL') return 3 / 4;
+  if (l === 'WIDE') return 4 / 3;
+  if (l === 'SQUARE') return 1;
+  if (w && h) return Math.min(1.6, Math.max(0.66, w / h));
+  return 3 / 4;
+}

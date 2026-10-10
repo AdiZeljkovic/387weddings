@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { pool } from './db.js';
+import { storyExcerpt } from '../src/lib/excerpt.js';
+import { stripLang, routeOf, pathFor } from '../src/lib/lang.js';
 
 /**
  * Server-rendered meta tags.
@@ -34,14 +36,6 @@ const settings = async (): Promise<Record<string, string>> => {
   return map;
 };
 
-const PAGE_KEYS: Record<string, string> = {
-  '/': 'home',
-  '/portfolio': 'portfolio',
-  '/about': 'about',
-  '/contact': 'contact',
-  '/privacy': 'privacy',
-};
-
 const esc = (s: string) =>
   String(s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c] as string));
 
@@ -59,31 +53,33 @@ export async function renderShell(pathname: string, lang: 'bs' | 'en'): Promise<
 
   const base = (s['sitemap.base_url']?.trim() || 'https://387weddings.ba').replace(/\/$/, '');
   const siteName = s['seo.site_name']?.trim() || '387 Weddings';
-  // English sits under /en; the page is the same, so the key comes off the
-  // path with the prefix removed.
-  const bare = pathname === '/en' ? '/' : pathname.startsWith('/en/') ? pathname.slice(3) || '/' : pathname;
-  const clean = bare.replace(/\/$/, '') || '/';
-  const bsPath = clean;
-  const enPath = clean === '/' ? '/en' : `/en${clean}`;
+  // Which page this is comes from the shared address table, whatever language
+  // the path is named in; the two addresses may differ by more than /en
+  // (/radovi and /en/portfolio).
+  const route = routeOf(stripLang(pathname));
+  const bsPath = pathFor('BOS', pathname);
+  const enPath = pathFor('ENG', pathname);
 
   let title = `${siteName}`;
   let desc = '';
 
-  const key = PAGE_KEYS[clean];
+  const key = route && !route.slug ? route.key : null;
   if (key) {
     title = s[`seo.${key}.title.${lang}`]?.trim() || s[`seo.${key}.title`]?.trim() || title;
     desc = s[`seo.${key}.desc.${lang}`]?.trim() || s[`seo.${key}.desc`]?.trim() || desc;
-  } else if (clean.startsWith('/portfolio/')) {
+  } else if (route?.slug) {
     // One story: its own couple name, so a shared link says who it is about
     try {
-      const slug = decodeURIComponent(clean.slice('/portfolio/'.length));
+      const slug = route.slug;
       const { rows } = await pool.query(
-        'SELECT couple, location, date_text, cover_url FROM stories WHERE slug = $1 AND is_published = TRUE',
+        `SELECT couple, location, date_text, cover_url, quote_bs, quote_en, text_bs, text_en
+           FROM stories WHERE slug = $1 AND is_published = TRUE`,
         [slug]
       );
       if (rows[0]) {
         title = `${rows[0].couple} | ${siteName}`;
-        desc = [rows[0].location, rows[0].date_text].filter(Boolean).join(' · ');
+        // What the story is about, not only its date
+        desc = storyExcerpt(rows[0], lang);
         if (rows[0].cover_url) s = { ...s, 'seo.og_image': base + rows[0].cover_url };
       }
     } catch { /* fall through to the defaults */ }
@@ -117,11 +113,11 @@ export async function renderShell(pathname: string, lang: 'bs' | 'en'): Promise<
   // The home page's largest element is the first hero frame, and the browser
   // only discovers it once React has run. Preloading it here starts the request
   // with the HTML. Mirrors the widths and `sizes` that Home.tsx renders.
-  if (clean === '/') {
+  if (route?.key === 'home') {
     const hero = s['img.home.hero.1']?.trim();
     if (hero?.startsWith('/uploads/')) {
       const file = hero.slice('/uploads/'.length);
-      const srcset = [768, 1280, 1920, 2400].map(w => `/img/${file}?w=${w} ${w}w`).join(', ');
+      const srcset = [600, 900, 1200, 1600, 2000, 2400].map(w => `/img/${file}?w=${w} ${w}w`).join(', ');
       const pre = [
         `<link rel="preload" as="image" href="${esc(`/img/${file}?w=24`)}" fetchpriority="high" />`,
         `<link rel="preload" as="image" href="${esc(`/img/${file}?w=1920`)}" imagesrcset="${esc(srcset)}"`

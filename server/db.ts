@@ -104,6 +104,27 @@ export async function initDB() {
 
       ALTER TABLE story_images ADD COLUMN IF NOT EXISTS focus VARCHAR(40) DEFAULT NULL;
 
+      -- The fan of stories on the home page is filled from the stories
+      -- themselves, one source of truth: a story is in it when fan_order holds
+      -- its place (1-5), and it may carry its own upright 2:3 picture for it,
+      -- since a Radovi cover is often landscape.
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS fan_order INT DEFAULT NULL;
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS fan_image TEXT DEFAULT NULL;
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS fan_focus VARCHAR(40) DEFAULT NULL;
+
+      -- A story keeps its old addresses when its title (and so its slug)
+      -- changes, so links already shared still land on it.
+      CREATE TABLE IF NOT EXISTS story_redirects (
+        old_slug VARCHAR(160) PRIMARY KEY,
+        story_id INT NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      -- Card shape: AUTO follows the photograph; TALL, WIDE and SQUARE are the
+      -- owner's explicit choice and always win. TALL used to be the default
+      -- that nobody chose, so it is turned into AUTO once, here.
+      ALTER TABLE stories ALTER COLUMN cover_layout SET DEFAULT 'AUTO';
+
       -- ── Image dimensions ─────────────────────────────────────────────────
       -- Read off the file at upload time and kept, so the site can set each
       -- frame's aspect-ratio from the photograph itself. Without this the
@@ -168,10 +189,8 @@ export async function initDB() {
         ('robots_txt', E'User-agent: *\nAllow: /\nDisallow: /admin/\n\nSitemap: https://387weddings.ba/sitemap.xml'),
         ('img.home.hero.1', ''), ('img.home.hero.2', ''), ('img.home.hero.3', ''),
         ('img.home.hero.4', ''), ('img.home.hero.5', ''),
-        ('img.home.grid.1', ''), ('img.home.grid.2', ''), ('img.home.grid.3', ''),
-        ('img.home.grid.4', ''), ('img.home.grid.5', ''), ('img.home.grid.6', ''),
-        ('img.home.grid.7', ''), ('img.home.grid.8', ''), ('img.home.grid.9', ''),
-        ('img.home.team.aldin', ''), ('img.home.team.melisa', ''),
+        ('img.home.stack.1', ''), ('img.home.stack.2', ''), ('img.home.stack.3', ''),
+        ('img.home.stack.4', ''), ('img.home.stack.5', ''),
         ('img.about.melisa', ''), ('img.about.aldin', ''),
         ('img.about.cta.1', ''), ('img.about.cta.2', ''), ('img.about.cta.3', ''),
         ('img.contact.hero', ''),
@@ -438,6 +457,50 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
         OR key IN ('img.about.hero', 'img.about.story', 'img.portfolio.hero', 'img.contact.ornament',
                    'instagram_section_tag', 'instagram_section_heading')
         OR key LIKE 'img.about.hero.%' OR key LIKE 'img.portfolio.hero.%' OR key LIKE 'img.contact.ornament.%';
+
+      -- Once: the old default TALL becomes AUTO, so landscape covers stop being
+      -- squeezed into a portrait frame. Explicit choices made after this stand.
+      UPDATE stories SET cover_layout = 'AUTO'
+        WHERE cover_layout = 'TALL'
+          AND NOT EXISTS (SELECT 1 FROM site_settings WHERE key = 'migr.cover_layout_auto');
+      INSERT INTO site_settings (key, value) VALUES ('migr.cover_layout_auto', '1')
+        ON CONFLICT (key) DO NOTHING;
+
+      -- The home page changed: the nine-photo mosaic became the fan of stories
+      -- and the single About photograph became a pile of five prints. Nothing
+      -- the owner uploaded is dropped: the old About pair and three mosaic
+      -- frames carry over into the pile (only into empty places), and every old
+      -- value is kept in settings-backup-2026-10-10.sql.
+      DO $$
+      DECLARE m RECORD;
+      BEGIN
+        FOR m IN SELECT * FROM (VALUES
+          ('img.home.team.aldin',  'img.home.stack.1'),
+          ('img.home.team.melisa', 'img.home.stack.2'),
+          ('img.home.grid.2',      'img.home.stack.3'),
+          ('img.home.grid.8',      'img.home.stack.4'),
+          ('img.home.grid.1',      'img.home.stack.5')) AS t(src, dst)
+        LOOP
+          INSERT INTO site_settings (key, value)
+            SELECT m.dst || sfx, value FROM site_settings, (VALUES (''), ('.alt'), ('.focus')) AS x(sfx)
+             WHERE key = m.src || sfx AND COALESCE(value, '') <> ''
+          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+            WHERE COALESCE(site_settings.value, '') = '';
+        END LOOP;
+      END $$;
+      DELETE FROM site_settings WHERE key LIKE 'img.home.grid.%' OR key LIKE 'img.home.team.%';
+
+      -- Once, so the section does not vanish on the day this ships: the first
+      -- five published stories start in the fan. The owner rearranges it from
+      -- the panel; this never runs again.
+      UPDATE stories s SET fan_order = r.n FROM (
+        SELECT id, ROW_NUMBER() OVER (ORDER BY sort_order, id) AS n
+          FROM stories WHERE is_published = TRUE ORDER BY sort_order, id LIMIT 5
+      ) r
+      WHERE s.id = r.id
+        AND NOT EXISTS (SELECT 1 FROM site_settings WHERE key = 'migr.fan_seeded')
+        AND NOT EXISTS (SELECT 1 FROM stories WHERE fan_order IS NOT NULL);
+      INSERT INTO site_settings (key, value) VALUES ('migr.fan_seeded', '1') ON CONFLICT (key) DO NOTHING;
 
       -- An empty recipient meant the owner got no notification at all and had
       -- no way to tell. Default it to the public address they already set.

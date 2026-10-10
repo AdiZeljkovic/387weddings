@@ -8,6 +8,8 @@ import { OliveBranch, SectionLabel } from '../components/ornaments';
 import Reveal from '../components/Reveal';
 import Emphasis from '../components/Emphasis';
 import { introPlaying, INTRO_LIFT_S } from '../components/Preloader';
+import StoryFan, { type FanStory } from '../components/StoryFan';
+import { usePaths } from '../lib/routes';
 
 // One stand-in for the hero until the owner uploads a frame of their own. The
 // brief is explicit that the empty slots 2-5 must not pull images from another
@@ -34,62 +36,21 @@ const SLIDE_MS = 4000;
 const FADE_MS = 800;
 const SLIDE_MAX = 5;
 
-/**
- * The mosaic, one set of nine frames for every screen.
- *
- * On a desktop it is the board's flex layout: a fixed 396px upright column,
- * 596px tall and lifted 34px, beside two flexible columns of three 190px
- * frames (the second dropped 34px), then a closing row 352px tall. On a phone
- * every wrapper drops out with `display: contents` and the same nine frames sit
- * in one two-column grid — wide, two, two, wide, two, wide — which happens to
- * be their order in the DOM already. Nothing is rendered twice.
- */
-const MOSAIC_COLS = [
-  { px: 'px-big',  cls: 'lg:flex-[0_0_396px] lg:-top-[34px]', keys: ['img.home.grid.1'], h: 596,
-    sizes: '(min-width: 1024px) 396px, 100vw' },
-  { px: 'px-colA', cls: 'lg:flex-[1_1_0]', keys: ['img.home.grid.2', 'img.home.grid.3', 'img.home.grid.4'], h: 190,
-    sizes: '(min-width: 1024px) 24vw, 50vw' },
-  { px: 'px-colB', cls: 'lg:flex-[1_1_0] lg:mt-[34px]', keys: ['img.home.grid.5', 'img.home.grid.6', 'img.home.grid.7'], h: 190,
-    sizes: '(min-width: 1024px) 24vw, 50vw' },
+// The five photographs in the "O nama" pile, as the board lays them out: where
+// it sits as a share of the column, width, frame ratio, resting tilt, and where
+// it comes in from as it slides into place. `px` is how far it drifts while
+// the section scrolls by: the bigger the picture, the less it moves.
+const PILE = [
+  { key: 'img.home.stack.1', pos: { left: '4%',  top: '10%' },   w: '40%', ratio: '2 / 3', r: -5, from: [-80, 10, -12], px: 26 },
+  { key: 'img.home.stack.2', pos: { left: '42%', top: '0' },     w: '34%', ratio: '2 / 3', r: 3,  from: [10, -70, 10],  px: 34 },
+  { key: 'img.home.stack.3', pos: { right: '0',  top: '34%' },   w: '40%', ratio: '3 / 2', r: 6,  from: [80, 0, 12],    px: 26 },
+  { key: 'img.home.stack.4', pos: { left: '20%', bottom: '0' },  w: '42%', ratio: '3 / 2', r: -3, from: [-40, 70, -10], px: 20 },
+  { key: 'img.home.stack.5', pos: { left: '56%', bottom: '2%' }, w: '30%', ratio: '3 / 4', r: -5, from: [60, 60, 12],   px: 40 },
 ];
-const MOSAIC_FOOT = [
-  { key: 'img.home.grid.8', cls: 'lg:flex-[2_1_0]', sizes: '(min-width: 1024px) 64vw, 50vw' },
-  { key: 'img.home.grid.9', cls: 'lg:flex-[1_1_0]', sizes: '(min-width: 1024px) 32vw, 100vw' },
-];
-// Frames that run the full width of the phone grid, at 3:2
-const PHONE_WIDE = new Set(['img.home.grid.1', 'img.home.grid.6', 'img.home.grid.9']);
-
-const Frame = ({ src, alt, className = '', style, sizes, delay = 0, focus }: {
-  src: string; alt: string; className?: string; style?: React.CSSProperties;
-  sizes: string; delay?: number; focus?: string;
-}) => {
-  const r = respImg(src);
-  return (
-    <Reveal kind="mask" delay={delay} className={`rv-zoom zoom relative bg-rule ${className}`} style={style}>
-      <img
-        src={r.src}
-        srcSet={r.srcSet}
-        sizes={sizes}
-        alt={alt}
-        style={focus ? { objectPosition: focus } : undefined}
-        className="w-full h-full object-cover"
-        loading="lazy"
-        decoding="async"
-        draggable={false}
-        referrerPolicy="no-referrer"
-      />
-      {/* Warm wash the board puts over every mosaic frame */}
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 mix-blend-soft-light"
-        style={{ background: 'linear-gradient(160deg, rgba(166,134,93,.12), rgba(140,70,60,.08))' }}
-      />
-    </Reveal>
-  );
-};
 
 const Home = () => {
   const { t, getContentStyle } = useLanguage();
+  const paths = usePaths();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [slide, setSlide] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -107,8 +68,15 @@ const Home = () => {
   const remaining = useRef(SLIDE_MS + CURTAIN_MS);
   const startedAt = useRef(0);
 
+  // The fan is filled from the stories chosen for it in the panel
+  const [fan, setFan] = useState<FanStory[] | null>(null);
+
   useEffect(() => {
     loadSettings().then(setSettings).catch(err => console.warn('Home: settings load failed', err));
+    fetch('/api/stories/fan')
+      .then(r => (r.ok ? r.json() : []))
+      .then(d => setFan(Array.isArray(d) ? d : []))
+      .catch(() => setFan([]));
   }, []);
 
   // A blurred full-screen layer costs the compositor something, so it goes away
@@ -159,16 +127,10 @@ const Home = () => {
     setTurned(true);
   };
 
-  const mosaicSrc = (key: string) => {
-    const i = Number(key.split('.').pop()) - 1;
-    return settings[key] || FALLBACK[i % FALLBACK.length];
-  };
-  // Alt text lives beside each image slot as "<key>.alt"
+  // Alt text and focal point live beside each image slot as "<key>.alt" / ".focus"
   const altFor = (key: string) => settings[`${key}.alt`] || '';
   const focusFor = (key: string) => settings[`${key}.focus`] || '';
-
-  const aboutMain = respImg(settings['img.home.team.aldin'] || FALLBACK[1]);
-  const aboutDetail = respImg(settings['img.home.team.melisa'] || FALLBACK[6]);
+  const pileSrc = (key: string, i: number) => settings[key] || FALLBACK[(i + 1) % FALLBACK.length];
 
   const heroWords = [
     ...t('hero.title.part1').split(' ').filter(Boolean).map(w => ({ w, italic: false })),
@@ -248,11 +210,12 @@ const Home = () => {
           );
         })}
 
-        {/* Scrim — upward on phones, sideways on desktop */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-[linear-gradient(180deg,rgba(14,12,10,.5)_0%,rgba(14,12,10,.15)_38%,rgba(14,12,10,.82)_100%)] lg:bg-[linear-gradient(90deg,rgba(14,12,10,.82)_0%,rgba(14,12,10,.38)_55%,rgba(14,12,10,.12)_100%)]"
-        />
+        {/* Scrim. On a phone, upward, darker at the foot behind the words. On a
+            desktop the board's variant 3: a soft band under the header so the
+            menu reads on a bright sky, a light wash behind the text on the left,
+            and a little weight at the foot behind "Skroluj" — the photograph
+            itself is never darkened, filtered or faded. */}
+        <div aria-hidden="true" className="hero-scrim absolute inset-0" />
 
         {/* The statement. On a phone the words sit centred in the space under
             the header with the buttons below them; on a desktop the whole block
@@ -289,7 +252,7 @@ const Home = () => {
 
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 lg:gap-9 w-full max-w-[300px] lg:max-w-none mt-2 lg:mt-0">
             <Link
-              to="/portfolio"
+              to={paths('portfolio')}
               style={{ animationDelay: 'calc(var(--intro-delay, 0s) + 2s)', ...getContentStyle('hero.portfolio') }}
               className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none btn btn-on-dark bg-cream text-ink-900 text-center text-[11px] lg:text-[12px] font-semibold tracking-[0.2em] uppercase py-[19px] lg:py-[18px] lg:px-[30px] border border-cream"
             >
@@ -298,7 +261,7 @@ const Home = () => {
             {/* A framed button on a phone, where a bare link is easy to miss; on
                 a desktop the board has it as a quiet underlined link */}
             <Link
-              to="/contact"
+              to={paths('contact')}
               style={{ animationDelay: 'calc(var(--intro-delay, 0s) + 2.2s)', ...getContentStyle('hero.inquire') }}
               className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none btn [--btn-fill:rgba(255,255,255,.2)] lg:[--btn-fill:transparent] text-white text-center text-[11px] lg:text-[12px] font-medium tracking-[0.2em] lg:tracking-[0.22em] uppercase py-[19px] border border-white/55 lg:py-3.5 lg:border-0 lg:border-b lg:border-b-white/50 lg:hover:text-cream"
             >
@@ -351,25 +314,22 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ── Mosaic ─────────────────────────────────────────────────────────── */}
-      <section id="radovi" className="relative overflow-hidden bg-cream pt-[72px] pb-20 lg:py-32 px-5 lg:px-16">
-        <OliveBranch className="hidden lg:block absolute bottom-5 w-[260px] left-[calc(50%-600px)]" />
-        <OliveBranch className="hidden lg:block absolute bottom-5 w-[260px] right-[calc(50%-600px)]" flip />
+      {/* ── Featured stories: the fan ─────────────────────────────────────
+          Fewer than three stories chosen and the section is left out
+          altogether rather than looking half empty. */}
+      {fan && fan.length >= 3 && (
+        <section id="radovi" className="relative overflow-x-clip bg-cream pt-[72px] pb-20 lg:pt-32 lg:pb-32">
+          <OliveBranch className="hidden lg:block absolute bottom-5 w-[260px] left-[calc(50%-600px)]" />
+          <OliveBranch className="hidden lg:block absolute bottom-5 w-[260px] right-[calc(50%-600px)]" flip />
 
-        <div className="relative max-w-[1312px] mx-auto">
-          <div className="grid grid-cols-2 gap-2 lg:block">
-            {/* Desktop: the heading beside the three columns */}
-            <div className="contents lg:flex lg:items-center lg:gap-12">
-              <div className="col-span-2 text-center lg:text-left mb-[30px] lg:mb-0 lg:flex-[0_1_280px] lg:min-w-[240px]">
-                <SectionLabel
-                  centered="mobile"
-                  className="mb-6 lg:mb-7"
-                  style={getContentStyle('home.featured.title')}
-                >
+          <StoryFan
+            stories={fan}
+            heading={
+              <>
+                <SectionLabel centered="mobile" className="mb-6 lg:mb-7" style={getContentStyle('home.featured.title')}>
                   {t('home.featured.title')}
                 </SectionLabel>
-
-                <Reveal as="h2" className="font-serif font-normal text-[clamp(28px,8.7vw,34px)] lg:text-[clamp(38px,3.4vw,48px)] leading-[1.12] lg:leading-[1.1] m-0">
+                <h2 className="font-serif font-normal text-[clamp(28px,8.7vw,34px)] lg:text-[clamp(38px,3.4vw,48px)] leading-[1.12] lg:leading-[1.1] m-0">
                   {(['part1', 'part2'] as const).map(part => (
                     <React.Fragment key={part}>
                       <span style={getContentStyle(`home.featured.heading.${part}`)}>
@@ -391,59 +351,26 @@ const Home = () => {
                       </svg>
                     </span>
                   </span>
-                </Reveal>
+                </h2>
+              </>
+            }
+            cta={
+              <div className="relative flex justify-center mt-11 lg:mt-16 px-5">
+                <Link
+                  to={paths('portfolio')}
+                  style={getContentStyle('home.featured.cta')}
+                  className="btn relative inline-block border border-ink-900 text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.2em] uppercase px-7 py-[18px] lg:py-4 hover:text-white"
+                >
+                  {t('home.featured.cta')} →
+                </Link>
               </div>
-
-              <div className="contents lg:flex lg:flex-[1_1_560px] lg:min-w-0 lg:items-start lg:gap-3">
-                {MOSAIC_COLS.map((col, ci) => (
-                  <div key={col.px} className={`contents lg:flex lg:flex-col lg:gap-3 lg:min-w-0 lg:relative ${col.px} ${col.cls}`}>
-                    {col.keys.map((key, ri) => (
-                      <Frame
-                        key={key}
-                        src={mosaicSrc(key)}
-                        alt={altFor(key)}
-                        sizes={PHONE_WIDE.has(key) ? col.sizes.replace(/50vw$/, '100vw') : col.sizes}
-                        delay={(ci * 3 + ri) * 0.06}
-                        focus={focusFor(key)}
-                        className={`min-w-0 ${PHONE_WIDE.has(key) ? 'col-span-2 aspect-[3/2]' : 'aspect-[3/4]'} lg:aspect-auto lg:h-[var(--h)]`}
-                        style={{ '--h': `${col.h}px` } as React.CSSProperties}
-                      />
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Desktop closing row: one wide frame, one narrow upright */}
-            <div className="contents lg:flex lg:gap-3 lg:h-[352px] lg:mt-[46px]">
-              {MOSAIC_FOOT.map((tile, i) => (
-                <Frame
-                  key={tile.key}
-                  src={mosaicSrc(tile.key)}
-                  alt={altFor(tile.key)}
-                  sizes={tile.sizes}
-                  delay={(7 + i) * 0.06}
-                  focus={focusFor(tile.key)}
-                  className={`min-w-0 ${PHONE_WIDE.has(tile.key) ? 'col-span-2 aspect-[3/2]' : 'aspect-[3/4]'} lg:aspect-auto lg:h-full ${tile.cls}`}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="relative flex justify-center mt-11 lg:mt-16">
-            <Link
-              to="/portfolio"
-              style={getContentStyle('home.featured.cta')}
-              className="btn relative inline-block border border-ink-900 text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.2em] uppercase px-7 py-[18px] lg:py-4 hover:text-white"
-            >
-              {t('home.featured.cta')} →
-            </Link>
-          </div>
-        </div>
-      </section>
+            }
+          />
+        </section>
+      )}
 
       {/* ── About ──────────────────────────────────────────────────────────── */}
-      <section id="onama" className="relative overflow-hidden bg-cream-light pt-[72px] pb-20 lg:py-32 px-6 lg:px-24">
+      <section id="onama" className="relative overflow-x-clip bg-cream-light pt-[72px] pb-20 lg:py-32 px-6 lg:px-24">
         <OliveBranch className="hidden lg:block absolute left-24 top-9 w-[170px] opacity-[0.22]" />
 
         <div className="home-about relative max-w-[1248px] mx-auto text-center lg:text-left">
@@ -479,55 +406,59 @@ const Home = () => {
             ))}
           </div>
 
-          {/* A phone shows the one photograph inside a thin white keyline, the
-              board's mobile treatment; a desktop adds the offset gold frame and
-              the small detail print overlapping its lower left corner. */}
-          <div className="ha-image relative mb-10 lg:mb-0 lg:pb-14 lg:pl-14">
-            <Reveal
-              kind="frame"
-              delay={0.2}
-              aria-hidden="true"
-              className="hidden lg:block absolute top-10 -right-6 bottom-24 left-24 border border-gold-600"
-            />
-            <Reveal kind="mask" className="rv-zoom zoom relative aspect-[4/5] bg-rule">
-              <img
-                src={aboutMain.src}
-                srcSet={aboutMain.srcSet}
-                sizes="(min-width: 1024px) 40vw, 92vw"
-                alt={settings['img.home.team.aldin.alt'] || t('home.about.heading.part1')}
-                className="w-full h-full object-cover"
-                style={{ objectPosition: settings['img.home.team.aldin.focus'] || undefined }}
-                loading="lazy"
-                decoding="async"
-                draggable={false}
-                referrerPolicy="no-referrer"
-              />
-              <span aria-hidden="true" className="lg:hidden absolute inset-3 border border-white/55 pointer-events-none" />
-            </Reveal>
-            <div className="hidden lg:block absolute left-0 bottom-0 w-[36%] px-detail">
-              <Reveal kind="mask" delay={0.14} className="rv-zoom zoom aspect-[2/3] bg-rule border-8 border-cream-light">
-                <img
-                  src={aboutDetail.src}
-                  srcSet={aboutDetail.srcSet}
-                  sizes="15vw"
-                  alt=""
-                  aria-hidden="true"
-                  className="w-full h-full object-cover"
-                  style={{ objectPosition: settings['img.home.team.melisa.focus'] || undefined }}
-                  loading="lazy"
-                  decoding="async"
-                  draggable={false}
-                  referrerPolicy="no-referrer"
-                />
-              </Reveal>
+          {/* The pile: five prints thrown on a table, overlapping at their own
+              angles. Each slides in from its side as the section arrives and
+              settles into its tilt; on a desktop they drift at different speeds
+              while the section scrolls by, and the one under the mouse lifts
+              and straightens. */}
+          <div className="ha-image relative mb-11 lg:mb-0 lg:py-2">
+            <div className="relative h-[400px] lg:h-[620px]">
+              {PILE.map((ph, i) => {
+                const r = respImg(pileSrc(ph.key, i));
+                return (
+                  <div
+                    key={ph.key}
+                    className="pile-item absolute"
+                    style={{ ...ph.pos, width: ph.w, zIndex: i + 1, '--pp': `${ph.px}px` } as unknown as React.CSSProperties}
+                  >
+                    <Reveal
+                      kind="pile"
+                      delay={i * 0.12}
+                      style={{
+                        '--r': `${ph.r}deg`,
+                        '--ex': `${ph.from[0]}px`,
+                        '--ey': `${ph.from[1]}px`,
+                        '--er': `${ph.from[2]}deg`,
+                      } as React.CSSProperties}
+                    >
+                      <div className="pile-photo relative overflow-hidden rounded-[3px] border-[3px] border-cream-light bg-rule" style={{ aspectRatio: ph.ratio }}>
+                        <img
+                          src={r.src}
+                          srcSet={r.srcSet}
+                          sizes="(min-width: 1024px) 22vw, 45vw"
+                          alt={altFor(ph.key)}
+                          style={{ objectPosition: focusFor(ph.key) || undefined }}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          decoding="async"
+                          draggable={false}
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                    </Reveal>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
+          {/* Like "Pošaljite upit" in the hero: a quiet underlined link on a
+              desktop, a thin framed button on a phone, under the photographs */}
           <div className="ha-btn">
             <Link
-              to="/about"
+              to={paths('about')}
               style={getContentStyle('home.about.cta')}
-              className="btn btn-solid inline-block bg-ink-900 text-white text-[11px] lg:text-[12px] font-semibold tracking-[0.2em] lg:tracking-[0.22em] uppercase px-[30px] lg:px-[38px] py-[19px] lg:py-[22px]"
+              className="btn [--btn-fill:#151311] lg:[--btn-fill:transparent] inline-block text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.2em] lg:tracking-[0.22em] uppercase px-[30px] py-[19px] border border-ink-900/55 hover:text-white lg:px-0 lg:py-3.5 lg:border-0 lg:border-b lg:border-b-ink-900/50 lg:hover:text-ink-900"
             >
               {t('home.about.cta')} →
             </Link>

@@ -1,14 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
 import { respImg, SIZES } from '../lib/img';
-import { useImageMeta, ratioFor } from '../lib/imageMeta';
+import { ratioFor } from '../lib/imageMeta';
+import { storyExcerpt } from '../lib/excerpt';
 import { balanceColumns } from '../lib/masonry';
 import { OliveBranch, SectionLabel, DiamondRule } from '../components/ornaments';
 import Reveal from '../components/Reveal';
 import Lightbox, { LightboxImage } from '../components/Lightbox';
+import { usePaths } from '../lib/routes';
 
 const CARD_LABEL_KEYS: Record<string, string> = {
   WEDDINGS:  'portfolio.card.wedding',
@@ -23,6 +25,8 @@ interface StoryImage {
   caption: string | null;
   layout: string | null;
   focus: string | null;
+  width?: number | null;
+  height?: number | null;
 }
 
 interface StoryData {
@@ -57,17 +61,29 @@ const CoupleName = ({ name, redAmp = true }: { name: string; redAmp?: boolean })
 const Story = () => {
   const { slug } = useParams<{ slug: string }>();
   const { t, language, getContentStyle } = useLanguage();
+  const paths = usePaths();
   const [story, setStory] = useState<StoryData | null>(null);
   const [status, setStatus] = useState<'loading' | 'ok' | 'missing'>('loading');
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [lightbox, setLightbox] = useState<number | null>(null);
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     let alive = true;
     setStatus('loading');
     fetch(`/api/stories/${encodeURIComponent(slug || '')}`)
-      .then(r => (r.ok ? r.json() : Promise.reject(new Error('missing'))))
-      .then(d => { if (alive) { setStory(d); setStatus('ok'); } })
+      .then(async r => {
+        if (r.ok) return r.json();
+        // The story was renamed: follow it to its new address
+        const body = await r.json().catch(() => ({}));
+        if (body?.moved_to) {
+          navigate(`../${encodeURIComponent(body.moved_to)}`, { replace: true, relative: 'path' });
+          return null;
+        }
+        throw new Error('missing');
+      })
+      .then(d => { if (alive && d) { setStory(d); setStatus('ok'); } })
       .catch(() => { if (alive) setStatus('missing'); });
     loadSettings().then(setSettings).catch(() => {});
     return () => { alive = false; };
@@ -84,10 +100,6 @@ const Story = () => {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const metaFor = useImageMeta(
-    useMemo(() => (story?.images ?? []).map(i => i.url), [story])
-  );
-
   // The tab and the link preview carry the couple's name. The server already
   // renders them that way; this keeps them right when the visitor moves from
   // one story to the next without a page load.
@@ -101,7 +113,8 @@ const Story = () => {
       const el = document.querySelector(sel);
       if (el && value) el.setAttribute('content', value);
     };
-    const desc = [story.location, story.date_text].filter(Boolean).join(' · ');
+    // A short account of the story itself, not just its date
+    const desc = storyExcerpt(story, language === 'ENG' ? 'en' : 'bs');
     set('meta[property="og:title"]', title);
     set('meta[name="twitter:title"]', title);
     if (desc) {
@@ -117,7 +130,7 @@ const Story = () => {
       set('meta[property="og:image"]', abs);
       set('meta[name="twitter:image"]', abs);
     }
-  }, [story, settings]);
+  }, [story, settings, language]);
 
   // The columns end at about the same height whether a story has six
   // photographs or thirty, and each one keeps its own shape rather than being
@@ -125,10 +138,13 @@ const Story = () => {
   const columns = useMemo(() => {
     const laid = (story?.images ?? []).map(img => ({
       img,
-      ratio: ratioFor(metaFor(img.url), img.layout),
+      // The real size comes with the story, so the frame is reserved at the
+      // photograph's own ratio from the first paint and nothing jumps
+      ratio: img.width && img.height ? img.width / img.height : ratioFor(undefined, img.layout),
     }));
-    return balanceColumns(laid, cols, g => 1 / g.ratio);
-  }, [story, cols, metaFor]);
+    // A story with fewer photographs than columns leaves no empty ones
+    return balanceColumns(laid, Math.min(cols, Math.max(1, laid.length)), g => 1 / g.ratio);
+  }, [story, cols]);
 
   const lightboxImages: LightboxImage[] = (story?.images ?? []).map(i => ({
     id: i.id, url: i.url, alt: i.alt, caption: i.caption,
@@ -147,7 +163,7 @@ const Story = () => {
       <div className="bg-cream min-h-[70vh] flex flex-col items-center justify-center text-center px-6 py-24">
         <h1 className="font-serif text-4xl text-ink-900 mb-6">404</h1>
         <Link
-          to="/portfolio"
+          to={paths('portfolio')}
           style={getContentStyle('story.back')}
           className="text-[11px] font-medium tracking-[0.24em] uppercase text-ink-900 border-b border-[#bfb3a0] pb-1.5"
         >
@@ -175,7 +191,7 @@ const Story = () => {
       {/* Back */}
       <div className="px-5 lg:px-24 pt-6 lg:pt-11">
         <Link
-          to="/portfolio"
+          to={paths('portfolio')}
           style={getContentStyle('story.back')}
           className="inline-flex items-center gap-2.5 lg:gap-3 text-ink-900 text-[10px] lg:text-[11px] font-medium tracking-[0.24em] uppercase border-b border-[#bfb3a0] pb-1.5 transition-opacity duration-250 hover:opacity-60"
         >
@@ -195,14 +211,14 @@ const Story = () => {
             </SectionLabel>
           )}
 
-          <Reveal as="h1" className="font-serif font-normal text-[clamp(30px,9.8vw,38px)] lg:text-[clamp(44px,4.6vw,64px)] leading-[1.1] lg:leading-[1.08] m-0 mb-[22px] lg:mb-8">
+          <Reveal as="h1" className="font-serif font-normal text-[clamp(30px,9.8vw,38px)] lg:text-[clamp(44px,4.6vw,64px)] leading-[1.1] lg:leading-[1.08] m-0 mb-[22px] lg:mb-8 max-w-full [overflow-wrap:anywhere]">
             <CoupleName name={story.couple} />
           </Reveal>
 
           <div className="flex flex-wrap items-center justify-center gap-x-5 lg:gap-x-9 gap-y-2 lg:gap-y-3 text-[10px] lg:text-[11px] font-medium tracking-[0.22em] lg:tracking-[0.26em] uppercase text-ink-500">
             {[story.location, story.date_text, typeLabel].filter(Boolean).map((v, i, arr) => (
               <React.Fragment key={`${v}-${i}`}>
-                <span>{v}</span>
+                <span className="min-w-0 [overflow-wrap:anywhere]">{v}</span>
                 {i < arr.length - 1 && <span aria-hidden="true" className="w-px h-3.5 bg-[#c8bba8]" />}
               </React.Fragment>
             ))}
@@ -216,7 +232,7 @@ const Story = () => {
           full width above the text was pushing the story itself off screen. */}
       {(quote || paragraphs.length > 0) && (
         <section className="px-6 py-[52px] lg:pt-12 lg:pb-32">
-          <div className="max-w-[760px] mx-auto text-center">
+          <div className="max-w-[760px] mx-auto text-center min-w-0 [overflow-wrap:anywhere]">
             <SectionLabel centered line="lg:w-10" className="mb-7 lg:mb-10" style={getContentStyle('story.tag')}>
               {t('story.tag')}
             </SectionLabel>
@@ -259,7 +275,7 @@ const Story = () => {
                     type="button"
                     onClick={() => setLightbox(i)}
                     aria-label={img.alt || `Fotografija ${i + 1}`}
-                    className="block w-full overflow-hidden bg-rule cursor-zoom-in group"
+                    className="zoom block w-full bg-rule cursor-zoom-in"
                     // Reserved at the photograph's own ratio, so nothing is
                     // cropped and the page does not jump as images arrive
                     style={{ aspectRatio: String(ratio) }}
@@ -269,7 +285,9 @@ const Story = () => {
                       srcSet={r.srcSet}
                       sizes={SIZES.gallery}
                       alt={img.alt || ''}
-                      className="w-full h-full object-cover transition-[filter] duration-400 group-hover:brightness-[1.07] group-hover:saturate-[1.05]"
+                      width={img.width || undefined}
+                      height={img.height || undefined}
+                      className="w-full h-full object-cover"
                       style={{ objectPosition: img.focus || undefined }}
                       loading="lazy"
                       decoding="async"
@@ -295,7 +313,7 @@ const Story = () => {
               className="max-w-[1248px] mx-auto border-t border-rule pt-8 lg:pt-9 flex flex-wrap justify-between gap-6"
             >
               {story.prev_slug ? (
-                <Link to={`/portfolio/${story.prev_slug}`} className="group flex flex-col gap-2.5 text-ink-900">
+                <Link to={paths('portfolio', story.prev_slug)} className="group flex flex-col gap-2.5 text-ink-900">
                   <span
                     style={getContentStyle('story.prev')}
                     className="text-[11px] font-medium tracking-[0.24em] uppercase text-gold-label"
@@ -303,13 +321,13 @@ const Story = () => {
                     ← {t('story.prev')}
                   </span>
                   <span className="font-serif text-[24px] lg:text-[28px] leading-[1.2] transition-colors duration-250 group-hover:text-love">
-                    <CoupleName name={story.prev_couple || ''} redAmp={false} />
+                    <span className="[overflow-wrap:anywhere]"><CoupleName name={story.prev_couple || ''} redAmp={false} /></span>
                   </span>
                 </Link>
               ) : <span />}
 
               {story.next_slug && (
-                <Link to={`/portfolio/${story.next_slug}`} className="group flex flex-col gap-2.5 text-ink-900 text-right items-end ml-auto">
+                <Link to={paths('portfolio', story.next_slug)} className="group flex flex-col gap-2.5 text-ink-900 text-right items-end ml-auto">
                   <span
                     style={getContentStyle('story.next')}
                     className="text-[11px] font-medium tracking-[0.24em] uppercase text-gold-label"
@@ -317,7 +335,7 @@ const Story = () => {
                     {t('story.next')} →
                   </span>
                   <span className="font-serif text-[24px] lg:text-[28px] leading-[1.2] transition-colors duration-250 group-hover:text-love">
-                    <CoupleName name={story.next_couple || ''} redAmp={false} />
+                    <span className="[overflow-wrap:anywhere]"><CoupleName name={story.next_couple || ''} redAmp={false} /></span>
                   </span>
                 </Link>
               )}

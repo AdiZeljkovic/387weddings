@@ -6,7 +6,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import { LanguageProvider } from './contexts/LanguageContext';
-import { routerBasename, pathFor } from './lib/lang';
+import { routerBasename, pathFor, ROUTES } from './lib/lang';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/admin/ProtectedRoute';
 import { AdminLayout } from './components/admin/AdminLayout';
@@ -102,9 +102,10 @@ function PageMetadata({ title, description, pageKey, ownTitle = false }: {
       }
 
       const baseUrl = (s['sitemap.base_url']?.trim() || 'https://387weddings.ba').replace(/\/$/, '');
-      // `pathname` comes from the Router, so it has no /en prefix on it
-      const bsPath = pathFor('BOS', pathname);
-      const enPath = pathFor('ENG', pathname);
+      // `pathname` comes from the Router, so it has no /en prefix on it; the
+      // two languages may name the page differently (/radovi, /en/portfolio)
+      const bsPath = pathFor('BOS', langCode === 'en' ? `/en${pathname}` : pathname);
+      const enPath = pathFor('ENG', langCode === 'en' ? `/en${pathname}` : pathname);
       const here = langCode === 'en' ? enPath : bsPath;
 
       setMeta('meta[property="og:url"]', `${baseUrl}${here}`);
@@ -335,36 +336,49 @@ function App() {
                             <Home />
                           </>
                         } />
-                        <Route path="/portfolio" element={
-                          <>
-                            <PageMetadata title="Portfolio" description="Explore our curated collection of wedding, engagement, and elopement stories." pageKey="portfolio" />
-                            <Portfolio />
-                          </>
-                        } />
-                        <Route path="/privacy" element={
-                          <>
-                            <PageMetadata title="Privatnost" description="Politika privatnosti i kolačića." pageKey="privacy" />
-                            <Privacy />
-                          </>
-                        } />
-                        <Route path="/portfolio/:slug" element={
-                          <>
-                            <PageMetadata title="Priča" description="Priča jednog para." pageKey="story" ownTitle />
-                            <Story />
-                          </>
-                        } />
-                        <Route path="/about" element={
-                          <>
-                            <PageMetadata title="About Us" description="Get to know Melisa and Aldin, the artists behind 387 Cinematic Weddings." pageKey="about" />
-                            <About />
-                          </>
-                        } />
-                        <Route path="/contact" element={
-                          <>
-                            <PageMetadata title="Inquire" description="Let's connect and start the dialogue about your wedding story." pageKey="contact" />
-                            <Contact />
-                          </>
-                        } />
+                        {/* Each page answers at its Bosnian and its English name, so
+                            both /radovi and (under /en) /portfolio resolve; the server
+                            301s a Bosnian visitor from an English name to the right one. */}
+                        {[ROUTES.portfolio.bs, ROUTES.portfolio.en].map(path => (
+                          <Route key={path} path={path} element={
+                            <>
+                              <PageMetadata title="Portfolio" description="Explore our curated collection of wedding, engagement, and elopement stories." pageKey="portfolio" />
+                              <Portfolio />
+                            </>
+                          } />
+                        ))}
+                        {[ROUTES.portfolio.bs, ROUTES.portfolio.en].map(path => (
+                          <Route key={`${path}/story`} path={`${path}/:slug`} element={
+                            <>
+                              <PageMetadata title="Priča" description="Priča jednog para." pageKey="story" ownTitle />
+                              <Story />
+                            </>
+                          } />
+                        ))}
+                        {[ROUTES.privacy.bs, ROUTES.privacy.en].map(path => (
+                          <Route key={path} path={path} element={
+                            <>
+                              <PageMetadata title="Privatnost" description="Politika privatnosti i kolačića." pageKey="privacy" />
+                              <Privacy />
+                            </>
+                          } />
+                        ))}
+                        {[ROUTES.about.bs, ROUTES.about.en].map(path => (
+                          <Route key={path} path={path} element={
+                            <>
+                              <PageMetadata title="About Us" description="Get to know Melisa and Aldin, the artists behind 387 Cinematic Weddings." pageKey="about" />
+                              <About />
+                            </>
+                          } />
+                        ))}
+                        {[ROUTES.contact.bs, ROUTES.contact.en].map(path => (
+                          <Route key={path} path={path} element={
+                            <>
+                              <PageMetadata title="Inquire" description="Let's connect and start the dialogue about your wedding story." pageKey="contact" />
+                              <Contact />
+                            </>
+                          } />
+                        ))}
                         <Route path="*" element={
                           <>
                             <PageMetadata title="404 Not Found" description="The page you are looking for doesn't exist." pageKey="404" />

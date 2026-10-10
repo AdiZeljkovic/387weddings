@@ -19,6 +19,7 @@ import seoRoutes from './server/routes/seoRoutes.js';
 import imageRoutes from './server/routes/imageRoutes.js';
 import storyRoutes from './server/routes/storyRoutes.js';
 import { renderShell } from './server/shell.js';
+import { langFromPath, stripLang, routeOf, pathFor } from './src/lib/lang.js';
 
 dotenv.config();
 
@@ -107,13 +108,48 @@ async function startServer() {
     const lang = req.query.lang;
     if (lang !== 'en' && lang !== 'bs') return next();
 
-    const bare = req.path === '/en' ? '/' : req.path.startsWith('/en/') ? req.path.slice(3) || '/' : req.path;
-    const target = lang === 'en' ? (bare === '/' ? '/en' : `/en${bare}`) : bare;
+    const target = pathFor(lang === 'en' ? 'ENG' : 'BOS', req.path);
 
     const params = new URLSearchParams(req.query as Record<string, string>);
     params.delete('lang');
     const qs = params.toString();
     res.redirect(301, qs ? `${target}?${qs}` : target);
+  });
+
+  // ── Every page at its own name, in its own language ────────────────────────
+  // Bosnian pages are /radovi, /o-nama, /kontakt, /privatnost; English ones
+  // /en/portfolio, /en/about, /en/contact, /en/privacy. A Bosnian visit to an
+  // English name (the old /portfolio, /about, /contact, /privacy) or the other
+  // way round moves permanently to the right one, so every old link and every
+  // indexed address keeps working. A story renamed in the panel also sends its
+  // old address on to the new one.
+  app.use(async (req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+    if (/^\/(api|admin|uploads|img|assets)(\/|$)/.test(req.path) || path.extname(req.path)) return next();
+    const lang = langFromPath(req.path);
+    const route = routeOf(stripLang(req.path));
+    if (!route) return next();
+    const qs = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
+
+    if (route.key === 'portfolio' && route.slug) {
+      try {
+        const live = await pool.query('SELECT 1 FROM stories WHERE slug = $1 AND is_published = TRUE', [route.slug]);
+        if (!live.rowCount) {
+          const moved = await pool.query(
+            `SELECT s.slug FROM story_redirects r JOIN stories s ON s.id = r.story_id
+              WHERE r.old_slug = $1 AND s.is_published = TRUE`, [route.slug]);
+          if (moved.rows[0]) {
+            const to = pathFor(lang, lang === 'ENG' ? `/en/portfolio/${moved.rows[0].slug}` : `/radovi/${moved.rows[0].slug}`);
+            return res.redirect(301, to + qs);
+          }
+        }
+      } catch { /* the page itself will answer */ }
+    }
+
+    const own = pathFor(lang, req.path);
+    const here = req.path.replace(/\/+$/, '') || '/';
+    if (own !== here) return res.redirect(301, own + qs);
+    next();
   });
 
   // ── CORS ───────────────────────────────────────────────────────────────────
@@ -160,7 +196,7 @@ async function startServer() {
 
   // The story page used to live under /prica/:slug; keep those links alive
   app.get('/prica/:slug', (req, res) => {
-    res.redirect(301, `/portfolio/${encodeURIComponent(req.params.slug)}`);
+    res.redirect(301, `/radovi/${encodeURIComponent(req.params.slug)}`);
   });
 
   // ── API Routes ─────────────────────────────────────────────────────────────
@@ -192,15 +228,8 @@ async function startServer() {
     // A single-page app answered 200 for every URL, so unknown pages looked
     // like real pages to crawlers (soft 404) and /favicon.ico returned HTML.
     // Known routes still get the shell; anything else gets a real 404.
-    const KNOWN_ROUTES = new Set(['/', '/portfolio', '/about', '/contact', '/privacy']);
-    // English lives under /en, so a route check looks at the path without it
-    const stripLang = (p: string) =>
-      p === '/en' ? '/' : p.startsWith('/en/') ? p.slice(3) || '/' : p;
-    const isKnownRoute = (p: string) => {
-      const q = stripLang(p);
-      return KNOWN_ROUTES.has(q.replace(/\/$/, '') || '/')
-        || q.startsWith('/admin') || q.startsWith('/portfolio/');
-    };
+    // Every page, in either language, by the shared address table
+    const isKnownRoute = (p: string) => Boolean(routeOf(stripLang(p))) || stripLang(p).startsWith('/admin');
 
     const shell = path.join(process.cwd(), 'dist', 'index.html');
 
@@ -214,12 +243,12 @@ async function startServer() {
       // A story URL is only real if that slug is published. Without this check
       // every /portfolio/<anything> answered 200, which is a soft 404.
       let ok = isKnownRoute(req.path);
-      const story = stripLang(req.path).match(/^\/portfolio\/([^/]+)\/?$/);
-      if (story) {
+      const story = routeOf(stripLang(req.path));
+      if (story?.slug) {
         try {
           const { rowCount } = await pool.query(
             'SELECT 1 FROM stories WHERE slug = $1 AND is_published = TRUE',
-            [decodeURIComponent(story[1])]
+            [story.slug]
           );
           ok = (rowCount ?? 0) > 0;
         } catch {

@@ -178,14 +178,14 @@ const Contact = () => {
           frame on a phone. The title, ornament and intro are one set of
           elements; only the box around them changes. The two crops the brief
           asks for come from <picture>, so there is still a single <img>.     */}
-      <section className="relative lg:flex bg-[#f7f6f3] lg:h-[464px] overflow-hidden">
+      <section className="relative lg:flex bg-[#f7f6f3] lg:h-[min(640px,40vw)] overflow-hidden">
         <div className="flex-1 min-w-0 flex flex-col items-center justify-center text-center px-6 lg:px-16 pt-11 pb-7 lg:py-0">
           {heading}{ornament}{intro}
         </div>
 
-        <Reveal kind="mask" className="rv-zoom relative flex-none w-full h-[220px] lg:w-[661px] lg:h-auto overflow-hidden">
+        <Reveal kind="mask" className="rv-zoom relative flex-none w-full h-[220px] lg:w-auto lg:flex-[0_0_50%] lg:h-auto overflow-hidden">
           <picture className="block w-full h-full">
-            <source media="(min-width: 1024px)" srcSet={heroDesktop.srcSet || heroDesktop.src} sizes="46vw" />
+            <source media="(min-width: 1024px)" srcSet={heroDesktop.srcSet || heroDesktop.src} sizes="50vw" />
             <img
               src={heroMobile.src} srcSet={heroMobile.srcSet} sizes="100vw" alt="" aria-hidden="true"
               className="w-full h-full object-cover lg:animate-[slowZoom_18s_ease-in-out_infinite_alternate] motion-reduce:animate-none"
@@ -194,7 +194,7 @@ const Contact = () => {
           </picture>
           {/* Desktop: the frame fades into the text column on its left */}
           <span aria-hidden="true"
-            className="hidden lg:block absolute inset-y-0 left-0 w-[70%] bg-[linear-gradient(90deg,#f7f6f3_0%,rgba(247,246,243,.65)_45%,rgba(247,246,243,0)_100%)]" />
+            className="hidden lg:block absolute inset-y-0 left-0 w-1/2 bg-[linear-gradient(90deg,#f7f6f3_0%,rgba(247,246,243,.65)_45%,rgba(247,246,243,0)_100%)]" />
           {/* Phones: it fades into the page above and the form below */}
           <span aria-hidden="true" className="lg:hidden absolute inset-x-0 top-0 h-24 bg-[linear-gradient(#f7f6f3,rgba(247,246,243,0))]" />
           <span aria-hidden="true" className="lg:hidden absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(rgba(255,255,255,0),#ffffff)]" />

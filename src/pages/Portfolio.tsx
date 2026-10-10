@@ -4,11 +4,11 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
 import { respImg, SIZES } from '../lib/img';
-import { useImageMeta, layoutFor, LAYOUT_RATIO } from '../lib/imageMeta';
-import { balanceColumns } from '../lib/masonry';
+import { cardRatio } from '../lib/imageMeta';
 import { OliveBranch, SectionLabel, DiamondRule } from '../components/ornaments';
 import Reveal from '../components/Reveal';
 import Emphasis from '../components/Emphasis';
+import { usePaths } from '../lib/routes';
 
 const categories = ['ALL', 'WEDDINGS', 'STUDIO', 'PORTRAITS'] as const;
 type Category = typeof categories[number];
@@ -35,15 +35,17 @@ interface StoryCard {
   cover_url: string | null;
   cover_alt: string | null;
   cover_layout: string | null;
+  cover_width: number | null;
+  cover_height: number | null;
   cover_focus: string | null;
 }
 
 // One column on a phone, three above it — the brief is explicit
 const colsFor = (w: number) => (w < 820 ? 1 : w < 1100 ? 2 : 3);
 
-// Roughly how tall the number / category / name block is, as a fraction of the
-// column width. Only used to keep the columns level, so an estimate is enough.
-const CAPTION_H = 0.2;
+// How far each column starts below the first: three columns 0 / 96 / 48px,
+// two columns 0 / 64px, one column none
+const COL_OFFSET: Record<number, number[]> = { 1: [0], 2: [0, 64], 3: [0, 96, 48] };
 
 // "Amra & Tarik" — the ampersand is set in italic red, as in the mockup
 const CoupleName = ({ name, className = '' }: { name: string; className?: string }) => {
@@ -58,6 +60,7 @@ const CoupleName = ({ name, className = '' }: { name: string; className?: string
 
 const Portfolio = () => {
   const { t, getContentStyle } = useLanguage();
+  const paths = usePaths();
   const [searchParams] = useSearchParams();
   const initialCat = (searchParams.get('cat') || '').toUpperCase();
   const [activeFilter, setActiveFilter] = useState<Category>(
@@ -87,18 +90,19 @@ const Portfolio = () => {
     [stories, activeFilter]
   );
 
-  const metaFor = useImageMeta(useMemo(() => stories.map(s => s.cover_url), [stories]));
-
-  // Masonry. Cards used to go round-robin — 1, 2, 3, 1, 2, 3 — so with mixed
-  // portrait and landscape shapes the columns ended at different heights and
-  // one hung below the others with blank space under it.
+  // The board's layout: cards dealt into the columns in turn — 1st to the
+  // first, 2nd to the second, 3rd to the third, 4th back to the first — and
+  // each column stacked on its own, so cards never sit in level rows. The
+  // columns also start at different heights (see COL_OFFSET), so even a page of
+  // identical upright cards reads as scattered.
   const columns = useMemo(() => {
-    const laid = filtered.map(item => ({
-      item,
-      layout: layoutFor(metaFor(item.cover_url), item.cover_layout),
+    const out: { item: StoryCard; index: number; ratio: number }[][] =
+      Array.from({ length: cols }, () => []);
+    filtered.forEach((item, index) => out[index % cols].push({
+      item, index, ratio: cardRatio(item.cover_layout, item.cover_width, item.cover_height),
     }));
-    return balanceColumns(laid, cols, c => 1 / LAYOUT_RATIO[c.layout] + CAPTION_H);
-  }, [filtered, cols, metaFor]);
+    return out;
+  }, [filtered, cols]);
 
   const handle = settings.instagram_handle || '387.weddings';
   const instagramUrl = settings.instagram && settings.instagram !== '#'
@@ -187,8 +191,12 @@ const Portfolio = () => {
           ) : (
             <div className="flex gap-8 items-start">
               {columns.map((col, ci) => (
-                <div key={ci} className="flex-1 min-w-0 flex flex-col gap-11 lg:gap-12">
-                  {col.map(({ item: { item, layout }, index }, ri) => {
+                <div
+                  key={ci}
+                  className="flex-1 min-w-0 flex flex-col gap-11 lg:gap-12"
+                  style={{ paddingTop: (COL_OFFSET[cols] ?? [])[ci] || 0 }}
+                >
+                  {col.map(({ item, index, ratio }, ri) => {
                     const n = index + 1;
                     const src = item.cover_url || '';
                     const r = respImg(src);
@@ -196,7 +204,7 @@ const Portfolio = () => {
                     return (
                       <Link
                         key={item.id}
-                        to={`/portfolio/${item.slug}`}
+                        to={paths('portfolio', item.slug)}
                         className="work-card group block text-ink-900 cursor-pointer"
                       >
                         <div className="overflow-hidden">
@@ -205,7 +213,7 @@ const Portfolio = () => {
                             kind="mask"
                             delay={ci * 0.12 + ri * 0.06}
                             className="zoom bg-rule"
-                            style={{ aspectRatio: String(LAYOUT_RATIO[layout]) }}
+                            style={{ aspectRatio: String(ratio) }}
                           >
                             <img
                               src={r.src}

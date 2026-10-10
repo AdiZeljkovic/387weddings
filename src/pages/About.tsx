@@ -6,6 +6,7 @@ import { loadSettings } from '../lib/settingsCache';
 import { respImg, SIZES } from '../lib/img';
 import { OliveBranch, SectionLabel } from '../components/ornaments';
 import Reveal from '../components/Reveal';
+import { usePaths } from '../lib/routes';
 
 const FALLBACK_MELISA = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=1200';
 const FALLBACK_ALDIN  = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=1200';
@@ -129,6 +130,7 @@ const Bio = ({ n, portrait, ratio, flip, altText }: {
 
 const About = () => {
   const { t, getContentStyle } = useLanguage();
+  const paths = usePaths();
   const [imgs, setImgs] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -198,7 +200,7 @@ const About = () => {
                 {t(`about.invite.${p}`)}
               </Reveal>
             ))}
-            <Link to="/contact" style={getContentStyle('about.invite.button')}
+            <Link to={paths('contact')} style={getContentStyle('about.invite.button')}
               className="btn inline-block border border-ink-900/30 text-ink-900 text-[11px] font-medium tracking-[0.22em] lg:tracking-[0.25em] uppercase px-10 lg:px-11 py-3.5 lg:mt-3 hover:text-white">
               {t('about.invite.button')}
             </Link>

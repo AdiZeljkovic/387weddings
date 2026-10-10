@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
 import Logo from './Logo';
+import { usePaths } from '../lib/routes';
 
 const InstagramGlyph = ({ size = 16, stroke = 'currentColor' }: { size?: number; stroke?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.6" aria-hidden="true">
@@ -15,7 +16,20 @@ const InstagramGlyph = ({ size = 16, stroke = 'currentColor' }: { size?: number;
 
 const Navbar = () => {
   const { t, language, setLanguage, getContentStyle } = useLanguage();
+  const paths = usePaths();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+
+  // The header's height, for anything pinned under it (the fan of stories)
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const set = () => document.documentElement.style.setProperty('--header-h', `${el.offsetHeight}px`);
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const [settings, setSettings] = useState<Record<string, string>>({});
   const location = useLocation();
 
@@ -41,10 +55,10 @@ const Navbar = () => {
   }, [isMobileMenuOpen]);
 
   const links = [
-    { path: '/',          label: t('nav.home'),    styleKey: 'nav.home' },
-    { path: '/portfolio', label: t('nav.work'),    styleKey: 'nav.work' },
-    { path: '/about',     label: t('nav.stories'), styleKey: 'nav.stories' },
-    { path: '/contact',   label: t('nav.inquire'), styleKey: 'nav.inquire' },
+    { path: paths('home'),      label: t('nav.home'),    styleKey: 'nav.home' },
+    { path: paths('portfolio'), label: t('nav.work'),    styleKey: 'nav.work' },
+    { path: paths('about'),     label: t('nav.stories'), styleKey: 'nav.stories' },
+    { path: paths('contact'),   label: t('nav.inquire'), styleKey: 'nav.inquire' },
   ];
 
   // The header follows the user down every page. On the home hero it lies over
@@ -114,6 +128,7 @@ const Navbar = () => {
   return (
     <>
       <header
+        ref={headerRef}
         className={cn(
           'top-0 left-0 right-0 flex items-center justify-between gap-6',
           'px-5 sm:px-8 lg:px-24 transition-colors duration-300',
@@ -147,7 +162,9 @@ const Navbar = () => {
         <div className="flex items-center gap-[14px] lg:gap-11">
         <nav className="hidden lg:flex items-center gap-y-2 gap-x-11">
           {links.map(link => {
-            const active = location.pathname === link.path;
+            // A story belongs to Radovi, so Radovi stays marked while one is open
+            const active = link.path === '/' ? location.pathname === '/'
+              : location.pathname === link.path || location.pathname.startsWith(`${link.path}/`);
             return (
               <Link
                 key={link.path}
@@ -221,7 +238,9 @@ const Navbar = () => {
 
             <nav aria-label="Glavni meni" className="flex-1 flex flex-col items-center justify-center gap-1 pb-5">
               {links.map(link => {
-                const active = location.pathname === link.path;
+                // A story belongs to Radovi, so Radovi stays marked while one is open
+            const active = link.path === '/' ? location.pathname === '/'
+              : location.pathname === link.path || location.pathname.startsWith(`${link.path}/`);
                 return (
                   <Link
                     key={link.path}

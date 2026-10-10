@@ -1,13 +1,17 @@
 import { Router } from 'express';
+import type { PoolClient } from 'pg';
 import { pool } from '../db.js';
 import { requireAuth } from '../auth.js';
 
 const router = Router();
 
 const CATEGORIES = ['WEDDINGS', 'STUDIO', 'PORTRAITS'] as const;
-const LAYOUTS = ['TALL', 'WIDE', 'SQUARE'] as const;
+// AUTO follows the photograph's own shape; the other three are the owner's
+// explicit choice and always win
+const LAYOUTS = ['AUTO', 'TALL', 'WIDE', 'SQUARE'] as const;
+const FAN_MAX = 5;
 
-const slugify = (input: string) =>
+export const slugify = (input: string) =>
   String(input)
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/đ/gi, 'd')
@@ -16,25 +20,56 @@ const slugify = (input: string) =>
     .replace(/^-+|-+$/g, '')
     .slice(0, 150);
 
-// GET /api/stories — published cards for the Radovi grid.
-// While the client is still migrating, a site with no stories yet falls back to
-// the old gallery_images so the page is never empty and nothing is lost.
+// Lists change in the panel and must show on the next page load, so they are
+// revalidated every time instead of sitting in a browser cache for a minute.
+const FRESH = 'no-cache';
+
+// Real pixel size of an upload, joined from image_meta by its file name, so a
+// frame can be reserved at the photograph's own ratio in the very first render
+const META = (col: string, alias: string) => `
+  LEFT JOIN image_meta ${alias}
+         ON ${alias}.file = regexp_replace(${col}, '^/uploads/', '')`;
+
+// GET /api/stories — published cards for the Radovi grid
 router.get('/', async (_req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT id, slug, couple, category, cover_url, cover_alt, cover_layout, cover_focus,
-              location, date_text
-         FROM stories
-        WHERE is_published = TRUE
-        ORDER BY sort_order, id`
+      `SELECT s.id, s.slug, s.couple, s.category, s.cover_url, s.cover_alt, s.cover_layout,
+              s.cover_focus, s.location, s.date_text,
+              m.width AS cover_width, m.height AS cover_height
+         FROM stories s ${META('s.cover_url', 'm')}
+        WHERE s.is_published = TRUE
+        ORDER BY s.sort_order, s.id`
     );
-
-    // Every card is a real story with a slug, so every card is a link. Old
-    // gallery rows were migrated into stories by initDB rather than faked here.
-    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.setHeader('Cache-Control', FRESH);
     res.json(rows);
   } catch (err) {
     console.error('[stories]', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET /api/stories/fan — the stories chosen for the fan on the home page, in
+// their fan order. The fan has no data of its own: name and link come from the
+// story, the picture is the story's fan picture or else its cover.
+router.get('/fan', async (_req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT s.id, s.slug, s.couple, s.fan_order,
+              COALESCE(NULLIF(s.fan_image, ''), s.cover_url) AS image,
+              CASE WHEN COALESCE(s.fan_image, '') <> '' THEN s.fan_focus ELSE s.cover_focus END AS focus,
+              s.cover_alt AS alt,
+              m.width, m.height
+         FROM stories s
+         ${META("COALESCE(NULLIF(s.fan_image, ''), s.cover_url)", 'm')}
+        WHERE s.is_published = TRUE AND s.fan_order IS NOT NULL
+        ORDER BY s.fan_order, s.id
+        LIMIT ${FAN_MAX}`
+    );
+    res.setHeader('Cache-Control', FRESH);
+    res.json(rows);
+  } catch (err) {
+    console.error('[stories/fan]', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -47,6 +82,16 @@ router.get('/:slug', async (req, res) => {
       [req.params.slug]
     );
     if (rows.length === 0) {
+      // An old address of a story whose title has since changed
+      const moved = await pool.query(
+        `SELECT s.slug FROM story_redirects r JOIN stories s ON s.id = r.story_id
+          WHERE r.old_slug = $1 AND s.is_published = TRUE`,
+        [req.params.slug]
+      );
+      if (moved.rows[0]) {
+        res.status(404).json({ error: 'Moved', moved_to: moved.rows[0].slug });
+        return;
+      }
       res.status(404).json({ error: 'Not found' });
       return;
     }
@@ -54,8 +99,9 @@ router.get('/:slug', async (req, res) => {
 
     const [images, neighbours] = await Promise.all([
       pool.query(
-        `SELECT id, url, alt, caption, layout, focus FROM story_images
-          WHERE story_id = $1 ORDER BY sort_order, id`,
+        `SELECT i.id, i.url, i.alt, i.caption, i.layout, i.focus, m.width, m.height
+           FROM story_images i ${META('i.url', 'm')}
+          WHERE i.story_id = $1 ORDER BY i.sort_order, i.id`,
         [story.id]
       ),
       // Previous / next follow the order the cards are listed in, and wrap
@@ -96,7 +142,7 @@ router.get('/:slug', async (req, res) => {
           next_slug: n.next_slug, next_couple: n.next_couple,
         };
 
-    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.setHeader('Cache-Control', FRESH);
     res.json({ ...story, images: images.rows, ...nav });
   } catch (err) {
     console.error('[story]', err);
@@ -109,8 +155,13 @@ router.get('/:slug', async (req, res) => {
 router.get('/admin/all', requireAuth, async (_req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT s.*, (SELECT COUNT(*) FROM story_images i WHERE i.story_id = s.id) AS image_count
-         FROM stories s ORDER BY s.sort_order, s.id`
+      `SELECT s.*, (SELECT COUNT(*) FROM story_images i WHERE i.story_id = s.id) AS image_count,
+              mc.width AS cover_width, mc.height AS cover_height,
+              mf.width AS fan_width, mf.height AS fan_height
+         FROM stories s
+         ${META('s.cover_url', 'mc')}
+         ${META('s.fan_image', 'mf')}
+        ORDER BY s.sort_order, s.id`
     );
     res.json(rows);
   } catch (err) {
@@ -135,29 +186,119 @@ router.get('/admin/:id/images', requireAuth, async (req, res) => {
   }
 });
 
-const readBody = (b: Record<string, unknown>) => ({
-  couple: String(b.couple ?? '').trim(),
-  category: CATEGORIES.includes(b.category as typeof CATEGORIES[number])
-    ? (b.category as string) : 'WEDDINGS',
-  location: (b.location as string) || null,
-  date_text: (b.date_text as string) || null,
-  tag: (b.tag as string) || null,
-  tag_bs: (b.tag_bs as string) || (b.tag as string) || null,
-  tag_en: (b.tag_en as string) || (b.tag as string) || null,
-  cover_url: (b.cover_url as string) || null,
-  cover_alt: (b.cover_alt as string) || null,
-  cover_layout: LAYOUTS.includes(b.cover_layout as typeof LAYOUTS[number])
-    ? (b.cover_layout as string) : 'TALL',
-  // "50% 30%" — where the owner clicked on the photograph
-  cover_focus: typeof b.cover_focus === 'string' && /^[\d.%\s a-z-]{0,40}$/i.test(b.cover_focus)
-    ? (b.cover_focus || null) : null,
-  quote_bs: (b.quote_bs as string) || null,
-  quote_en: (b.quote_en as string) || null,
-  text_bs: (b.text_bs as string) || null,
-  text_en: (b.text_en as string) || null,
-  sort_order: Number.isFinite(Number(b.sort_order)) ? Number(b.sort_order) : 0,
-  is_published: b.is_published !== false,
+// PUT /api/stories/admin/fan — the fan's order, as dragged in the panel
+router.put('/admin/fan', requireAuth, async (req, res) => {
+  const ids: number[] = Array.isArray(req.body?.ids)
+    ? req.body.ids.map(Number).filter(Number.isFinite).slice(0, FAN_MAX) : [];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('UPDATE stories SET fan_order = NULL WHERE fan_order IS NOT NULL AND NOT (id = ANY($1))', [ids]);
+    for (let i = 0; i < ids.length; i++) {
+      await client.query('UPDATE stories SET fan_order = $1 WHERE id = $2', [i + 1, ids[i]]);
+    }
+    await client.query('COMMIT');
+    res.json({ success: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('[stories/fan/order]', err);
+    res.status(500).json({ error: 'Server error' });
+  } finally {
+    client.release();
+  }
 });
+
+const focusOk = (v: unknown) =>
+  typeof v === 'string' && /^[\d.%\s a-z-]{0,40}$/i.test(v) ? (v || null) : null;
+
+const readBody = (b: Record<string, unknown>) => {
+  const fanOn = b.fan_on === true || (b.fan_on === undefined && Number(b.fan_order) > 0);
+  const fanOrder = Number(b.fan_order);
+  return {
+    couple: String(b.couple ?? '').trim(),
+    category: CATEGORIES.includes(b.category as typeof CATEGORIES[number])
+      ? (b.category as string) : 'WEDDINGS',
+    location: (b.location as string) || null,
+    date_text: (b.date_text as string) || null,
+    tag: (b.tag as string) || null,
+    tag_bs: (b.tag_bs as string) || (b.tag as string) || null,
+    tag_en: (b.tag_en as string) || (b.tag as string) || null,
+    cover_url: (b.cover_url as string) || null,
+    cover_alt: (b.cover_alt as string) || null,
+    cover_layout: LAYOUTS.includes(b.cover_layout as typeof LAYOUTS[number])
+      ? (b.cover_layout as string) : 'AUTO',
+    // "50% 30%" — where the owner clicked on the photograph
+    cover_focus: focusOk(b.cover_focus),
+    quote_bs: (b.quote_bs as string) || null,
+    quote_en: (b.quote_en as string) || null,
+    text_bs: (b.text_bs as string) || null,
+    text_en: (b.text_en as string) || null,
+    sort_order: Number.isFinite(Number(b.sort_order)) ? Number(b.sort_order) : 0,
+    is_published: b.is_published !== false,
+    fan_on: fanOn,
+    fan_order: fanOn && fanOrder >= 1 && fanOrder <= FAN_MAX ? Math.round(fanOrder) : null,
+    fan_image: (b.fan_image as string) || null,
+    fan_focus: focusOk(b.fan_focus),
+    // The story that makes room, when the fan is already full
+    fan_replace: Number.isFinite(Number(b.fan_replace)) ? Number(b.fan_replace) : null,
+  };
+};
+
+/**
+ * Puts a story into the fan (or takes it out) under the rules the owner asked
+ * for: never more than five, never a sixth added quietly — the caller has to
+ * say which story gives up its place — and an unpublished story is never in it.
+ * Returns an error body when the fan is full and no replacement was named.
+ */
+async function placeInFan(
+  client: PoolClient,
+  id: number, v: ReturnType<typeof readBody>,
+): Promise<{ status: number; body: unknown } | null> {
+  if (!v.fan_on || !v.is_published) {
+    await client.query('UPDATE stories SET fan_order = NULL WHERE id = $1', [id]);
+    return null;
+  }
+  const others = await client.query(
+    `SELECT id, couple, fan_order FROM stories
+      WHERE fan_order IS NOT NULL AND is_published = TRUE AND id <> $1
+      ORDER BY fan_order`,
+    [id]
+  );
+  if (others.rows.length >= FAN_MAX) {
+    if (!v.fan_replace || !others.rows.some(r => r.id === v.fan_replace)) {
+      return { status: 409, body: { error: 'fan_full', fan: others.rows } };
+    }
+    const out = others.rows.find(r => r.id === v.fan_replace)!;
+    await client.query('UPDATE stories SET fan_order = NULL WHERE id = $1', [out.id]);
+    await client.query('UPDATE stories SET fan_order = $1 WHERE id = $2', [v.fan_order ?? out.fan_order, id]);
+    return null;
+  }
+  // A free place: the one asked for, else the first one not taken
+  const taken = new Set(others.rows.map(r => r.fan_order));
+  let place = v.fan_order;
+  if (!place || taken.has(place)) {
+    // The asked-for place is taken: the story already there moves down a slot
+    if (place && taken.has(place)) {
+      await client.query(
+        `UPDATE stories SET fan_order = fan_order + 1
+          WHERE fan_order >= $1 AND id <> $2 AND fan_order IS NOT NULL`,
+        [place, id]
+      );
+    } else {
+      place = 1;
+      while (taken.has(place)) place++;
+    }
+  }
+  await client.query('UPDATE stories SET fan_order = $1 WHERE id = $2', [place, id]);
+  // Keep the places 1..n with no gaps
+  await client.query(
+    `UPDATE stories s SET fan_order = r.n FROM (
+       SELECT id, ROW_NUMBER() OVER (ORDER BY fan_order, id) AS n
+         FROM stories WHERE fan_order IS NOT NULL
+     ) r WHERE s.id = r.id`
+  );
+  return null;
+}
 
 router.post('/', requireAuth, async (req, res) => {
   const v = readBody(req.body);
@@ -166,26 +307,41 @@ router.post('/', requireAuth, async (req, res) => {
     return;
   }
   const slug = slugify(String(req.body.slug || v.couple)) || `prica-${Date.now()}`;
+  const client = await pool.connect();
   try {
-    const { rows } = await pool.query(
+    await client.query('BEGIN');
+    const { rows } = await client.query(
       `INSERT INTO stories
          (slug, couple, category, location, date_text, tag, tag_bs, tag_en,
           cover_url, cover_alt, cover_layout, cover_focus,
-          quote_bs, quote_en, text_bs, text_en, sort_order, is_published)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+          quote_bs, quote_en, text_bs, text_en, sort_order, is_published,
+          fan_image, fan_focus)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
        RETURNING *`,
       [slug, v.couple, v.category, v.location, v.date_text, v.tag, v.tag_bs, v.tag_en,
        v.cover_url, v.cover_alt, v.cover_layout, v.cover_focus,
-       v.quote_bs, v.quote_en, v.text_bs, v.text_en, v.sort_order, v.is_published]
+       v.quote_bs, v.quote_en, v.text_bs, v.text_en, v.sort_order, v.is_published,
+       v.fan_image, v.fan_focus]
     );
-    res.json(rows[0]);
+    const problem = await placeInFan(client, rows[0].id, v);
+    if (problem) {
+      await client.query('ROLLBACK');
+      res.status(problem.status).json(problem.body);
+      return;
+    }
+    await client.query('COMMIT');
+    const fresh = await pool.query('SELECT * FROM stories WHERE id = $1', [rows[0].id]);
+    res.json(fresh.rows[0]);
   } catch (err: unknown) {
+    await client.query('ROLLBACK');
     if ((err as { code?: string }).code === '23505') {
       res.status(409).json({ error: 'Adresa stranice (slug) već postoji' });
       return;
     }
     console.error('[stories/create]', err);
     res.status(500).json({ error: 'Server error' });
+  } finally {
+    client.release();
   }
 });
 
@@ -195,33 +351,59 @@ router.put('/:id', requireAuth, async (req, res) => {
     res.status(400).json({ error: 'Ime para je obavezno' });
     return;
   }
-  const slug = slugify(String(req.body.slug || v.couple));
+  // The address follows the title unless the owner wrote one of their own
+  const slug = slugify(String(req.body.slug || v.couple)) || null;
+  const client = await pool.connect();
   try {
-    const { rows } = await pool.query(
-      `UPDATE stories SET
-         slug = COALESCE(NULLIF($1, ''), slug), couple = $2, category = $3, location = $4,
-         date_text = $5, tag = $6, tag_bs = $7, tag_en = $8,
-         cover_url = $9, cover_alt = $10, cover_layout = $11, cover_focus = $12,
-         quote_bs = $13, quote_en = $14, text_bs = $15, text_en = $16,
-         sort_order = $17, is_published = $18
-       WHERE id = $19 RETURNING *`,
-      [slug, v.couple, v.category, v.location, v.date_text, v.tag, v.tag_bs, v.tag_en,
-       v.cover_url, v.cover_alt, v.cover_layout, v.cover_focus,
-       v.quote_bs, v.quote_en, v.text_bs, v.text_en, v.sort_order, v.is_published,
-       req.params.id]
-    );
-    if (rows.length === 0) {
+    await client.query('BEGIN');
+    const before = await client.query('SELECT slug FROM stories WHERE id = $1', [req.params.id]);
+    if (before.rows.length === 0) {
+      await client.query('ROLLBACK');
       res.status(404).json({ error: 'Not found' });
       return;
     }
-    res.json(rows[0]);
+    const { rows } = await client.query(
+      `UPDATE stories SET
+         slug = COALESCE($1, slug), couple = $2, category = $3, location = $4,
+         date_text = $5, tag = $6, tag_bs = $7, tag_en = $8,
+         cover_url = $9, cover_alt = $10, cover_layout = $11, cover_focus = $12,
+         quote_bs = $13, quote_en = $14, text_bs = $15, text_en = $16,
+         sort_order = $17, is_published = $18, fan_image = $19, fan_focus = $20
+       WHERE id = $21 RETURNING *`,
+      [slug, v.couple, v.category, v.location, v.date_text, v.tag, v.tag_bs, v.tag_en,
+       v.cover_url, v.cover_alt, v.cover_layout, v.cover_focus,
+       v.quote_bs, v.quote_en, v.text_bs, v.text_en, v.sort_order, v.is_published,
+       v.fan_image, v.fan_focus, req.params.id]
+    );
+    // The old address keeps working, permanently pointing at the new one
+    const oldSlug = before.rows[0].slug;
+    if (oldSlug && oldSlug !== rows[0].slug) {
+      await client.query(
+        `INSERT INTO story_redirects (old_slug, story_id) VALUES ($1, $2)
+         ON CONFLICT (old_slug) DO UPDATE SET story_id = EXCLUDED.story_id`,
+        [oldSlug, rows[0].id]
+      );
+      await client.query('DELETE FROM story_redirects WHERE old_slug = $1', [rows[0].slug]);
+    }
+    const problem = await placeInFan(client, rows[0].id, v);
+    if (problem) {
+      await client.query('ROLLBACK');
+      res.status(problem.status).json(problem.body);
+      return;
+    }
+    await client.query('COMMIT');
+    const fresh = await pool.query('SELECT * FROM stories WHERE id = $1', [rows[0].id]);
+    res.json(fresh.rows[0]);
   } catch (err: unknown) {
+    await client.query('ROLLBACK');
     if ((err as { code?: string }).code === '23505') {
       res.status(409).json({ error: 'Adresa stranice (slug) već postoji' });
       return;
     }
     console.error('[stories/update]', err);
     res.status(500).json({ error: 'Server error' });
+  } finally {
+    client.release();
   }
 });
 
@@ -248,7 +430,7 @@ router.post('/:id/images', requireAuth, async (req, res) => {
       `INSERT INTO story_images (story_id, url, alt, caption, layout, focus, sort_order)
        VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
       [req.params.id, url, alt || null, caption || null,
-       LAYOUTS.includes(layout) ? layout : 'TALL',
+       ['TALL', 'WIDE', 'SQUARE'].includes(layout) ? layout : 'TALL',
        typeof focus === 'string' && focus ? focus.slice(0, 40) : null,
        Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0]
     );
@@ -270,7 +452,7 @@ router.put('/images/:imageId', requireAuth, async (req, res) => {
               sort_order = COALESCE($5, sort_order)
         WHERE id = $6 RETURNING *`,
       [alt || null, caption || null,
-       LAYOUTS.includes(layout) ? layout : null,
+       ['TALL', 'WIDE', 'SQUARE'].includes(layout) ? layout : null,
        typeof focus === 'string' && focus ? focus.slice(0, 40) : null,
        Number.isFinite(Number(sort_order)) ? Number(sort_order) : null,
        req.params.imageId]

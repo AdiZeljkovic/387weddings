@@ -1,15 +1,18 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
+import { pathOf, type RouteKey } from '../../src/lib/lang.js';
 
 const router = Router();
 
-const STATIC_PAGES = [
-  { path: '/',          changefreq: 'weekly',  priority: '1.0' },
-  { path: '/portfolio', changefreq: 'weekly',  priority: '0.9' },
-  { path: '/about',     changefreq: 'monthly', priority: '0.7' },
-  { path: '/contact',   changefreq: 'monthly', priority: '0.8' },
-  { path: '/privacy',   changefreq: 'yearly',  priority: '0.3' },
+// Each page in both languages, from the shared address table
+const STATIC_PAGES: { key: RouteKey; changefreq: string; priority: string }[] = [
+  { key: 'home',      changefreq: 'weekly',  priority: '1.0' },
+  { key: 'portfolio', changefreq: 'weekly',  priority: '0.9' },
+  { key: 'about',     changefreq: 'monthly', priority: '0.7' },
+  { key: 'contact',   changefreq: 'monthly', priority: '0.8' },
+  { key: 'privacy',   changefreq: 'yearly',  priority: '0.3' },
 ];
+const en = (routerPath: string) => (routerPath === '/' ? '/en' : `/en${routerPath}`);
 
 // GET /sitemap.xml — dynamically generated from settings
 router.get('/sitemap.xml', async (_req, res) => {
@@ -25,26 +28,26 @@ router.get('/sitemap.xml', async (_req, res) => {
       'SELECT slug FROM stories WHERE is_published = TRUE ORDER BY sort_order, id'
     );
     const pages = [
-      ...STATIC_PAGES,
-      ...stories.rows.map(r => ({ path: `/portfolio/${r.slug}`, changefreq: 'monthly', priority: '0.7' })),
+      ...STATIC_PAGES.map(p => ({ bs: pathOf('BOS', p.key), en: en(pathOf('ENG', p.key)), changefreq: p.changefreq, priority: p.priority })),
+      ...stories.rows.map(r => ({
+        bs: pathOf('BOS', 'portfolio', r.slug), en: en(pathOf('ENG', 'portfolio', r.slug)),
+        changefreq: 'monthly', priority: '0.7',
+      })),
     ];
 
     // Both languages are listed as their own addresses, each pointing at the
-    // other. They used to share one address with ?lang=en, which search
-    // engines read as a single page with a parameter rather than two documents.
-    const enPath = (p: string) => (p === '/' ? '/en' : `/en${p}`);
-    const entry = (loc: string, p: { path: string; changefreq: string; priority: string }) => `
+    // other: /radovi and /en/portfolio are the same page in two languages.
+    const entry = (loc: string, p: { bs: string; en: string; changefreq: string; priority: string }) => `
   <url>
     <loc>${baseUrl}${loc}</loc>
-    <xhtml:link rel="alternate" hreflang="bs" href="${baseUrl}${p.path}"/>
-    <xhtml:link rel="alternate" hreflang="en" href="${baseUrl}${enPath(p.path)}"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="${baseUrl}${p.path}"/>
+    <xhtml:link rel="alternate" hreflang="bs" href="${baseUrl}${p.bs}"/>
+    <xhtml:link rel="alternate" hreflang="en" href="${baseUrl}${p.en}"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="${baseUrl}${p.bs}"/>
     <lastmod>${today}</lastmod>
     <changefreq>${p.changefreq}</changefreq>
     <priority>${p.priority}</priority>
   </url>`;
-    const urls = pages.map(p => entry(p.path, p)).join('')
-      + pages.map(p => entry(enPath(p.path), p)).join('');
+    const urls = pages.map(p => entry(p.bs, p)).join('') + pages.map(p => entry(p.en, p)).join('');
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"

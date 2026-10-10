@@ -23,11 +23,13 @@ router.get('/', async (req, res) => {
     const result = await pool.query('SELECT key, value FROM site_settings');
     const settings: Record<string, string> = {};
     for (const row of result.rows) {
+      // migr.* are one-time migration markers, of no use to anyone outside
+      if (row.key.startsWith('migr.')) continue;
       if (!admin && PRIVATE_KEYS.has(row.key)) continue;
       settings[row.key] = row.value;
     }
     // The admin's copy must never sit in a shared cache
-    res.setHeader('Cache-Control', admin ? 'private, no-store' : 'public, max-age=60');
+    res.setHeader('Cache-Control', admin ? 'private, no-store' : 'no-cache');
     if (!admin) res.setHeader('Vary', 'Cookie');
     res.json(settings);
   } catch (err) {

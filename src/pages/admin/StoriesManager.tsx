@@ -4,15 +4,19 @@ import {
   Images, X, ArrowUp, ArrowDown, ExternalLink,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { FanBoard, FocusPicker, FanFullDialog } from '../../components/admin/FanAdmin';
 
 const CATEGORIES = [
   { value: 'WEDDINGS',  label: 'Vjenčanje' },
   { value: 'STUDIO',    label: 'Studio' },
   { value: 'PORTRAITS', label: 'Portreti' },
 ];
+// AUTO follows the photograph's own shape; the other three are a fixed frame
+// the owner picks, cropped around the focal point
 const LAYOUTS = [
-  { value: 'TALL',   label: 'Portretna 3:4' },
-  { value: 'WIDE',   label: 'Pejzažna 4:3' },
+  { value: 'AUTO',   label: 'Automatski — prema fotografiji' },
+  { value: 'TALL',   label: 'Uspravna 3:4' },
+  { value: 'WIDE',   label: 'Vodoravna 4:3' },
   { value: 'SQUARE', label: 'Kvadrat 1:1' },
 ];
 
@@ -44,14 +48,32 @@ interface Story {
   sort_order: number;
   is_published: boolean;
   image_count?: string;
+  fan_order?: number | null;
+  fan_image?: string | null;
+  fan_focus?: string | null;
+  cover_width?: number | null;
+  cover_height?: number | null;
+  fan_width?: number | null;
+  fan_height?: number | null;
 }
+
+// The same rule the server uses, so the address shown is the one it will get
+const slugify = (input: string) =>
+  String(input)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/gi, 'd')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 150);
 
 const EMPTY = {
   couple: '', slug: '', category: 'WEDDINGS', location: '', date_text: '', tag: '',
   tag_bs: '', tag_en: '', cover_focus: '',
-  cover_url: '', cover_alt: '', cover_layout: 'TALL',
+  cover_url: '', cover_alt: '', cover_layout: 'AUTO',
   quote_bs: '', quote_en: '', text_bs: '', text_en: '',
   sort_order: 0, is_published: true,
+  fan_on: false, fan_order: 0, fan_image: '', fan_focus: '',
 };
 
 const field = 'w-full bg-moody-950/60 border border-white/10 rounded-sm px-3 py-2.5 text-sm text-white/85 placeholder:text-white/20 outline-none focus:border-gold-600 transition-colors';
@@ -75,6 +97,13 @@ export default function StoriesManager() {
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const coverRef = useRef<HTMLInputElement>(null);
+  const fanRef = useRef<HTMLInputElement>(null);
+  // The address follows the title until the owner types one of their own
+  const [slugAuto, setSlugAuto] = useState(true);
+  // Pixel size of the cover and the fan picture, to warn about a crop
+  const [coverSize, setCoverSize] = useState<{ w: number; h: number } | null>(null);
+  const [fanSize, setFanSize] = useState<{ w: number; h: number } | null>(null);
+  const [fanFull, setFanFull] = useState<{ id: number; couple: string; fan_order: number }[] | null>(null);
 
   // Gallery editor, one story at a time
   const [openGallery, setOpenGallery] = useState<number | null>(null);
@@ -97,7 +126,7 @@ export default function StoriesManager() {
 
   useEffect(() => { load(); }, [load]);
 
-  const upload = async (file: File): Promise<string | null> => {
+  const upload = async (file: File): Promise<{ url: string; w?: number; h?: number } | null> => {
     const fd = new FormData();
     fd.append('image', file);
     const controller = new AbortController();
@@ -109,7 +138,8 @@ export default function StoriesManager() {
       clearTimeout(timeout);
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Upload nije uspio.'); return null; }
-      return data.url as string;
+      if (data.warning) setError(data.warning);
+      return { url: data.url as string, w: data.width, h: data.height };
     } catch (err) {
       clearTimeout(timeout);
       setError((err as Error).name === 'AbortError'
@@ -123,15 +153,38 @@ export default function StoriesManager() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const url = await upload(file);
-    if (url) setForm(f => ({ ...f, cover_url: url }));
+    const up = await upload(file);
+    if (up) { setForm(f => ({ ...f, cover_url: up.url })); setCoverSize(up.w && up.h ? { w: up.w, h: up.h } : null); }
     setUploading(false);
     if (coverRef.current) coverRef.current.value = '';
   };
 
-  const save = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onFanPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const up = await upload(file);
+    if (up) { setForm(f => ({ ...f, fan_image: up.url })); setFanSize(up.w && up.h ? { w: up.w, h: up.h } : null); }
+    setUploading(false);
+    if (fanRef.current) fanRef.current.value = '';
+  };
+
+  const reorderFan = async (ids: number[]) => {
+    setItems(list => list.map(x => ({ ...x, fan_order: ids.includes(x.id) ? ids.indexOf(x.id) + 1 : x.fan_order })));
+    await fetch('/api/stories/admin/fan', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      body: JSON.stringify({ ids }),
+    });
+    load();
+  };
+
+  const save = async (e?: React.FormEvent, replace?: number) => {
+    e?.preventDefault();
     if (!form.couple.trim()) { setError('Ime para je obavezno.'); return; }
+    if (form.fan_on && !form.fan_image && !form.cover_url) {
+      setError('Za lepezu treba slika: postavi "Sliku za lepezu" ili naslovnu fotografiju.');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -139,10 +192,18 @@ export default function StoriesManager() {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          slug: slugAuto ? '' : form.slug,
+          fan_order: form.fan_on ? (form.fan_order || null) : null,
+          fan_replace: replace ?? null,
+        }),
       });
       const data = await res.json();
+      // Never a sixth story added quietly: ask which one makes room
+      if (res.status === 409 && data.error === 'fan_full') { setFanFull(data.fan); return; }
       if (!res.ok) { setError(data.error || 'Spremanje nije uspjelo.'); return; }
+      setFanFull(null);
       setForm({ ...EMPTY });
       setEditingId(null);
       setShowForm(false);
@@ -154,15 +215,20 @@ export default function StoriesManager() {
 
   const edit = (s: Story) => {
     setEditingId(s.id);
+    setSlugAuto(s.slug === slugify(s.couple));
+    setCoverSize(s.cover_width && s.cover_height ? { w: s.cover_width, h: s.cover_height } : null);
+    setFanSize(s.fan_width && s.fan_height ? { w: s.fan_width, h: s.fan_height } : null);
     setForm({
       couple: s.couple, slug: s.slug, category: s.category,
       tag_bs: s.tag_bs || s.tag || '', tag_en: s.tag_en || s.tag || '',
       cover_focus: s.cover_focus || '',
       location: s.location ?? '', date_text: s.date_text ?? '', tag: s.tag ?? '',
-      cover_url: s.cover_url ?? '', cover_alt: s.cover_alt ?? '', cover_layout: s.cover_layout ?? 'TALL',
+      cover_url: s.cover_url ?? '', cover_alt: s.cover_alt ?? '', cover_layout: s.cover_layout ?? 'AUTO',
       quote_bs: s.quote_bs ?? '', quote_en: s.quote_en ?? '',
       text_bs: s.text_bs ?? '', text_en: s.text_en ?? '',
       sort_order: s.sort_order, is_published: s.is_published,
+      fan_on: s.fan_order != null, fan_order: s.fan_order ?? 0,
+      fan_image: s.fan_image ?? '', fan_focus: s.fan_focus ?? '',
     });
     setShowForm(true);
     setError(null);
@@ -170,12 +236,15 @@ export default function StoriesManager() {
   };
 
   const remove = async (s: Story) => {
-    if (!confirm(`Trajno obrisati priču "${s.couple}" i sve njene fotografije?`)) return;
+    const inFan = s.fan_order != null ? '\n\nOva priča je u lepezi na naslovnoj i izaći će iz nje.' : '';
+    if (!confirm(`Trajno obrisati priču "${s.couple}" i sve njene fotografije?${inFan}`)) return;
     await fetch(`/api/stories/${s.id}`, { method: 'DELETE', credentials: 'include' });
     load();
   };
 
   const togglePublished = async (s: Story) => {
+    if (s.is_published && s.fan_order != null
+      && !confirm(`"${s.couple}" je u lepezi na naslovnoj. Ako je sakriješ, izaći će i iz lepeze. Nastaviti?`)) return;
     await fetch(`/api/stories/${s.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -211,13 +280,13 @@ export default function StoriesManager() {
     setGalleryBusy(true);
     let order = gallery.length;
     for (const file of files) {
-      const url = await upload(file);
-      if (!url) continue;
+      const up = await upload(file);
+      if (!up) continue;
       await fetch(`/api/stories/${openGallery}/images`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ url, layout: 'TALL', sort_order: order++ }),
+        body: JSON.stringify({ url: up.url, sort_order: order++ }),
       });
     }
     if (galleryRef.current) galleryRef.current.value = '';
@@ -270,12 +339,21 @@ export default function StoriesManager() {
           </p>
         </div>
         <button
-          onClick={() => { setShowForm(v => !v); setEditingId(null); setForm({ ...EMPTY }); setError(null); }}
+          onClick={() => {
+            setShowForm(v => !v); setEditingId(null); setForm({ ...EMPTY }); setError(null);
+            setSlugAuto(true); setCoverSize(null); setFanSize(null);
+          }}
           className="flex-none flex items-center gap-2 bg-gold-600 hover:bg-gold-500 text-white px-4 py-2.5 rounded-sm text-xs tracking-[0.2em] uppercase font-bold transition-colors"
         >
           <Plus size={14} /> Nova priča
         </button>
       </div>
+
+      {!loading && <FanBoard items={items.map(x => ({ ...x, fan_order: x.fan_order ?? null, fan_image: x.fan_image ?? null }))} onReorder={reorderFan} />}
+
+      {fanFull && (
+        <FanFullDialog fan={fanFull} onCancel={() => setFanFull(null)} onPick={id => save(undefined, id)} />
+      )}
 
       {error && (
         <div className="mb-5 bg-red-500/10 border border-red-500/25 text-red-300 text-xs rounded-sm px-4 py-3">
@@ -288,11 +366,21 @@ export default function StoriesManager() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Ime para *" hint="Napiši ga s & — na sajtu se & prikazuje u kurzivu i crvenoj.">
               <input className={field} placeholder="Amra & Tarik" value={form.couple}
-                onChange={e => setForm(f => ({ ...f, couple: e.target.value }))} />
+                onChange={e => {
+                  const couple = e.target.value;
+                  setForm(f => ({ ...f, couple, slug: slugAuto ? slugify(couple) : f.slug }));
+                }} />
             </Field>
-            <Field label="Adresa stranice (slug)" hint="Ostavi prazno i napravit će se iz imena para.">
-              <input className={field} placeholder="amra-i-tarik" value={form.slug}
-                onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} />
+            <Field label="Adresa stranice"
+              hint={`Prati ime para dok je ne promijeniš sama. Na sajtu: /radovi/${(slugAuto ? slugify(form.couple) : slugify(form.slug)) || '…'} (engleski /en/portfolio/…). Stara adresa nastavlja raditi i vodi na novu.`}>
+              <div className="flex gap-2">
+                <input className={field} placeholder="amra-i-tarik" value={slugAuto ? slugify(form.couple) : form.slug}
+                  onChange={e => { setSlugAuto(false); setForm(f => ({ ...f, slug: e.target.value })); }} />
+                {!slugAuto && (
+                  <button type="button" onClick={() => setSlugAuto(true)}
+                    className="flex-none text-[10px] text-white/40 hover:text-white/70 px-2">Iz imena</button>
+                )}
+              </div>
             </Field>
             <Field label="Kategorija">
               <select className={field} value={form.category}
@@ -328,20 +416,72 @@ export default function StoriesManager() {
             <Field label="Alt tekst naslovne" hint="Kratki opis za čitače ekrana i Google.">
               <input className={field} placeholder="Mladenci na Jahorini" value={form.cover_alt}
                 onChange={e => setForm(f => ({ ...f, cover_alt: e.target.value }))} /></Field>
-            <Field label="Omjer kartice"
-              hint="Čita se sam iz fotografije. Ovo je rezerva za slike učitane prije.">
+            <Field label="Veličina kartice u Radovima"
+              hint="Automatski: okvir prati omjer fotografije, ništa se ne reže. Uspravna, vodoravna ili kvadrat: okvir je fiksan, a slika se reže oko točke fokusa. Promjena vrijedi odmah po spremanju.">
               <select className={field} value={form.cover_layout}
                 onChange={e => setForm(f => ({ ...f, cover_layout: e.target.value }))}>
                 {LAYOUTS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
               </select>
             </Field>
-            <Field label="Točka fokusa"
-              hint='Gdje je najvažniji dio slike, npr. "50% 30%". Prazno = sredina. Koristi se samo kad se okvir za par posto razlikuje od slike, da se ne odreže lice.'>
-              <input className={field} placeholder="50% 30%" value={form.cover_focus}
-                onChange={e => setForm(f => ({ ...f, cover_focus: e.target.value }))} /></Field>
+            {form.cover_url && (
+              <Field label="Točka fokusa naslovne" hint="Klikni na lice; koristi se kad okvir kartice reže sliku.">
+                <FocusPicker src={form.cover_url} value={form.cover_focus}
+                  onChange={v => setForm(f => ({ ...f, cover_focus: v }))}
+                  ratio={form.cover_layout === 'WIDE' ? '4 / 3' : form.cover_layout === 'SQUARE' ? '1 / 1' : '3 / 4'} />
+              </Field>
+            )}
             <Field label="Redoslijed" hint="Manji broj ide prije. Određuje i broj na kartici.">
               <input type="number" className={field} value={form.sort_order}
                 onChange={e => setForm(f => ({ ...f, sort_order: Number(e.target.value) }))} /></Field>
+          </div>
+
+          <div className="border-t border-white/5 pt-5 space-y-4">
+            <label className="flex items-center gap-2.5 text-xs text-white/70 cursor-pointer">
+              <input type="checkbox" checked={form.fan_on} className="accent-gold-600 w-4 h-4"
+                onChange={e => setForm(f => ({ ...f, fan_on: e.target.checked }))} />
+              Prikaži u lepezi na početnoj
+            </label>
+            {form.fan_on && (() => {
+              const pic = form.fan_image || form.cover_url;
+              const size = form.fan_image ? fanSize : coverSize;
+              const notUpright = size ? size.w >= size.h : false;
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-6">
+                  <Field label="Redoslijed u lepezi" hint="1 je lijevo, 5 desno. Mijenja se i povlačenjem na tabli iznad.">
+                    <select className={field} value={form.fan_order}
+                      onChange={e => setForm(f => ({ ...f, fan_order: Number(e.target.value) }))}>
+                      <option value={0}>Prvo slobodno mjesto</option>
+                      {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="Slika za lepezu (uspravna 2:3)"
+                    hint="Naslovna u Radovima je često vodoravna, zato lepeza ima svoju. Ako je ne postaviš, koristi se naslovna.">
+                    <div className="flex items-center gap-3">
+                      <input className={field} placeholder="/uploads/..." value={form.fan_image}
+                        onChange={e => setForm(f => ({ ...f, fan_image: e.target.value }))} />
+                      <input ref={fanRef} type="file" accept="image/*" onChange={onFanPick} className="hidden" id="fan-pick" />
+                      <label htmlFor="fan-pick"
+                        className="flex-none flex items-center gap-2 bg-moody-800 hover:bg-moody-700 border border-white/10 text-white/70 px-3 py-2.5 rounded-sm text-xs cursor-pointer transition-colors">
+                        {uploading ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />} Učitaj
+                      </label>
+                    </div>
+                  </Field>
+                  {pic && (
+                    <div className="sm:col-span-2">
+                      {notUpright && (
+                        <p className="text-amber-300/80 text-[11px] mb-2">
+                          {form.fan_image ? 'Slika za lepezu' : 'Naslovna slika'} nije uspravna i bit će izrezana na 2:3.
+                          {!form.fan_image && ' Bolje je postaviti posebnu uspravnu sliku za lepezu.'}
+                        </p>
+                      )}
+                      <FocusPicker src={pic}
+                        value={form.fan_image ? form.fan_focus : form.cover_focus}
+                        onChange={v => setForm(f => (f.fan_image ? { ...f, fan_focus: v } : { ...f, cover_focus: v }))} />
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           <div className="border-t border-white/5 pt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -397,10 +537,17 @@ export default function StoriesManager() {
                   {s.cover_url && <img src={s.cover_url} alt="" className="w-full h-full object-cover" />}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-white/85 text-sm truncate">{s.couple}</div>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-white/85 text-sm truncate">{s.couple}</span>
+                    {s.fan_order != null && s.is_published && (
+                      <span className="flex-none text-[9px] tracking-widest uppercase text-gold-400 border border-gold-600/40 rounded-sm px-1.5 py-0.5">
+                        Lepeza {s.fan_order}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-white/30 text-[11px] truncate">
                     {CATEGORIES.find(c => c.value === s.category)?.label}
-                    {s.location ? ` · ${s.location}` : ''} · /portfolio/{s.slug} · {s.image_count ?? 0} fotografija
+                    {s.location ? ` · ${s.location}` : ''} · /radovi/{s.slug} · {s.image_count ?? 0} fotografija
                   </div>
                 </div>
 
@@ -411,7 +558,7 @@ export default function StoriesManager() {
                   {s.is_published ? <Eye size={15} /> : <EyeOff size={15} />}
                 </button>
                 {s.is_published && (
-                  <a href={`/portfolio/${s.slug}`} target="_blank" rel="noopener noreferrer" title="Otvori na sajtu"
+                  <a href={`/radovi/${s.slug}`} target="_blank" rel="noopener noreferrer" title="Otvori na sajtu"
                     className="flex-none p-2 text-white/25 hover:text-white/60 transition-colors"><ExternalLink size={15} /></a>
                 )}
                 <button onClick={() => openStoryGallery(s.id)}
@@ -452,10 +599,6 @@ export default function StoriesManager() {
                             value={img.alt ?? ''} onChange={e => patchImage(img, { alt: e.target.value })} />
                           <input className={`${field} py-1.5 text-xs`} placeholder="Natpis u lightboxu (opcionalno)"
                             value={img.caption ?? ''} onChange={e => patchImage(img, { caption: e.target.value })} />
-                          <select className={`${field} py-1.5 text-xs w-36 flex-none`} value={img.layout}
-                            onChange={e => patchImage(img, { layout: e.target.value })}>
-                            {LAYOUTS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
-                          </select>
                           <div className="flex-none flex items-center">
                             <button onClick={() => moveImage(idx, -1)} disabled={idx === 0}
                               className="p-1.5 text-white/30 hover:text-white disabled:opacity-20"><ArrowUp size={13} /></button>

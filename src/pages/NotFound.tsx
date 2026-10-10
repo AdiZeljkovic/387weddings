@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { SectionLabel, OliveBranch } from '../components/ornaments';
 import Reveal from '../components/Reveal';
+import { usePaths } from '../lib/routes';
 
 /**
  * Not on the boards, so it borrows their vocabulary: cream ground, a ruled
@@ -12,6 +13,7 @@ import Reveal from '../components/Reveal';
  */
 const NotFound = () => {
   const { t, getContentStyle } = useLanguage();
+  const paths = usePaths();
 
   return (
     <div className="relative overflow-hidden bg-cream min-h-[70vh] flex flex-col items-center justify-center text-center px-6 py-24 lg:py-32">
@@ -39,14 +41,14 @@ const NotFound = () => {
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5">
           <Link
-            to="/"
+            to={paths('home')}
             style={getContentStyle('notfound.home')}
             className="btn btn-solid inline-block bg-ink-900 text-white text-[11px] lg:text-[12px] font-semibold tracking-[0.2em] uppercase px-7 py-4"
           >
             {t('notfound.home')}
           </Link>
           <Link
-            to="/portfolio"
+            to={paths('portfolio')}
             style={getContentStyle('notfound.portfolio')}
             className="btn inline-block border border-ink-900 text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.2em] uppercase px-7 py-4 hover:text-white"
           >

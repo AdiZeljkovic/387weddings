@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings } from '../lib/settingsCache';
+import { usePaths } from '../lib/routes';
 
 const InstagramGlyph = ({ size = 18 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#151311" strokeWidth="1.6" aria-hidden="true">
@@ -14,6 +15,7 @@ const InstagramGlyph = ({ size = 18 }: { size?: number }) => (
 
 const Footer = () => {
   const { t, getContentStyle } = useLanguage();
+  const paths = usePaths();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const location = useLocation();
 
@@ -23,16 +25,16 @@ const Footer = () => {
 
   // The three statement links, each with a gold rule and a one-line subtitle
   const features = [
-    { to: '/about',     label: t('nav.stories'), labelKey: 'nav.stories', subKey: 'footer.link.about.sub' },
-    { to: '/portfolio', label: t('nav.work'),    labelKey: 'nav.work',    subKey: 'footer.link.work.sub' },
-    { to: '/contact',   label: t('nav.inquire'), labelKey: 'nav.inquire', subKey: 'footer.link.contact.sub' },
+    { to: paths('about'),     label: t('nav.stories'), labelKey: 'nav.stories', subKey: 'footer.link.about.sub' },
+    { to: paths('portfolio'), label: t('nav.work'),    labelKey: 'nav.work',    subKey: 'footer.link.work.sub' },
+    { to: paths('contact'),   label: t('nav.inquire'), labelKey: 'nav.inquire', subKey: 'footer.link.contact.sub' },
   ];
 
   const navLinks = [
-    { to: '/',          label: t('nav.home'),    styleKey: 'nav.home' },
-    { to: '/portfolio', label: t('nav.work'),    styleKey: 'nav.work' },
-    { to: '/about',     label: t('nav.stories'), styleKey: 'nav.stories' },
-    { to: '/contact',   label: t('nav.inquire'), styleKey: 'nav.inquire' },
+    { to: paths('home'),      label: t('nav.home'),    styleKey: 'nav.home' },
+    { to: paths('portfolio'), label: t('nav.work'),    styleKey: 'nav.work' },
+    { to: paths('about'),     label: t('nav.stories'), styleKey: 'nav.stories' },
+    { to: paths('contact'),   label: t('nav.inquire'), styleKey: 'nav.inquire' },
   ];
 
   const handle = settings.instagram_handle || '387.weddings';

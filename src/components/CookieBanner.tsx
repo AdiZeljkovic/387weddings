@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+import { usePaths } from '../lib/routes';
 
 const KEY = '387_cookie_consent';
 
@@ -27,6 +28,7 @@ const write = (v: Exclude<Consent, null>) => {
  */
 const CookieBanner = () => {
   const { t, getContentStyle } = useLanguage();
+  const paths = usePaths();
   const [visible, setVisible] = useState(false);
   const box = useRef<HTMLDivElement>(null);
 
@@ -71,7 +73,7 @@ const CookieBanner = () => {
           className="flex-1 text-[12px] lg:text-[13px] font-light leading-[1.6] lg:leading-[1.8] text-ink-700 m-0"
         >
           {t('cookie.text')}{' '}
-          <Link to="/privacy" className="text-ink-900 border-b border-[#bfb3a0] hover:opacity-70 transition-opacity">
+          <Link to={paths('privacy')} className="text-ink-900 border-b border-[#bfb3a0] hover:opacity-70 transition-opacity">
             {t('cookie.more')}
           </Link>
         </p>
