@@ -25,12 +25,15 @@ const filled = (value: string) => Boolean(value) && !value.startsWith('about.');
 // Phones follow the board rather than the desktop order: the words come first
 // and the portrait after them, Melisa's text ranged right and Aldin's left.
 // One set of elements carries both layouts — nothing is rendered twice.
-const Bio = ({ n, portrait, ratio, flip, altText }: {
+const Bio = ({ n, portrait, ratio, flip, altText, focus }: {
   n: 1 | 2;
   portrait: { src: string; srcSet?: string };
   ratio: string;
   flip?: boolean;
   altText?: string;
+  /** Focal point from the panel; a portrait's face is in its upper part, so
+   *  without one the crop keeps the upper quarter rather than the middle */
+  focus?: string;
 }) => {
   const { t, getContentStyle } = useLanguage();
   const base = `about.bio.${n}`;
@@ -64,6 +67,7 @@ const Bio = ({ n, portrait, ratio, flip, altText }: {
             srcSet={portrait.srcSet}
             sizes={SIZES.half}
             alt={altText || t(`${base}.title.part2`)}
+            style={{ objectPosition: focus || '50% 25%' }}
             className="w-full h-full object-cover"
             loading="lazy"
             decoding="async"
@@ -148,13 +152,15 @@ const About = () => {
       {/* ── Melisa — portrait left ─────────────────────────────────────────── */}
       <section className="relative overflow-hidden px-6 lg:px-24 pt-14 lg:pt-30 pb-16 lg:pb-32">
         <OliveBranch className="hidden lg:block absolute right-24 bottom-2.5 w-[300px] animate-[drift_16s_ease-in-out_infinite_alternate] motion-reduce:animate-none" />
-        <Bio n={1} portrait={melisa} ratio="4 / 5" altText={imgs['img.about.melisa.alt']} />
+        {/* Both portraits in an upright 2:3 frame (the board), so a 2:3
+            photograph is shown whole */}
+        <Bio n={1} portrait={melisa} ratio="2 / 3" altText={imgs['img.about.melisa.alt']} focus={imgs['img.about.melisa.focus']} />
       </section>
 
       {/* ── Aldin — mirrored, on the lighter band ──────────────────────────── */}
       <section className="relative overflow-hidden bg-cream-light px-6 lg:px-24 pt-14 lg:pt-32 pb-16 lg:pb-32">
         <OliveBranch className="hidden lg:block absolute left-24 bottom-6 w-[170px] animate-[drift_16s_ease-in-out_infinite_alternate] motion-reduce:animate-none" flip />
-        <Bio n={2} portrait={aldin} ratio="3 / 4" flip altText={imgs['img.about.aldin.alt']} />
+        <Bio n={2} portrait={aldin} ratio="2 / 3" flip altText={imgs['img.about.aldin.alt']} focus={imgs['img.about.aldin.focus']} />
       </section>
 
       {/* ── Closing invitation, framed by three photographs ──────────────────

@@ -56,10 +56,10 @@ const SECTIONS = [
     groups: [
       {
         label: 'Portreti uz biografije',
-        hint: 'Po jedan portret uz svaku biografiju, u boji kako ga učitaš.',
+        hint: 'Po jedan portret uz svaku biografiju, u boji kako ga učitaš. Okvir je uspravan 2:3, pa se uspravna fotografija 2:3 vidi cijela. Ako učitaš drugačiji omjer, klikni na lice da se ne odreže; bez toga se čuva gornja četvrtina.',
         images: [
-          { key: 'img.about.melisa', label: 'Portret uz biografiju 1', ratio: '4:5', fallback: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=800' },
-          { key: 'img.about.aldin', label: 'Portret uz biografiju 2', ratio: '3:4', fallback: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.about.melisa', label: 'Portret uz biografiju 1', ratio: '2:3', defaultFocus: '50% 25%', fallback: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=800' },
+          { key: 'img.about.aldin', label: 'Portret uz biografiju 2', ratio: '2:3', defaultFocus: '50% 25%', fallback: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800' },
         ],
       },
       {
@@ -204,6 +204,7 @@ export default function ImagesManager() {
                         focus={urls[`${img.key}.focus`] || ''}
                         onFocusChange={v => setUrl(`${img.key}.focus`, v)}
                         ratio={img.ratio}
+                        defaultFocus={'defaultFocus' in img ? img.defaultFocus : undefined}
                       />
                     ))}
                   </div>
@@ -232,7 +233,7 @@ export default function ImagesManager() {
 // ── ImageSlot ─────────────────────────────────────────────────────────────────
 
 function ImageSlot({
-  imageKey, label, fallback, value, onChange, alt, onAltChange, focus, onFocusChange, ratio,
+  imageKey, label, fallback, value, onChange, alt, onAltChange, focus, onFocusChange, ratio, defaultFocus,
 }: {
   imageKey: string;
   label: string;
@@ -245,6 +246,8 @@ function ImageSlot({
   onFocusChange: (v: string) => void;
   /** The shape the site shows this slot at, e.g. "3:4" or "16:9 · cijeli ekran" */
   ratio: string;
+  /** Where the crop sits when no point has been chosen (the site's default) */
+  defaultFocus?: string;
 }) {
   const fileRef  = useRef<HTMLInputElement>(null);
   const imgRef   = useRef<HTMLImageElement>(null);
@@ -263,7 +266,7 @@ function ImageSlot({
   useEffect(() => { setAltInput(alt); }, [alt]);
 
   const displaySrc = (value || fallback);
-  const focusPos = focus || '50% 50%';
+  const focusPos = focus || defaultFocus || '50% 50%';
 
   // Click the preview to say which part of the photo must stay in frame when
   // it gets cropped. Stored as a CSS object-position string.

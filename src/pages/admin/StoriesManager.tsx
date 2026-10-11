@@ -4,6 +4,7 @@ import {
   Images, X, ArrowUp, ArrowDown, ExternalLink,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { slugify } from '../../lib/slug';
 import { FanBoard, FocusPicker, FanFullDialog } from '../../components/admin/FanAdmin';
 
 const CATEGORIES = [
@@ -45,6 +46,7 @@ interface Story {
   cover_layout: string;
   quote_bs: string | null; quote_en: string | null;
   text_bs: string | null;  text_en: string | null;
+  seo_desc_bs?: string | null; seo_desc_en?: string | null;
   sort_order: number;
   is_published: boolean;
   image_count?: string;
@@ -57,21 +59,12 @@ interface Story {
   fan_height?: number | null;
 }
 
-// The same rule the server uses, so the address shown is the one it will get
-const slugify = (input: string) =>
-  String(input)
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/gi, 'd')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 150);
 
 const EMPTY = {
   couple: '', slug: '', category: 'WEDDINGS', location: '', date_text: '', tag: '',
   tag_bs: '', tag_en: '', cover_focus: '',
   cover_url: '', cover_alt: '', cover_layout: 'AUTO',
-  quote_bs: '', quote_en: '', text_bs: '', text_en: '',
+  quote_bs: '', quote_en: '', text_bs: '', text_en: '', seo_desc_bs: '', seo_desc_en: '',
   sort_order: 0, is_published: true,
   fan_on: false, fan_order: 0, fan_image: '', fan_focus: '',
 };
@@ -226,6 +219,7 @@ export default function StoriesManager() {
       cover_url: s.cover_url ?? '', cover_alt: s.cover_alt ?? '', cover_layout: s.cover_layout ?? 'AUTO',
       quote_bs: s.quote_bs ?? '', quote_en: s.quote_en ?? '',
       text_bs: s.text_bs ?? '', text_en: s.text_en ?? '',
+      seo_desc_bs: s.seo_desc_bs ?? '', seo_desc_en: s.seo_desc_en ?? '',
       sort_order: s.sort_order, is_published: s.is_published,
       fan_on: s.fan_order != null, fan_order: s.fan_order ?? 0,
       fan_image: s.fan_image ?? '', fan_focus: s.fan_focus ?? '',
@@ -495,6 +489,14 @@ export default function StoriesManager() {
             <Field label="Tekst priče (ENG)" hint="Prazan red razdvaja pasuse.">
               <textarea rows={5} className={field} value={form.text_en}
                 onChange={e => setForm(f => ({ ...f, text_en: e.target.value }))} /></Field>
+            <Field label="Opis za Google (BOS)"
+              hint={`Prikazuje se u rezultatima pretrage i pri dijeljenju linka. Prazno: prvih 150 znakova teksta priče (a ako je tekst kraći od 50 znakova, opći opis stranice). ${(form.seo_desc_bs || '').length}/160`}>
+              <textarea rows={2} maxLength={300} className={field} value={form.seo_desc_bs}
+                onChange={e => setForm(f => ({ ...f, seo_desc_bs: e.target.value }))} /></Field>
+            <Field label="Opis za Google (ENG)"
+              hint={`Za englesku stranicu priče. ${(form.seo_desc_en || '').length}/160`}>
+              <textarea rows={2} maxLength={300} className={field} value={form.seo_desc_en}
+                onChange={e => setForm(f => ({ ...f, seo_desc_en: e.target.value }))} /></Field>
           </div>
 
           <div className="flex items-center justify-between gap-4 border-t border-white/5 pt-5">

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { PoolClient } from 'pg';
 import { pool } from '../db.js';
 import { requireAuth } from '../auth.js';
+import { slugify } from '../../src/lib/slug.js';
 
 const router = Router();
 
@@ -11,14 +12,7 @@ const CATEGORIES = ['WEDDINGS', 'STUDIO', 'PORTRAITS'] as const;
 const LAYOUTS = ['AUTO', 'TALL', 'WIDE', 'SQUARE'] as const;
 const FAN_MAX = 5;
 
-export const slugify = (input: string) =>
-  String(input)
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/đ/gi, 'd')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 150);
+export { slugify };
 
 // Lists change in the panel and must show on the next page load, so they are
 // revalidated every time instead of sitting in a browser cache for a minute.
@@ -208,6 +202,25 @@ router.put('/admin/fan', requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * The address a story gets. Written by hand in the panel, it is taken as it is
+ * (a clash is reported). Made from the title, a second "Mostar" quietly
+ * becomes mostar-2 rather than failing to save.
+ */
+async function addressFor(client: PoolClient, body: Record<string, unknown>, couple: string, id: number | null) {
+  const fromTitle = slugify(couple);
+  const asked = slugify(String(body.slug || ''));
+  if (asked && asked !== fromTitle) return asked;
+  const base = fromTitle || `prica-${Date.now()}`;
+  for (let n = 1; n < 100; n++) {
+    const candidate = n === 1 ? base : `${base}-${n}`;
+    const { rowCount } = await client.query(
+      'SELECT 1 FROM stories WHERE slug = $1 AND ($2::int IS NULL OR id <> $2)', [candidate, id]);
+    if (!rowCount) return candidate;
+  }
+  return `${base}-${Date.now()}`;
+}
+
 const focusOk = (v: unknown) =>
   typeof v === 'string' && /^[\d.%\s a-z-]{0,40}$/i.test(v) ? (v || null) : null;
 
@@ -233,6 +246,9 @@ const readBody = (b: Record<string, unknown>) => {
     quote_en: (b.quote_en as string) || null,
     text_bs: (b.text_bs as string) || null,
     text_en: (b.text_en as string) || null,
+    // "Opis za Google": what search results and link previews show
+    seo_desc_bs: String(b.seo_desc_bs ?? '').trim().slice(0, 300) || null,
+    seo_desc_en: String(b.seo_desc_en ?? '').trim().slice(0, 300) || null,
     sort_order: Number.isFinite(Number(b.sort_order)) ? Number(b.sort_order) : 0,
     is_published: b.is_published !== false,
     fan_on: fanOn,
@@ -306,22 +322,22 @@ router.post('/', requireAuth, async (req, res) => {
     res.status(400).json({ error: 'Ime para je obavezno' });
     return;
   }
-  const slug = slugify(String(req.body.slug || v.couple)) || `prica-${Date.now()}`;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    const slug = await addressFor(client, req.body, v.couple, null);
     const { rows } = await client.query(
       `INSERT INTO stories
          (slug, couple, category, location, date_text, tag, tag_bs, tag_en,
           cover_url, cover_alt, cover_layout, cover_focus,
           quote_bs, quote_en, text_bs, text_en, sort_order, is_published,
-          fan_image, fan_focus)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+          fan_image, fan_focus, seo_desc_bs, seo_desc_en)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
        RETURNING *`,
       [slug, v.couple, v.category, v.location, v.date_text, v.tag, v.tag_bs, v.tag_en,
        v.cover_url, v.cover_alt, v.cover_layout, v.cover_focus,
        v.quote_bs, v.quote_en, v.text_bs, v.text_en, v.sort_order, v.is_published,
-       v.fan_image, v.fan_focus]
+       v.fan_image, v.fan_focus, v.seo_desc_bs, v.seo_desc_en]
     );
     const problem = await placeInFan(client, rows[0].id, v);
     if (problem) {
@@ -351,8 +367,6 @@ router.put('/:id', requireAuth, async (req, res) => {
     res.status(400).json({ error: 'Ime para je obavezno' });
     return;
   }
-  // The address follows the title unless the owner wrote one of their own
-  const slug = slugify(String(req.body.slug || v.couple)) || null;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -362,18 +376,21 @@ router.put('/:id', requireAuth, async (req, res) => {
       res.status(404).json({ error: 'Not found' });
       return;
     }
+    // The address follows the title unless the owner wrote one of their own
+    const slug = await addressFor(client, req.body, v.couple, Number(req.params.id));
     const { rows } = await client.query(
       `UPDATE stories SET
          slug = COALESCE($1, slug), couple = $2, category = $3, location = $4,
          date_text = $5, tag = $6, tag_bs = $7, tag_en = $8,
          cover_url = $9, cover_alt = $10, cover_layout = $11, cover_focus = $12,
          quote_bs = $13, quote_en = $14, text_bs = $15, text_en = $16,
-         sort_order = $17, is_published = $18, fan_image = $19, fan_focus = $20
-       WHERE id = $21 RETURNING *`,
+         sort_order = $17, is_published = $18, fan_image = $19, fan_focus = $20,
+         seo_desc_bs = $21, seo_desc_en = $22
+       WHERE id = $23 RETURNING *`,
       [slug, v.couple, v.category, v.location, v.date_text, v.tag, v.tag_bs, v.tag_en,
        v.cover_url, v.cover_alt, v.cover_layout, v.cover_focus,
        v.quote_bs, v.quote_en, v.text_bs, v.text_en, v.sort_order, v.is_published,
-       v.fan_image, v.fan_focus, req.params.id]
+       v.fan_image, v.fan_focus, v.seo_desc_bs, v.seo_desc_en, req.params.id]
     );
     // The old address keeps working, permanently pointing at the new one
     const oldSlug = before.rows[0].slug;

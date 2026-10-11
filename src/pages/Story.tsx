@@ -42,6 +42,7 @@ interface StoryData {
   cover_alt: string | null;
   quote_bs: string | null; quote_en: string | null;
   text_bs: string | null;  text_en: string | null;
+  seo_desc_bs?: string | null; seo_desc_en?: string | null;
   images: StoryImage[];
   prev_slug: string | null; prev_couple: string | null;
   next_slug: string | null; next_couple: string | null;
@@ -114,7 +115,10 @@ const Story = () => {
       if (el && value) el.setAttribute('content', value);
     };
     // A short account of the story itself, not just its date
-    const desc = storyExcerpt(story, language === 'ENG' ? 'en' : 'bs');
+    const lc = language === 'ENG' ? 'en' : 'bs';
+    const general = settings[`seo.story.desc.${lc}`]?.trim() || settings['seo.story.desc']?.trim()
+      || settings[`seo.portfolio.desc.${lc}`]?.trim() || settings['seo.portfolio.desc']?.trim() || '';
+    const desc = storyExcerpt(story, lc, general);
     set('meta[property="og:title"]', title);
     set('meta[name="twitter:title"]', title);
     if (desc) {
@@ -368,7 +372,7 @@ const Story = () => {
                 <circle cx="12" cy="12" r="4" />
                 <circle cx="17.2" cy="6.8" r=".8" fill="currentColor" />
               </svg>
-              @{handle} →
+              <span>@{handle} <span className="btn-arrow">→</span></span>
             </a>
           </div>
       </section>

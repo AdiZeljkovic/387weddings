@@ -17,14 +17,16 @@ const EMPTY = {
   guests: '', coverage: '', video: '', places: '', message: '',
 };
 
-// Field skin from the board: 51px tall, hairline border, warm off-white fill
+// Field skin from the board: 51px tall, hairline border, warm off-white fill.
+// 16px on a phone: below that, an iPhone zooms the page in on every tap into a
+// field. The board's 14px from a desktop up.
 const INPUT =
   'box-border w-full h-[51px] px-4 py-3.5 border border-[#e0d9cc] rounded-none bg-cream-soft ' +
-  'font-sans text-[14px] font-light text-[#1a1a1a] placeholder:text-[#b3aca2] ' +
+  'font-sans text-[16px] lg:text-[14px] font-light text-[#1a1a1a] placeholder:text-[#b3aca2] ' +
   'outline-none focus:border-gold-600 transition-colors duration-250';
 const AREA =
   'box-border w-full px-4 py-3.5 border border-[#e0d9cc] rounded-none bg-cream-soft ' +
-  'font-sans text-[14px] font-light text-[#1a1a1a] placeholder:text-[#b3aca2] resize-none ' +
+  'font-sans text-[16px] lg:text-[14px] font-light text-[#1a1a1a] placeholder:text-[#b3aca2] resize-none ' +
   'outline-none focus:border-gold-600 transition-colors duration-250';
 
 // The one-line reason a field is not accepted, under the field itself
@@ -92,6 +94,10 @@ const Contact = () => {
     if (!formData.email.trim()) e.email = t('contact.err.email');
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(formData.email.trim())) e.email = t('contact.err.email.bad');
     if (!formData.date.trim()) e.date = t('contact.err.date');
+    // Every field marked with an asterisk is asked for, with its own message
+    if (!formData.location.trim()) e.location = t('contact.err.location');
+    if (!formData.guests.trim() || Number(formData.guests) < 1) e.guests = t('contact.err.guests');
+    if (!formData.coverage.trim()) e.coverage = t('contact.err.coverage');
     if (!consent) e.consent = t('contact.err.consent');
     return e;
   };
@@ -102,7 +108,7 @@ const Contact = () => {
     setErrors(found);
     if (Object.keys(found).length > 0) {
       // Put the cursor on the first thing that needs filling in
-      const first = ['name', 'email', 'date', 'consent'].find(k => found[k]);
+      const first = ['name', 'email', 'date', 'location', 'guests', 'coverage', 'consent'].find(k => found[k]);
       document.getElementById(`c-${first}`)?.focus();
       return;
     }
@@ -233,6 +239,9 @@ const Contact = () => {
         ) : (
         <form
           onSubmit={handleSubmit}
+          // The form says what is missing itself, in the page's language,
+          // rather than the browser's own bubble on one field at a time
+          noValidate
           method="post"
           action="/api/contact"
           className="max-w-[768px] mx-auto flex flex-col gap-7"
@@ -242,7 +251,7 @@ const Contact = () => {
 
           <div>
             <Label htmlFor="c-name" required style={getContentStyle('contact.form.name')}>{t('contact.form.name')}</Label>
-            <input id="c-name" name="name" type="text" autoComplete="name"
+            <input id="c-name" name="name" type="text" autoComplete="name" required aria-required="true"
               aria-invalid={Boolean(errors.name)}
               aria-describedby={errors.name ? 'c-name-err' : undefined}
               className={INPUT + errRing(errors.name)}
@@ -254,7 +263,7 @@ const Contact = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-7">
             <div>
               <Label htmlFor="c-email" required style={getContentStyle('contact.form.email')}>{t('contact.form.email')}</Label>
-              <input id="c-email" name="email" type="email" autoComplete="email"
+              <input id="c-email" name="email" type="email" autoComplete="email" required aria-required="true"
                 aria-invalid={Boolean(errors.email)}
                 aria-describedby={errors.email ? 'c-email-err' : undefined}
                 className={INPUT + errRing(errors.email)}
@@ -276,7 +285,7 @@ const Contact = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-7">
             <div>
               <Label htmlFor="c-date" required style={getContentStyle('contact.form.date')}>{t('contact.form.date')}</Label>
-              <input id="c-date" name="date" type="date" min={today}
+              <input id="c-date" name="date" type="date" min={today} required aria-required="true"
                 aria-invalid={Boolean(errors.date)}
                 aria-describedby={errors.date ? 'c-date-err' : undefined}
                 className={INPUT + errRing(errors.date)}
@@ -285,25 +294,35 @@ const Contact = () => {
             </div>
             <div>
               <Label htmlFor="c-location" required style={getContentStyle('contact.form.location')}>{t('contact.form.location')}</Label>
-              <input id="c-location" name="location" type="text" required className={INPUT}
+              <input id="c-location" name="location" type="text" required aria-required="true"
+                aria-invalid={Boolean(errors.location)}
+                aria-describedby={errors.location ? 'c-location-err' : undefined}
+                className={INPUT + errRing(errors.location)}
                 placeholder={t('contact.form.location.placeholder')}
-                value={formData.location} onChange={e => set('location')(e.target.value)} />
+                value={formData.location} onChange={e => { set('location')(e.target.value); clearErr('location'); }} />
+              <FieldError id="c-location" message={errors.location} />
             </div>
             <div>
               <Label htmlFor="c-guests" required style={getContentStyle('contact.form.guests')}>{t('contact.form.guests')}</Label>
-              <input id="c-guests" name="guests" type="number" required min="1"
-                className={`${INPUT} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+              <input id="c-guests" name="guests" type="number" inputMode="numeric" required aria-required="true" min="1"
+                aria-invalid={Boolean(errors.guests)}
+                aria-describedby={errors.guests ? 'c-guests-err' : undefined}
+                className={`${INPUT}${errRing(errors.guests)} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
                 placeholder={t('contact.form.guests.placeholder')}
-                value={formData.guests} onChange={e => set('guests')(e.target.value)} />
+                value={formData.guests} onChange={e => { set('guests')(e.target.value); clearErr('guests'); }} />
+              <FieldError id="c-guests" message={errors.guests} />
             </div>
             <div>
               <Label htmlFor="c-coverage" required style={getContentStyle('contact.form.coverage')}>{t('contact.form.coverage')}</Label>
-              <select id="c-coverage" name="coverage" required
-                className={`${INPUT} appearance-none cursor-pointer ${!formData.coverage ? 'text-[#b3aca2]' : ''}`}
-                value={formData.coverage} onChange={e => set('coverage')(e.target.value)}>
+              <select id="c-coverage" name="coverage" required aria-required="true"
+                aria-invalid={Boolean(errors.coverage)}
+                aria-describedby={errors.coverage ? 'c-coverage-err' : undefined}
+                className={`${INPUT}${errRing(errors.coverage)} appearance-none cursor-pointer ${!formData.coverage ? 'text-[#b3aca2]' : ''}`}
+                value={formData.coverage} onChange={e => { set('coverage')(e.target.value); clearErr('coverage'); }}>
                 <option value="">{t('contact.form.coverage.placeholder')}</option>
                 {coverageOptions.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
+              <FieldError id="c-coverage" message={errors.coverage} />
             </div>
           </div>
 
@@ -334,13 +353,16 @@ const Contact = () => {
           </div>
 
           <div className="-mt-1">
-            <label htmlFor="c-consent" className="flex items-center gap-3 text-[13px] font-light text-[#6b6b6b] min-h-11 cursor-pointer">
-              <input id="c-consent" name="consent" type="checkbox" checked={consent}
-                aria-invalid={Boolean(errors.consent)}
-                aria-describedby={errors.consent ? 'c-consent-err' : undefined}
-                onChange={e => { setConsent(e.target.checked); clearErr('consent'); }}
-                className={`w-4 h-4 m-0 flex-none accent-ink-900 cursor-pointer${
-                  errors.consent ? ' outline outline-1 outline-red-600 outline-offset-2' : ''}`} />
+            {/* The whole row is the label, and the box sits in a 44x44 target */}
+            <label htmlFor="c-consent" className="flex items-center gap-1.5 text-[13px] font-light text-[#6b6b6b] min-h-11 cursor-pointer -ml-3">
+              <span className="flex-none w-11 h-11 flex items-center justify-center">
+                <input id="c-consent" name="consent" type="checkbox" checked={consent} required aria-required="true"
+                  aria-invalid={Boolean(errors.consent)}
+                  aria-describedby={errors.consent ? 'c-consent-err' : undefined}
+                  onChange={e => { setConsent(e.target.checked); clearErr('consent'); }}
+                  className={`w-5 h-5 m-0 accent-ink-900 cursor-pointer${
+                    errors.consent ? ' outline outline-1 outline-red-600 outline-offset-2' : ''}`} />
+              </span>
               <span style={getContentStyle('contact.form.consent')}>{t('contact.form.consent')}</span>
             </label>
             <FieldError id="c-consent" message={errors.consent} />
@@ -359,7 +381,7 @@ const Contact = () => {
               style={getContentStyle('contact.form.submit')}
               className="btn btn-solid w-full sm:w-[280px] h-[54px] border-0 bg-ink-900 disabled:opacity-60 disabled:cursor-not-allowed text-white text-[11px] font-semibold tracking-[0.25em] uppercase flex items-center justify-center gap-3">
               {submitting && <Loader2 size={14} className="animate-spin" aria-hidden="true" />}
-              {submitting ? t('contact.form.sending') : `${t('contact.form.submit')} →`}
+              {submitting ? t('contact.form.sending') : <>{t('contact.form.submit')} <span className="btn-arrow">→</span></>}
             </button>
           </div>
         </form>

@@ -72,14 +72,17 @@ export async function renderShell(pathname: string, lang: 'bs' | 'en'): Promise<
     try {
       const slug = route.slug;
       const { rows } = await pool.query(
-        `SELECT couple, location, date_text, cover_url, quote_bs, quote_en, text_bs, text_en
+        `SELECT couple, location, date_text, cover_url, quote_bs, quote_en, text_bs, text_en,
+                seo_desc_bs, seo_desc_en
            FROM stories WHERE slug = $1 AND is_published = TRUE`,
         [slug]
       );
       if (rows[0]) {
         title = `${rows[0].couple} | ${siteName}`;
         // What the story is about, not only its date
-        desc = storyExcerpt(rows[0], lang);
+        const general = s[`seo.story.desc.${lang}`]?.trim() || s['seo.story.desc']?.trim()
+          || s[`seo.portfolio.desc.${lang}`]?.trim() || s['seo.portfolio.desc']?.trim() || '';
+        desc = storyExcerpt(rows[0], lang, general);
         if (rows[0].cover_url) s = { ...s, 'seo.og_image': base + rows[0].cover_url };
       }
     } catch { /* fall through to the defaults */ }

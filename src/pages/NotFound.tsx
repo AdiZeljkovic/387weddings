@@ -52,7 +52,7 @@ const NotFound = () => {
             style={getContentStyle('notfound.portfolio')}
             className="btn inline-block border border-ink-900 text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.2em] uppercase px-7 py-4 hover:text-white"
           >
-            {t('notfound.portfolio')} →
+            {t('notfound.portfolio')} <span className="btn-arrow">→</span>
           </Link>
         </div>
       </div>

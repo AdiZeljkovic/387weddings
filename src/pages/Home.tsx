@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useLanguage } from '../contexts/LanguageContext';
@@ -9,6 +9,7 @@ import Reveal from '../components/Reveal';
 import Emphasis from '../components/Emphasis';
 import { introPlaying, INTRO_LIFT_S } from '../components/Preloader';
 import StoryFan, { type FanStory } from '../components/StoryFan';
+import PhotoPile, { type PilePhoto } from '../components/PhotoPile';
 import { usePaths } from '../lib/routes';
 
 // One stand-in for the hero until the owner uploads a frame of their own. The
@@ -37,15 +38,18 @@ const FADE_MS = 800;
 const SLIDE_MAX = 5;
 
 // The five photographs in the "O nama" pile, as the board lays them out: where
-// it sits as a share of the column, width, frame ratio, resting tilt, and where
-// it comes in from as it slides into place. `px` is how far it drifts while
-// the section scrolls by: the bigger the picture, the less it moves.
-const PILE = [
-  { key: 'img.home.stack.1', pos: { left: '4%',  top: '10%' },   w: '40%', ratio: '2 / 3', r: -5, from: [-80, 10, -12], px: 26 },
-  { key: 'img.home.stack.2', pos: { left: '42%', top: '0' },     w: '34%', ratio: '2 / 3', r: 3,  from: [10, -70, 10],  px: 34 },
-  { key: 'img.home.stack.3', pos: { right: '0',  top: '34%' },   w: '40%', ratio: '3 / 2', r: 6,  from: [80, 0, 12],    px: 26 },
-  { key: 'img.home.stack.4', pos: { left: '20%', bottom: '0' },  w: '42%', ratio: '3 / 2', r: -3, from: [-40, 70, -10], px: 20 },
-  { key: 'img.home.stack.5', pos: { left: '56%', bottom: '2%' }, w: '30%', ratio: '3 / 4', r: -5, from: [60, 60, 12],   px: 40 },
+// it sits as a share of the column, width, frame ratio and resting tilt.
+// `from` is where it flies in from as the section scrolls up — a share of the
+// screen width, px up or down, extra tilt: 1 from the left, 2 from above, 3
+// from the right, 4 from the lower left, 5 from the lower right. `px` is how
+// far it drifts while the section scrolls by (the bigger the picture, the less
+// it moves) and `depth` how far it shifts against the mouse.
+const PILE: Omit<PilePhoto, 'src' | 'srcSet' | 'alt' | 'focus'>[] = [
+  { key: 'img.home.stack.1', pos: { left: '4%',  top: '10%' },   w: '40%', ratio: '2 / 3', r: -5, from: [-0.36, -20, -18], px: 26, depth: 7 },
+  { key: 'img.home.stack.2', pos: { left: '42%', top: '0' },     w: '34%', ratio: '2 / 3', r: 3,  from: [0.08, -150, 16],  px: 34, depth: 9 },
+  { key: 'img.home.stack.3', pos: { right: '0',  top: '34%' },   w: '40%', ratio: '3 / 2', r: 6,  from: [0.34, 10, 18],    px: 26, depth: 7 },
+  { key: 'img.home.stack.4', pos: { left: '20%', bottom: '0' },  w: '42%', ratio: '3 / 2', r: -3, from: [-0.28, 120, -16], px: 20, depth: 6 },
+  { key: 'img.home.stack.5', pos: { left: '56%', bottom: '2%' }, w: '30%', ratio: '3 / 4', r: -5, from: [0.30, 120, 20],   px: 40, depth: 10 },
 ];
 
 const Home = () => {
@@ -127,10 +131,15 @@ const Home = () => {
     setTurned(true);
   };
 
-  // Alt text and focal point live beside each image slot as "<key>.alt" / ".focus"
-  const altFor = (key: string) => settings[`${key}.alt`] || '';
-  const focusFor = (key: string) => settings[`${key}.focus`] || '';
-  const pileSrc = (key: string, i: number) => settings[key] || FALLBACK[(i + 1) % FALLBACK.length];
+  // Alt text and focal point live beside each image slot as "<key>.alt" /
+  // ".focus". Built once per settings load, not on every slide of the hero.
+  const pilePhotos = useMemo<PilePhoto[]>(() => PILE.map((ph, i) => {
+    const r = respImg(settings[ph.key] || FALLBACK[(i + 1) % FALLBACK.length]);
+    return {
+      ...ph, src: r.src, srcSet: r.srcSet,
+      alt: settings[`${ph.key}.alt`] || '', focus: settings[`${ph.key}.focus`] || '',
+    };
+  }), [settings]);
 
   const heroWords = [
     ...t('hero.title.part1').split(' ').filter(Boolean).map(w => ({ w, italic: false })),
@@ -254,18 +263,18 @@ const Home = () => {
             <Link
               to={paths('portfolio')}
               style={{ animationDelay: 'calc(var(--intro-delay, 0s) + 2s)', ...getContentStyle('hero.portfolio') }}
-              className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none btn btn-on-dark bg-cream text-ink-900 text-center text-[11px] lg:text-[12px] font-semibold tracking-[0.2em] uppercase py-[19px] lg:py-[18px] lg:px-[30px] border border-cream"
+              className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none btn btn-hero bg-cream text-ink-900 text-center text-[11px] lg:text-[12px] font-semibold tracking-[0.2em] uppercase py-[19px] lg:py-[18px] lg:px-[30px] border border-cream"
             >
-              {t('hero.portfolio')}<span className="hidden lg:inline"> →</span>
+              {t('hero.portfolio')}<span className="hidden lg:inline">&nbsp;<span className="btn-arrow">→</span></span>
             </Link>
             {/* A framed button on a phone, where a bare link is easy to miss; on
                 a desktop the board has it as a quiet underlined link */}
             <Link
               to={paths('contact')}
               style={{ animationDelay: 'calc(var(--intro-delay, 0s) + 2.2s)', ...getContentStyle('hero.inquire') }}
-              className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none btn [--btn-fill:rgba(255,255,255,.2)] lg:[--btn-fill:transparent] text-white text-center text-[11px] lg:text-[12px] font-medium tracking-[0.2em] lg:tracking-[0.22em] uppercase py-[19px] border border-white/55 lg:py-3.5 lg:border-0 lg:border-b lg:border-b-white/50 lg:hover:text-cream"
+              className="opacity-0 animate-[fadeUp_1s_ease_both] motion-reduce:opacity-100 motion-reduce:animate-none btn tlink tlink-dark [--btn-fill:rgba(255,255,255,.2)] text-white text-center text-[11px] lg:text-[12px] font-medium tracking-[0.2em] lg:tracking-[0.22em] uppercase py-[19px] border border-white/55 lg:py-3.5 lg:border-0 lg:border-b lg:border-b-white/50"
             >
-              {t('hero.inquire')}<span className="hidden lg:inline"> →</span>
+              {t('hero.inquire')}<span className="hidden lg:inline">&nbsp;<span className="btn-arrow">→</span></span>
             </Link>
           </div>
         </div>
@@ -318,7 +327,9 @@ const Home = () => {
           Fewer than three stories chosen and the section is left out
           altogether rather than looking half empty. */}
       {fan && fan.length >= 3 && (
-        <section id="radovi" className="relative overflow-x-clip bg-cream pt-[72px] pb-20 lg:pt-32 lg:pb-32">
+        // Only a small gap above: the pinned stage itself centres the heading
+        // and the fan in the screen under the header
+        <section id="radovi" className="relative overflow-x-clip bg-cream pt-6 pb-20 lg:pt-8 lg:pb-32">
           <OliveBranch className="hidden lg:block absolute bottom-5 w-[260px] left-[calc(50%-600px)]" />
           <OliveBranch className="hidden lg:block absolute bottom-5 w-[260px] right-[calc(50%-600px)]" flip />
 
@@ -361,7 +372,7 @@ const Home = () => {
                   style={getContentStyle('home.featured.cta')}
                   className="btn relative inline-block border border-ink-900 text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.2em] uppercase px-7 py-[18px] lg:py-4 hover:text-white"
                 >
-                  {t('home.featured.cta')} →
+                  {t('home.featured.cta')} <span className="btn-arrow">→</span>
                 </Link>
               </div>
             }
@@ -407,49 +418,12 @@ const Home = () => {
           </div>
 
           {/* The pile: five prints thrown on a table, overlapping at their own
-              angles. Each slides in from its side as the section arrives and
-              settles into its tilt; on a desktop they drift at different speeds
-              while the section scrolls by, and the one under the mouse lifts
-              and straightens. */}
+              angles (PhotoPile has the motion) */}
           <div className="ha-image relative mb-11 lg:mb-0 lg:py-2">
-            <div className="relative h-[400px] lg:h-[620px]">
-              {PILE.map((ph, i) => {
-                const r = respImg(pileSrc(ph.key, i));
-                return (
-                  <div
-                    key={ph.key}
-                    className="pile-item absolute"
-                    style={{ ...ph.pos, width: ph.w, zIndex: i + 1, '--pp': `${ph.px}px` } as unknown as React.CSSProperties}
-                  >
-                    <Reveal
-                      kind="pile"
-                      delay={i * 0.12}
-                      style={{
-                        '--r': `${ph.r}deg`,
-                        '--ex': `${ph.from[0]}px`,
-                        '--ey': `${ph.from[1]}px`,
-                        '--er': `${ph.from[2]}deg`,
-                      } as React.CSSProperties}
-                    >
-                      <div className="pile-photo relative overflow-hidden rounded-[3px] border-[3px] border-cream-light bg-rule" style={{ aspectRatio: ph.ratio }}>
-                        <img
-                          src={r.src}
-                          srcSet={r.srcSet}
-                          sizes="(min-width: 1024px) 22vw, 45vw"
-                          alt={altFor(ph.key)}
-                          style={{ objectPosition: focusFor(ph.key) || undefined }}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                          decoding="async"
-                          draggable={false}
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
-                    </Reveal>
-                  </div>
-                );
-              })}
-            </div>
+            <PhotoPile
+              className="h-[400px] lg:h-[620px]"
+              photos={pilePhotos}
+            />
           </div>
 
           {/* Like "Pošaljite upit" in the hero: a quiet underlined link on a
@@ -458,9 +432,9 @@ const Home = () => {
             <Link
               to={paths('about')}
               style={getContentStyle('home.about.cta')}
-              className="btn [--btn-fill:#151311] lg:[--btn-fill:transparent] inline-block text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.2em] lg:tracking-[0.22em] uppercase px-[30px] py-[19px] border border-ink-900/55 hover:text-white lg:px-0 lg:py-3.5 lg:border-0 lg:border-b lg:border-b-ink-900/50 lg:hover:text-ink-900"
+              className="btn tlink [--btn-fill:#151311] inline-block text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.2em] lg:tracking-[0.22em] uppercase px-[30px] py-[19px] border border-ink-900/55 hover:text-white lg:px-0 lg:py-3.5 lg:border-0 lg:border-b lg:border-b-ink-900/50"
             >
-              {t('home.about.cta')} →
+              {t('home.about.cta')} <span className="btn-arrow">→</span>
             </Link>
           </div>
         </div>

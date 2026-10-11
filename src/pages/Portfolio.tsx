@@ -294,7 +294,7 @@ const Portfolio = () => {
                 <circle cx="12" cy="12" r="4" />
                 <circle cx="17.2" cy="6.8" r=".8" fill="currentColor" />
               </svg>
-              @{handle} →
+              <span>@{handle} <span className="btn-arrow">→</span></span>
             </a>
           </div>
         </div>

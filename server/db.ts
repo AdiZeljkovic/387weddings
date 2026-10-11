@@ -1,5 +1,6 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
+import { slugify } from '../src/lib/slug.js';
 
 dotenv.config();
 
@@ -111,6 +112,9 @@ export async function initDB() {
       ALTER TABLE stories ADD COLUMN IF NOT EXISTS fan_order INT DEFAULT NULL;
       ALTER TABLE stories ADD COLUMN IF NOT EXISTS fan_image TEXT DEFAULT NULL;
       ALTER TABLE stories ADD COLUMN IF NOT EXISTS fan_focus VARCHAR(40) DEFAULT NULL;
+      -- "Opis za Google" per story, both languages
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS seo_desc_bs TEXT DEFAULT NULL;
+      ALTER TABLE stories ADD COLUMN IF NOT EXISTS seo_desc_en TEXT DEFAULT NULL;
 
       -- A story keeps its old addresses when its title (and so its slug)
       -- changes, so links already shared still land on it.
@@ -316,6 +320,9 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
         ('contact.err.email.bad', 'Forma: Greška – email neispravan', 'contact', 'form', 'text', 'That email address does not look right.', 'Ova email adresa ne izgleda ispravno.', 92),
         ('contact.err.date', 'Forma: Greška – datum', 'contact', 'form', 'text', 'Please choose the date of your wedding.', 'Molimo odaberite datum vjenčanja.', 93),
         ('contact.err.consent', 'Forma: Greška – pristanak', 'contact', 'form', 'text', 'Please agree before sending.', 'Molimo potvrdite pristanak prije slanja.', 94),
+        ('contact.err.location', 'Forma: Greška – lokacija', 'contact', 'form', 'text', 'Please tell us where the wedding is.', 'Molimo upišite gdje je vjenčanje.', 94),
+        ('contact.err.guests', 'Forma: Greška – broj gostiju', 'contact', 'form', 'text', 'Please give an approximate number of guests.', 'Molimo upišite približan broj gostiju.', 94),
+        ('contact.err.coverage', 'Forma: Greška – pokrivanje', 'contact', 'form', 'text', 'Please choose the coverage you need.', 'Molimo odaberite koliko pokrivanja trebate.', 94),
         ('contact.form.again', 'Forma: Dugme "Novi upit"', 'contact', 'form', 'text', 'Send another message', 'Pošalji novi upit', 95),
         ('portfolio.hero.title', 'Hero: Naslov', 'portfolio', 'hero', 'text', 'Stories that', 'Priče koje', 0),
         ('portfolio.hero.subtitle', 'Hero: Podnaslov', 'portfolio', 'hero', 'text', 'last', 'traju', 1),
@@ -502,6 +509,13 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
         AND NOT EXISTS (SELECT 1 FROM stories WHERE fan_order IS NOT NULL);
       INSERT INTO site_settings (key, value) VALUES ('migr.fan_seeded', '1') ON CONFLICT (key) DO NOTHING;
 
+      -- The Bosnian title of Radovi began with the English word "Portfolio".
+      -- Only the seeded wording is replaced; a title the owner wrote stays.
+      UPDATE site_settings
+        SET value = 'Radovi | Vjenčane fotografije Sarajevo | 387 Cinematic Weddings'
+        WHERE key = 'seo.portfolio.title.bs'
+          AND value IN ('Portfolio Vjenčane Fotografije | 387 Cinematic Weddings', 'Portfolio | 387 Cinematic Weddings');
+
       -- An empty recipient meant the owner got no notification at all and had
       -- no way to tell. Default it to the public address they already set.
       UPDATE site_settings SET value = (SELECT value FROM site_settings WHERE key = 'email')
@@ -521,6 +535,37 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
       UPDATE page_content SET value_en = 'Send message', value_bs = 'Pošalji poruku'
         WHERE key = 'contact.form.submit' AND value_bs IN ('Pošalji Upit', 'Pošaljite Upit', '');
     `);
+
+    // Once: every story's address is made from its title, as the brief asks.
+    // Test addresses such as /radovi/yo-yo for the story "Visoko" become
+    // /radovi/visoko; a second story with the same title gets -2. Each old
+    // address is kept as a permanent redirect to the new one, so nothing that
+    // was shared or indexed breaks. After this the panel keeps them in step.
+    const slugsDone = await client.query("SELECT 1 FROM site_settings WHERE key = 'migr.slugs_from_titles'");
+    if (!slugsDone.rowCount) {
+      const { rows } = await client.query('SELECT id, slug, couple FROM stories ORDER BY sort_order, id');
+      const taken = new Set<string>(rows.map(r => r.slug));
+      for (const r of rows) {
+        const base = slugify(r.couple || '');
+        if (!base || r.slug === base) continue;
+        // Already the title with a number for a duplicate, e.g. mostar-2
+        if (r.slug.startsWith(`${base}-`) && /^\d+$/.test(r.slug.slice(base.length + 1))) continue;
+        let next = base;
+        for (let n = 2; taken.has(next); n++) next = `${base}-${n}`;
+        taken.add(next);
+        await client.query('UPDATE stories SET slug = $1 WHERE id = $2', [next, r.id]);
+        await client.query(
+          `INSERT INTO story_redirects (old_slug, story_id) VALUES ($1, $2)
+           ON CONFLICT (old_slug) DO UPDATE SET story_id = EXCLUDED.story_id`,
+          [r.slug, r.id]
+        );
+        await client.query('DELETE FROM story_redirects WHERE old_slug = $1', [next]);
+        console.log(`[migr] story ${r.id}: /radovi/${r.slug} -> /radovi/${next}`);
+      }
+      await client.query(
+        "INSERT INTO site_settings (key, value) VALUES ('migr.slugs_from_titles', '1') ON CONFLICT (key) DO NOTHING"
+      );
+    }
 
     // Update promo section to Custom Package design (only if still at seed defaults)
     await client.query(`

@@ -94,11 +94,9 @@ const Navbar = () => {
     ? settings.instagram
     : `https://instagram.com/${instagramHandle}`;
 
-  const LangSwitch = ({ light, size = 12 }: { light?: boolean; size?: number }) => (
-    <span
-      className="flex items-center gap-[7px] leading-none"
-      style={{ fontSize: size, letterSpacing: '0.16em' }}
-    >
+  // 12px on a phone (the agreed minimum there), the board's 10px on a desktop
+  const LangSwitch = ({ light }: { light?: boolean }) => (
+    <span className="flex items-center gap-[7px] leading-none text-[12px] lg:text-[10px] tracking-[0.16em]">
       {(['ENG', 'BOS'] as const).map((lang, i) => (
         <React.Fragment key={lang}>
           {i > 0 && (
@@ -196,7 +194,7 @@ const Navbar = () => {
           />
         </nav>
 
-        <LangSwitch light={overHero} size={10} />
+        <LangSwitch light={overHero} />
 
           <button
             type="button"
@@ -274,7 +272,7 @@ const Navbar = () => {
                 href={instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 text-ink-900 text-[10px] tracking-[0.24em] uppercase transition-opacity duration-250 hover:opacity-60"
+                className="inline-flex items-center gap-3 text-ink-900 text-[12px] tracking-[0.24em] uppercase transition-opacity duration-250 hover:opacity-60"
               >
                 <InstagramGlyph stroke="#151311" />
                 @{instagramHandle}

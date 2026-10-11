@@ -8,7 +8,6 @@ import React, { useCallback, useEffect, useRef } from 'react';
  *  mask — photographs: a curtain opens from the top down
  *  line — the gold rules beside small labels: draw out from the centre
  *  frame — the offset gold frames: slide in 28px from below-left and fade up
- *  pile  — the home page prints: arrive from their own side and settle into their tilt
  *
  * The element is attached through a callback ref rather than an effect. Lists
  * here re-render once their data arrives (/api/content, /api/stories), and an
@@ -19,7 +18,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
  * A timer is the belt to that braces: if a node has not been revealed within
  * 1.5s, it is revealed regardless. Nothing stays invisible because of us.
  */
-export type RevealKind = 'up' | 'mask' | 'line' | 'frame' | 'pile';
+export type RevealKind = 'up' | 'mask' | 'line' | 'frame';
 
 const SAFETY_MS = 1500;
 
@@ -95,7 +94,6 @@ const CLASS: Record<RevealKind, string> = {
   mask: 'rv-mask',
   line: 'rv-line',
   frame: 'rv-frame',
-  pile: 'rv-pile',
 };
 
 export function Reveal<E extends keyof React.JSX.IntrinsicElements = 'div'>({

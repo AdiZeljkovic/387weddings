@@ -212,10 +212,63 @@
 /* Over the dark hero the fill is the page cream */
 .btn-on-dark { --btn-fill: #f9f5ee; }
 
+/* "Pogledajte radove", the cream button in the hero: a gold sweep, white
+   words, the arrow steps 6px on, and a deeper shadow over the photograph */
+.btn-hero { --btn-fill: #a6865d; }
+.btn-hero:hover, .btn-hero:focus-visible {
+  color: #ffffff;
+  border-color: #a6865d;
+  box-shadow: 0 12px 26px rgba(0,0,0,.35);
+}
+
+/* The arrow inside a button or link moves 6px on as it is hovered */
+.btn-arrow { display: inline-block; transition: translate .35s cubic-bezier(.2,.6,.2,1); }
+.btn:hover .btn-arrow, .btn:focus-visible .btn-arrow,
+.tlink:hover .btn-arrow, .tlink:focus-visible .btn-arrow { translate: 6px 0; }
+
+/* Text links: "Upoznajte nas →" and "Pošaljite upit →" on a desktop. They are
+   framed buttons on a phone, so the button rules apply up to lg; from lg on
+   they are words over a hairline, and a button's lift and shadow (which made
+   them look like a box) never touch them. On hover a gold line draws over the
+   hairline from the left, the words turn gold and open up a little, and the
+   arrow steps on — the same for keyboard focus. */
+@media (min-width: 1024px) {
+  .tlink {
+    position: relative;
+    background-image: none;
+    transition: color .45s ease, letter-spacing .55s cubic-bezier(.2,.6,.2,1);
+  }
+  .tlink::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: -1px;
+    height: 1px;
+    background: #a6865d;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .55s cubic-bezier(.2,.6,.2,1);
+  }
+  .tlink:hover, .tlink:focus-visible {
+    color: var(--tlink-hover, #a6865d);
+    letter-spacing: .26em;
+    transform: none;
+    box-shadow: none;
+  }
+  .tlink:hover::after, .tlink:focus-visible::after { transform: scaleX(1); }
+  .tlink:active { transform: none; }
+  /* Over the dark hero the gold is lighter */
+  .tlink-dark { --tlink-hover: #d9bd92; }
+  .tlink-dark::after { background: #d9bd92; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* The colour still changes, it just arrives rather than sweeps */
   .btn { transition: color .25s ease; transform: none !important; }
   .btn:hover, .btn:focus-visible { background-size: 100% 100%; box-shadow: none; }
+  .btn-arrow, .tlink, .tlink::after { transition: none; }
+  .btn:hover .btn-arrow, .tlink:hover .btn-arrow,
+  .btn:focus-visible .btn-arrow, .tlink:focus-visible .btn-arrow { translate: none; }
+  .tlink:hover, .tlink:focus-visible { letter-spacing: .22em; }
 }
 
 /* The hero is exactly the visible screen. svh excludes a phone's collapsible
@@ -287,14 +340,18 @@
   height: calc(100vh - var(--header-h, 0px));
   height: calc(100svh - var(--header-h, 0px));
 }
+/* On a phone the shadows stay short, so not even a card's shadow reaches the
+   16px margin the end cards keep from the screen edge */
 .fan-card .fan-photo {
-  box-shadow: 0 10px 22px rgba(60,40,20,.28);
+  box-shadow: 0 8px 12px rgba(60,40,20,.24);
   transition: transform .5s cubic-bezier(.2,.6,.2,1), box-shadow .5s ease;
 }
+.fan-shade { box-shadow: 0 12px 16px rgba(60,40,20,.34); }
 .fan-card .fan-photo img { transition: transform 1.2s cubic-bezier(.2,.6,.2,1); }
 .fan-card:focus-visible { outline: 2px solid var(--color-gold-600); outline-offset: 6px; }
-@media (min-width: 1024px) {
+@media (min-width: 768px) {
   .fan-card .fan-photo { box-shadow: 0 18px 40px rgba(60,40,20,.28); }
+  .fan-shade { box-shadow: 0 30px 60px rgba(60,40,20,.42); }
 }
 /* Hover, desktop only: the card grows to 107%, comes to the front and its
    picture eases in to 108% */
@@ -305,45 +362,49 @@
 }
 
 /* ── The "O nama" pile of prints ─────────────────────────
-   Each print arrives from its own side, 60-80px out and up to 12 degrees more
-   tilted, and settles into its resting angle. Tilt and position use the
-   standalone rotate / translate properties so nothing here fights a transform
-   set elsewhere. */
-.rv-pile {
-  opacity: 0;
-  translate: var(--ex) var(--ey);
-  rotate: calc(var(--r) + var(--er));
-  transition: opacity .9s ease, translate 1.1s cubic-bezier(.2,.6,.2,1), rotate 1.1s cubic-bezier(.2,.6,.2,1);
-}
-.rv-pile.is-in { opacity: 1; translate: 0 0; rotate: var(--r); }
+   PhotoPile writes the scroll-linked fly-in and depth on .pile-item and the
+   mouse lean on .pile-tilt; everything here is the breathing and the hover.
+   The resting tilt sits on .pile-photo with the standalone rotate property,
+   so the hover can straighten it without touching any other layer.           */
+.pile-item { will-change: translate, rotate, opacity; }
+.pile-tilt { transition: transform .6s cubic-bezier(.2,.6,.2,1); }
 .pile-photo {
+  rotate: var(--r);
   box-shadow: 0 12px 26px rgba(60,40,20,.26);
-  transition: transform .5s cubic-bezier(.2,.6,.2,1), box-shadow .5s ease;
+  transition: rotate .5s cubic-bezier(.2,.6,.2,1), scale .5s cubic-bezier(.2,.6,.2,1),
+    box-shadow .5s ease, filter .4s ease;
 }
-.pile-photo img { transition: transform 1.2s cubic-bezier(.2,.6,.2,1); }
 @media (min-width: 1024px) {
   .pile-photo { box-shadow: 0 16px 36px rgba(60,40,20,.26); }
 }
-/* Desktop hover: the print lifts to 105%, straightens to about 40% of its
-   tilt, comes to the top of the pile, and its picture eases in to 106% */
-@media (hover: hover) and (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
-  .pile-item:hover { z-index: 10 !important; }
-  .pile-item:hover .pile-photo {
-    transform: scale(1.05) rotate(calc(var(--r) * -0.6));
-    box-shadow: 0 26px 50px rgba(60,40,20,.36);
-  }
-  .pile-item:hover .pile-photo img { transform: scale(1.06); }
+/* Idle: every print breathes, ±6px and ±1°, 7-11s, out of step */
+@keyframes pileFloat {
+  from { transform: translateY(-6px) rotate(-1deg); }
+  to   { transform: translateY(6px) rotate(1deg); }
 }
-/* Depth: on a desktop each print drifts at its own speed while the section
-   scrolls past, the larger ones less */
-@supports (animation-timeline: view()) {
-  @media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
-    @keyframes pileDrift { from { translate: 0 var(--pp); } to { translate: 0 calc(var(--pp) * -1); } }
-    .pile-item { animation: pileDrift linear both; animation-timeline: view(); animation-range: cover; }
-  }
+.pile-float { animation: pileFloat var(--fd, 9s) ease-in-out var(--fo, 0s) infinite alternate; }
+/* Hover (desktop): to the front, 40% of its tilt, 106%, a deeper shadow and
+   one pass of light across it; the others dim to 85% */
+.pile-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 32%, rgba(255,255,255,.38) 48%, transparent 64%);
+  translate: -130% 0;
 }
+@keyframes pileSheen { from { translate: -130% 0; } to { translate: 130% 0; } }
+.pile-item.is-hot .pile-photo {
+  rotate: calc(var(--r) * .4);
+  scale: 1.06;
+  box-shadow: 0 28px 54px rgba(60,40,20,.38);
+}
+.pile-item.is-hot .pile-photo::after { animation: pileSheen .9s cubic-bezier(.2,.6,.2,1) 1 both; }
+.pile-item.is-dim .pile-photo { filter: brightness(.85); }
 @media (prefers-reduced-motion: reduce) {
-  .rv-pile { opacity: 1; translate: 0 0; rotate: var(--r); transition: none; }
+  .pile-float { animation: none; }
+  .pile-tilt, .pile-photo { transition: none; }
+  .pile-item.is-hot .pile-photo::after { animation: none; }
 }
 
 /* ── Home "O nama" block ─────────────────────────────────

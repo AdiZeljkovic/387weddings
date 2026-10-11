@@ -11,12 +11,13 @@ type Tab = 'contact' | 'general' | 'social' | 'seo' | 'technical';
 
 
 const SEO_PAGES = [
-  { key: 'home',      label: 'Naslovna', path: '/',          defaultTitle: 'Art in the Moments | 387 Weddings' },
-  { key: 'about',     label: 'O nama',   path: '/about',     defaultTitle: 'About Us | 387 Weddings' },
-  { key: 'portfolio', label: 'Portfolio', path: '/portfolio', defaultTitle: 'Portfolio | 387 Weddings' },
-  { key: 'contact',   label: 'Kontakt',  path: '/contact',   defaultTitle: 'Inquire | 387 Weddings' },
-  { key: 'story',     label: 'Priča',      path: '/portfolio/...', defaultTitle: 'Priča | 387 Weddings' },
-  { key: 'privacy',   label: 'Privatnost', path: '/privacy',   defaultTitle: 'Politika privatnosti | 387 Weddings' },
+  // The Bosnian address of each page (the English one is under /en)
+  { key: 'home',      label: 'Naslovna',   path: '/',            defaultTitle: 'Art in the Moments | 387 Weddings' },
+  { key: 'about',     label: 'O nama',     path: '/o-nama',      defaultTitle: 'O nama | 387 Weddings' },
+  { key: 'portfolio', label: 'Radovi',     path: '/radovi',      defaultTitle: 'Radovi | Vjenčane fotografije Sarajevo | 387 Cinematic Weddings' },
+  { key: 'contact',   label: 'Kontakt',    path: '/kontakt',     defaultTitle: 'Kontakt | 387 Weddings' },
+  { key: 'story',     label: 'Priča',      path: '/radovi/...',  defaultTitle: 'Ime para | 387 Weddings' },
+  { key: 'privacy',   label: 'Privatnost', path: '/privatnost',  defaultTitle: 'Politika privatnosti | 387 Weddings' },
 ];
 
 export default function AdminSettings() {
