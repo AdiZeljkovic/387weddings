@@ -14,7 +14,7 @@ const InstagramGlyph = ({ size = 18 }: { size?: number }) => (
 );
 
 const Footer = () => {
-  const { t, getContentStyle, language } = useLanguage();
+  const { t, getContentStyle } = useLanguage();
   const paths = usePaths();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const location = useLocation();
@@ -119,7 +119,7 @@ const Footer = () => {
 
           {/* Who built the site */}
           <span className="normal-case text-center">
-            {language === 'ENG' ? 'Website by' : 'Izrada stranice:'}{' '}
+            Design &amp; Development —{' '}
             <a
               href="https://luminor.solutions/"
               target="_blank"
