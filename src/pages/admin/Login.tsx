@@ -37,7 +37,7 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-moody-950 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
-          <span className="text-4xl font-script text-white block mb-1">387 Cinematic</span>
+          <span className="text-4xl font-script text-white block mb-1">387 Weddings</span>
           <span className="text-[9px] tracking-[0.5em] uppercase font-bold text-gold-600">Admin Panel</span>
         </div>
 

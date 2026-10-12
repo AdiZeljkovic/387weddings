@@ -47,70 +47,64 @@ const COLOR_PRESETS = [
   { label: 'Gold 50%',   value: 'rgba(166,134,93,0.5)', bg: 'rgba(166,134,93,0.5)' },
 ];
 
+// The editor follows the site: pages in the order of the menu, then what is
+// shared by every page, then the 404 page
 const PAGE_LABELS: Record<string, string> = {
   home:      'Naslovna',
   portfolio: 'Radovi',
-  about:     'O Nama',
-  contact:   'Upit',
-  story:     'Priča (zajedničke oznake)',
-  privacy:   'Privatnost i kolačići',
-  footer:    'Footer',
+  story:     'Priča',
+  about:     'O nama',
+  contact:   'Kontakt',
+  privacy:   'Privatnost',
+  layout:    'Meni, footer i baneri',
   notfound:  'Stranica 404',
 };
 
-// Subtitle shown under the tab (matches URL path)
+// Shown under the page name
 const PAGE_PATHS: Record<string, string> = {
   home:      '/',
   portfolio: '/radovi',
+  story:     '/radovi/… (svaka priča)',
   about:     '/o-nama',
   contact:   '/kontakt',
-  story:     '/radovi/...',
   privacy:   '/privatnost',
-  footer:    '(sve stranice)',
+  layout:    '(na svim stranicama)',
   notfound:  '(nepostojeća adresa)',
 };
 
+// Section names, per page
 const SECTION_LABELS: Record<string, string> = {
-  hero:          'Hero sekcija',
-  featured:      'Istaknuti radovi (lepeza priča)',
-  intro:         'Uvod',
-  collections:   'Kolekcije (kategorije)',
-  process:       'Proces / Koraci',
-  story:         'Priča',
-  bio:           'Biografije (Melisa i Aldin)',
-  press:         'Pisali su o nama (ne prikazuje se)',
-  invite:        'Poziv na kontakt',
-  facts:         'Sitnice o nama (ne prikazuje se)',
-  philosophy:    'Filozofija',
-  faq:           'Česta pitanja (FAQ)',
-  approach:      'Pristup & Uvod',
-  connect:       'Kontakt info',
-  about_section: 'O nama sekcija (naslovna)',
-  experience:    'Kako radimo (koraci)',
-  cta:           'CTA — poziv na akciju',
-  form:          'Kontakt forma',
-  journey:       'Putovanje — Kako radimo s vama',
-  addons:        'Naša podrška — Tu smo za vas',
-  filter:        'Filteri kategorija (ALL / Vjenčanja...)',
-  brand:         'Brend & Tagline',
-  nav:           'Navigacija',
-  contact:       'Kontakt kolona',
-  labels:        'Oznake i navigacija',
-  page:          'Tekst stranice',
-  cookie:        'Cookie baner',
-  instagram:     'Instagram blok',
-  legal:         'Copyright & Legal',
+  'home/hero':          'Hero (vrh stranice)',
+  'home/featured':      'Lepeza priča',
+  'home/about_section': 'O nama (hrpa fotografija)',
+  'portfolio/hero':     'Naslov i uvodni tekst',
+  'portfolio/filter':   'Filteri i oznake kategorija',
+  'story/labels':       'Oznake na stranici priče',
+  'about/bio':          'Biografije: Melisa i Aldin',
+  'about/invite':       'Poziv „Želimo čuti vašu priču“',
+  'contact/hero':       'Naslov stranice',
+  'contact/form':       'Forma — polja i dugme',
+  'contact/errors':     'Forma — poruke kad nešto nedostaje',
+  'contact/done':       'Poslije slanja',
+  'contact/note':       'Napomena o vremenu odgovora',
+  'privacy/page':       'Politika privatnosti',
+  'layout/nav':         'Glavni meni',
+  'layout/footer':      'Footer',
+  'layout/instagram':   'Instagram blok (Radovi i priče)',
+  'layout/cookie':      'Cookie baner',
+  'notfound/page':      'Stranica 404',
 };
 
-// Explicit section order per page (sections not listed appear at the end)
+// Sections in the order they appear on the page
 const SECTION_ORDER: Record<string, string[]> = {
   home:      ['hero', 'featured', 'about_section'],
-  about:     ['bio', 'invite'],
-  portfolio: ['hero', 'approach', 'filter'],
-  contact:   ['hero', 'connect', 'form'],
+  portfolio: ['hero', 'filter'],
   story:     ['labels'],
-  privacy:   ['page', 'cookie'],
-  footer:    ['brand', 'nav', 'contact', 'instagram', 'legal'],
+  about:     ['bio', 'invite'],
+  contact:   ['hero', 'form', 'errors', 'done', 'note'],
+  privacy:   ['page'],
+  layout:    ['nav', 'footer', 'instagram', 'cookie'],
+  notfound:  ['page'],
 };
 
 export default function PagesManager() {
@@ -184,22 +178,16 @@ export default function PagesManager() {
   const pages = Object.keys(PAGE_LABELS);
 
   const getSections = (page: string): string[] => {
-    const present = Array.from(new Set(content.filter(i => i.page === page && !UNUSED.has(i.key)).map(i => i.section)));
+    const present = Array.from(new Set(content.filter(i => i.page === page).map(i => i.section)));
     const order = SECTION_ORDER[page] ?? [];
     const ordered = order.filter(s => present.includes(s));
     const rest = present.filter(s => !order.includes(s));
     return [...ordered, ...rest];
   };
 
-  // Left over from older versions of the site: kept in the database (nothing
-  // is deleted), but not offered here, since editing them changes nothing
-  const UNUSED = new Set([
-    'footer.tagline', 'footer.contact', 'footer.navigation', 'footer.designed',
-    'nav.experience', 'portfolio.approach.title', 'contact.form.close', 'contact.form.success.another',
-  ]);
 
   const getFields = (page: string, section: string) =>
-    content.filter(i => i.page === page && i.section === section && !UNUSED.has(i.key));
+    content.filter(i => i.page === page && i.section === section);
 
   const handleChange = (key: string, lang: 'en' | 'bs', value: string) => {
     setEditMap(prev => ({ ...prev, [key]: { ...prev[key], [lang]: value } }));
@@ -308,9 +296,10 @@ export default function PagesManager() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-white">Urednik stranica</h1>
+          <h1 className="text-xl font-semibold text-white">Tekstovi stranica</h1>
           <p className="text-white/40 text-sm mt-1">
-            Editujte naslove, opise i sadržaj za svaku stranicu — na oba jezika.
+            Svaki tekst sa sajta, na bosanskom i engleskom, poredan kako ga posjetilac vidi.
+            Fotografije su pod <strong className="text-white/60">Fotografije</strong>, priče pod <strong className="text-white/60">Priče</strong>.
           </p>
         </div>
         <button
@@ -367,7 +356,7 @@ export default function PagesManager() {
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-white/80 font-medium text-sm">
-                      {SECTION_LABELS[section] || section}
+                      {SECTION_LABELS[`${activePage}/${section}`] || section}
                     </span>
                     <span className="text-white/20 text-xs font-mono">{fields.length} polja</span>
                   </div>

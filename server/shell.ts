@@ -207,7 +207,8 @@ export async function renderShell(pathname: string, lang: 'bs' | 'en'): Promise<
   const bizDesc = s[`seo.home.desc.${lang}`]?.trim() || DEFAULT_META.home[lang][1];
   if (bizDesc) business.description = bizDesc;
   if (s.email?.trim()) business.email = s.email.trim();
-  if (s.phone?.trim()) business.telephone = s.phone.trim();
+  // The seeded placeholder number is never published
+  if (s.phone?.trim() && s.phone.trim() !== '+387 61 000 000') business.telephone = s.phone.trim();
   const bizImage = previewImage(base, s['seo.og_image']?.trim() || s['img.home.hero.1']?.trim() || '');
   if (bizImage) business.image = bizImage;
   html = put(html, /<script type="application\/ld\+json">[\s\S]*?<\/script>/,

@@ -7,7 +7,7 @@ import { pool } from './db.js';
  *
  * Every place a photograph can be named is looked at — story covers and fan
  * pictures, story galleries, every setting (image slots, the link-preview
- * picture) and every text, plus the old gallery table — so a file is only
+ * picture) and every text — so a file is only
  * ever removed when no page, draft or setting points at it. Removing a file
  * also removes its resized copies and its size record.
  */
@@ -37,7 +37,6 @@ export async function referencedFiles(): Promise<Set<string>> {
     'SELECT url AS v FROM story_images',
     "SELECT value AS v FROM site_settings WHERE value LIKE '%/uploads/%'",
     "SELECT value_bs AS v FROM page_content WHERE value_bs LIKE '%/uploads/%' UNION ALL SELECT value_en FROM page_content WHERE value_en LIKE '%/uploads/%'",
-    "SELECT url AS v FROM gallery_images",
   ];
   for (const q of queries) {
     const { rows } = await pool.query(q);

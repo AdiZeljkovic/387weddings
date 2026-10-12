@@ -1,23 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Check, Loader2, Globe, Instagram,
+  Check, Loader2, Globe,
   Search, Languages, BarChart2, FileText, MapPin, ExternalLink, RefreshCw,
-  Tag, AlertCircle, Copy, CheckCheck, Phone, Mail, AtSign,
+  Tag, AlertCircle, Copy, CheckCheck, Mail, AtSign,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { invalidateSettingsCache } from '../../lib/settingsCache';
 import { adminFetch, json, errorText } from '../../lib/adminFetch';
 
-type Tab = 'contact' | 'general' | 'social' | 'seo' | 'technical' | 'security';
+type Tab = 'contact' | 'general' | 'seo' | 'technical' | 'security';
 
 
+// In the order of the site's menu
 const SEO_PAGES = [
   // The Bosnian address of each page (the English one is under /en)
   { key: 'home',      label: 'Naslovna',   path: '/',            defaultTitle: 'Art in the Moments | 387 Weddings' },
-  { key: 'about',     label: 'O nama',     path: '/o-nama',      defaultTitle: 'O nama | 387 Weddings' },
   { key: 'portfolio', label: 'Radovi',     path: '/radovi',      defaultTitle: 'Radovi | Vjenčane fotografije Sarajevo | 387 Cinematic Weddings' },
-  { key: 'contact',   label: 'Kontakt',    path: '/kontakt',     defaultTitle: 'Kontakt | 387 Weddings' },
   { key: 'story',     label: 'Priča',      path: '/radovi/...',  defaultTitle: 'Ime para | 387 Weddings' },
+  { key: 'about',     label: 'O nama',     path: '/o-nama',      defaultTitle: 'O nama | 387 Weddings' },
+  { key: 'contact',   label: 'Kontakt',    path: '/kontakt',     defaultTitle: 'Kontakt | 387 Weddings' },
   { key: 'privacy',   label: 'Privatnost', path: '/privatnost',  defaultTitle: 'Politika privatnosti | 387 Weddings' },
 ];
 
@@ -89,18 +90,17 @@ export default function AdminSettings() {
       <div>
         <h1 className="text-xl font-semibold text-white">Postavke sajta</h1>
         <p className="text-white/40 text-sm mt-1">
-          Opšte informacije, društvene mreže, SEO i analitika
+          Kontakt i Instagram, SEO, Coming Soon, analitika i sigurnost
         </p>
       </div>
 
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 border-b border-white/10 pb-4">
         {([
-          { id: 'contact',   label: 'Kontakt & Social' },
-          { id: 'general',   label: 'Opšte' },
-          { id: 'social',    label: 'Društvene mreže' },
+          { id: 'contact',   label: 'Kontakt i Instagram' },
           { id: 'seo',       label: 'SEO' },
-          { id: 'technical', label: 'Analitika & Tehnički' },
+          { id: 'general',   label: 'Sajt' },
+          { id: 'technical', label: 'Analitika i tehničko' },
           { id: 'security',  label: 'Sigurnost' },
         ] as { id: Tab; label: string }[]).map(t => (
           <button
@@ -118,7 +118,7 @@ export default function AdminSettings() {
         ))}
       </div>
 
-      {/* ── Tab: Kontakt & Social ── */}
+      {/* ── Tab: Kontakt i Instagram ── */}
       {tab === 'contact' && (
         <div className="space-y-4">
           {/* Email + Telefon */}
@@ -127,9 +127,11 @@ export default function AdminSettings() {
               <Mail size={13} /> Kontakt podaci
             </div>
             <Field label="Email adresa" placeholder="hello@387weddings.ba"
-              value={settings['email'] ?? ''} onChange={v => set('email', v)} />
+              value={settings['email'] ?? ''} onChange={v => set('email', v)}
+              hint="Javna adresa studija: Google je prikazuje u podacima o firmi." />
             <Field label="Telefon" placeholder="+387 61 000 000"
-              value={settings['phone'] ?? ''} onChange={v => set('phone', v)} />
+              value={settings['phone'] ?? ''} onChange={v => set('phone', v)}
+              hint="Google ga prikazuje u podacima o firmi. Prazno = ne prikazuje se." />
             <Field label="Upiti stižu na" placeholder="upiti@387weddings.ba"
               value={settings['contact_recipient'] ?? ''} onChange={v => set('contact_recipient', v)}
               hint="Adresa na koju se šalje obavijest kad neko pošalje kontakt formu. Upit se uvijek sprema i u panel, pod Upiti." />
@@ -140,20 +142,21 @@ export default function AdminSettings() {
             <div className="flex items-center gap-2 text-white/40 text-[10px] font-bold tracking-widest uppercase">
               <AtSign size={13} /> Instagram
             </div>
-            <Field label="Korisničko ime (bez @)" placeholder="art387weddings"
+            <Field label="Korisničko ime (bez @)" placeholder="387.weddings"
               value={settings['instagram_handle'] ?? ''} onChange={v => set('instagram_handle', v)}
-              hint="Prikazuje se kao @korisničkoime na sajtu." />
-            <Field label="URL profila" placeholder="https://instagram.com/art387weddings"
-              value={settings['instagram'] ?? ''} onChange={v => set('instagram', v)} />
+              hint="Prikazuje se kao @korisničkoime u footeru, meniju i bloku „Pogledajte još na Instagramu“." />
+            <Field label="URL profila" placeholder="https://instagram.com/387.weddings"
+              value={settings['instagram'] ?? ''} onChange={v => set('instagram', v)}
+              hint="Prazno = link vodi na profil iz korisničkog imena." />
           </div>
 
           <p className="text-white/20 text-[10px] leading-relaxed pt-1">
-            Tekstovi stranice (Napomena, "Pratite nas", tekst gumba...) uređuju se u <strong className="text-white/40">Stranice → Kontakt</strong>.
+            Tekstovi stranice Kontakt (naslov, polja forme, napomena o odgovoru) uređuju se u <strong className="text-white/40">Stranice → Kontakt</strong>.
           </p>
         </div>
       )}
 
-      {/* ── Tab: Opšte ── */}
+      {/* ── Tab: Sajt ── */}
       {tab === 'general' && (
         <div className="space-y-4">
           {/* Coming Soon toggle */}
@@ -193,32 +196,6 @@ export default function AdminSettings() {
             </button>
           </div>
 
-          <div className="bg-moody-950/60 border border-white/5 rounded-sm p-6 space-y-5">
-            <Field label="Email adresa" placeholder="hello@387weddings.ba"
-              value={settings['email'] ?? ''} onChange={v => set('email', v)} />
-            <Field label="Telefon" placeholder="+387 61 000 000"
-              value={settings['phone'] ?? ''} onChange={v => set('phone', v)} />
-            <Field label="Lokacija / Slogan" placeholder="Sarajevo — Worldwide"
-              value={settings['location'] ?? ''} onChange={v => set('location', v)} />
-          </div>
-        </div>
-      )}
-
-      {/* ── Tab: Društvene mreže ── */}
-      {tab === 'social' && (
-        <div className="space-y-4">
-          <SocialGroup icon={<Instagram size={15} />} label="Instagram">
-            <Field label="URL profila" placeholder="https://instagram.com/387cinematic"
-              value={settings['instagram'] ?? ''} onChange={v => set('instagram', v)} />
-            <Field label="Korisničko ime (bez @)" placeholder="387cinematic"
-              value={settings['instagram_handle'] ?? ''} onChange={v => set('instagram_handle', v)}
-              hint="Prikazuje se u footeru, meniju i bloku „Pogledajte još na Instagramu“." />
-          </SocialGroup>
-
-          <div className="bg-moody-950/40 border border-white/5 rounded-sm px-4 py-3 text-[10px] text-white/25 leading-relaxed">
-            Maketa u footeru ima <strong className="text-white/40">samo Instagram</strong>, pa su ostale
-            mreže uklonjene iz panela.
-          </div>
         </div>
       )}
 
@@ -431,17 +408,6 @@ export default function AdminSettings() {
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-
-function SocialGroup({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-moody-950/60 border border-white/5 rounded-sm p-5 space-y-4">
-      <div className="flex items-center gap-2 text-white/40 text-[10px] font-bold tracking-widest uppercase">
-        {icon} {label}
-      </div>
-      {children}
-    </div>
-  );
-}
 
 function TechGroup({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (

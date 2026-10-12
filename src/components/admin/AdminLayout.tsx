@@ -8,10 +8,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
 
 const navItems = [
-  { path: '/admin',              label: 'Dashboard',   icon: LayoutDashboard, exact: true },
-  { path: '/admin/pages',        label: 'Stranice',    icon: FileEdit },
-  { path: '/admin/images',       label: 'Fotografije', icon: Images },
+  // In the order the owner works: stories first, then the site's photographs
+  // and texts, then inquiries and settings
+  { path: '/admin',              label: 'Pregled',     icon: LayoutDashboard, exact: true },
   { path: '/admin/stories',      label: 'Priče',       icon: BookOpen },
+  { path: '/admin/images',       label: 'Fotografije', icon: Images },
+  { path: '/admin/pages',        label: 'Tekstovi',    icon: FileEdit },
   { path: '/admin/submissions',  label: 'Upiti',       icon: Mail },
   { path: '/admin/settings',     label: 'Postavke',    icon: Settings },
 ];
@@ -42,7 +44,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       <div className="px-6 py-8 border-b border-white/5">
         <Link to="/" target="_blank" className="flex flex-col group">
           <span className="text-2xl font-script text-white group-hover:text-gold-400 transition-colors">
-            387 Cinematic
+            387 Weddings
           </span>
           <span className="text-[9px] tracking-[0.5em] uppercase font-bold text-gold-600">
             Admin Panel

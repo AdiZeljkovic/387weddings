@@ -1,6 +1,7 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
 import { slugify } from '../src/lib/slug.js';
+import { adminCleanup } from './adminCleanup.js';
 
 dotenv.config();
 
@@ -34,18 +35,7 @@ export async function initDB() {
       -- made before stops working (see server/auth.ts)
       ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS token_version INT NOT NULL DEFAULT 0;
 
-      CREATE TABLE IF NOT EXISTS gallery_images (
-        id SERIAL PRIMARY KEY,
-        url TEXT NOT NULL,
-        category VARCHAR(50) NOT NULL CHECK (category IN ('WEDDINGS', 'STUDIO', 'PORTRAITS')),
-        layout VARCHAR(20) DEFAULT 'TALL',
-        title VARCHAR(255),
-        location VARCHAR(255),
-        sort_order INT DEFAULT 0,
-        is_active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      );
-      ALTER TABLE gallery_images ADD COLUMN IF NOT EXISTS layout VARCHAR(20) DEFAULT 'TALL';
+      -- (the old gallery_images table is archived by the 2026-10 cleanup)
 
 
 
@@ -180,11 +170,10 @@ export async function initDB() {
       INSERT INTO site_settings (key, value) VALUES
         ('email', 'hello@387weddings.ba'),
         ('contact_recipient', ''),
-        ('phone', '+387 61 000 000'),
-        ('instagram', '#'),
+        ('phone', ''),
+        ('instagram', ''),
         ('instagram_handle', '387.weddings'),
         ('coming_soon', 'false'),
-        ('location', 'Sarajevo — Worldwide'),
         ('seo.site_name', '387 Cinematic Weddings'),
         ('seo.og_image', ''),
         ('seo.home.title.en', 'Art in the Moments | 387 Cinematic Weddings'),
@@ -243,7 +232,6 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
         ('contact.form.email', 'Forma: Naziv polja Email', 'contact', 'form', 'text', 'Email address', 'E-mail adresa', 2),
         ('contact.form.date', 'Forma: Naziv polja Datum', 'contact', 'form', 'text', 'Wedding date', 'Datum vjenčanja', 3),
         ('contact.form.email.placeholder', 'Polje: E-mail — placeholder', 'contact', 'form', 'text', 'Enter your email address', 'Unesite e-mail adresu', 3),
-        ('contact.form.date.placeholder', 'Forma: Placeholder Datum', 'contact', 'form', 'text', 'Choose a date', 'Odaberite datum', 4),
         ('contact.form.phone', 'Polje: Telefon — labela', 'contact', 'form', 'text', 'Phone number', 'Broj telefona', 4),
         ('contact.form.location', 'Forma: Naziv polja Lokacija', 'contact', 'form', 'text', 'Wedding location / city', 'Lokacija vjenčanja / grad', 5),
         ('contact.form.phone.placeholder', 'Polje: Telefon — placeholder', 'contact', 'form', 'text', 'Enter phone number (optional)', 'Unesite broj telefona (opciono)', 5),
@@ -255,14 +243,12 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
         ('contact.form.submit', 'Forma: Gumb Pošalji', 'contact', 'form', 'text', 'Send message', 'Pošalji poruku', 9),
         ('contact.form.coverage', 'Polje: Trajanje angažmana — labela', 'contact', 'form', 'text', 'Approximate length of our coverage', 'Okvirno vrijeme trajanja našeg angažmana', 10),
         ('contact.form.sending', 'Forma: Slanje u toku', 'contact', 'form', 'text', 'Sending...', 'Slanje...', 10),
-        ('contact.form.close', 'Forma: Zatvori modal', 'contact', 'form', 'text', 'Close Window', 'Zatvori', 11),
         ('contact.form.coverage.placeholder', 'Polje: Trajanje angažmana — placeholder', 'contact', 'form', 'text', 'Select duration', 'Odaberite trajanje', 11),
         ('contact.form.coverage.opt.1', 'Trajanje: Opcija 1 (prazno = sakriveno)', 'contact', 'form', 'text', 'Up to 4 hours', 'Do 4 sata', 12),
         ('contact.form.success.title', 'Uspjeh: Naslov', 'contact', 'form', 'text', 'Thank You', 'Hvala Vam', 12),
         ('contact.form.coverage.opt.2', 'Trajanje: Opcija 2 (prazno = sakriveno)', 'contact', 'form', 'text', '4–8 hours', '4–8 sati', 13),
         ('contact.form.success.desc', 'Uspjeh: Opis', 'contact', 'form', 'textarea', 'Your message has been received. We look forward to hearing more about your story.', 'Vaša poruka je primljena. Veselimo se što ćemo čuti više o vašoj priči.', 13),
         ('contact.form.coverage.opt.3', 'Trajanje: Opcija 3 (prazno = sakriveno)', 'contact', 'form', 'text', '8–12 hours', '8–12 sati', 14),
-        ('contact.form.success.another', 'Uspjeh: Pošalji još jednu', 'contact', 'form', 'text', 'Send Another Message', 'Pošalji Novu Poruku', 14),
         ('contact.form.coverage.opt.4', 'Trajanje: Opcija 4 (prazno = sakriveno)', 'contact', 'form', 'text', 'Full day', 'Cijeli dan', 15),
         ('contact.form.error', 'Greška: Poruka', 'contact', 'form', 'text', 'Something went wrong. Please try again later.', 'Nešto je pošlo po krivu. Molimo pokušajte ponovo.', 15),
         ('contact.form.coverage.opt.5', 'Trajanje: Opcija 5 (prazno = sakriveno)', 'contact', 'form', 'text', 'Multiple days', 'Više dana', 16),
@@ -278,18 +264,13 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
         ('contact.hero.title.part2', 'Hero: Naslov — linija 2', 'contact', 'hero', 'text', 'your', 'svoju', 3),
         ('contact.hero.desc', 'Hero: Opis ispod naslova', 'contact', 'hero', 'textarea', 'Fill in the form and tell us the details of your wedding. We will get back to you as soon as possible.', 'Ispunite formu i javite nam detalje o vašem vjenčanju. Javićemo vam se u najkraćem mogućem roku.', 4),
         ('contact.hero.title.part3', 'Hero: Naslov — istaknuta riječ', 'contact', 'hero', 'text', 'story', 'priču', 5),
-        ('footer.tagline', 'Footer: Tagline tekst', 'footer', 'brand', 'textarea', 'We capture emotions that last when everything else has passed.', 'Zabilježimo emocije koje traju kada sve drugo prođe.', 0),
-        ('footer.contact', 'Footer: Naslov kontakt kolone', 'footer', 'contact', 'text', 'Contact', 'Kontakt', 0),
         ('instagram.tag', 'Instagram blok: Tag', 'footer', 'instagram', 'text', 'More moments', 'Još trenutaka', 0),
         ('instagram.title.part1', 'Instagram blok: Naslov dio 1', 'footer', 'instagram', 'text', 'See more on', 'Pogledajte još na', 1),
         ('instagram.title.part2', 'Instagram blok: Naslov dio 2 (kurziv)', 'footer', 'instagram', 'text', 'Instagram', 'Instagramu', 2),
         ('footer.rights', 'Footer: Copyright tekst', 'footer', 'legal', 'text', 'All rights reserved.', 'Sva prava zadržana.', 0),
-        ('footer.designed', 'Footer: "Dizajnirano..." tekst', 'footer', 'legal', 'text', 'Design and build', 'Dizajn i izrada', 1),
         ('footer.top', 'Footer: Tekst "Na vrh"', 'footer', 'legal', 'text', 'Back to top', 'Na vrh', 5),
-        ('footer.navigation', 'Footer: Naslov navigacije', 'footer', 'nav', 'text', 'Navigation', 'Navigacija', 0),
         ('nav.home', 'Navigacija: Link "Početna"', 'footer', 'nav', 'text', 'Home', 'Početna', 0),
         ('nav.work', 'Navigacija: Link "Radovi"', 'footer', 'nav', 'text', 'Work', 'Radovi', 1),
-        ('nav.experience', 'Navigacija: Link "Iskustvo"', 'footer', 'nav', 'text', 'Services', 'Usluge', 2),
         ('nav.stories', 'Navigacija: Link "O nama"', 'footer', 'nav', 'text', 'About Us', 'O nama', 3),
         ('nav.inquire', 'Navigacija: Link "Upit"', 'footer', 'nav', 'text', 'Contact', 'Kontakt', 4),
         ('footer.link.about.sub', 'Footer: Podnaslov uz "O nama"', 'footer', 'nav', 'text', 'Meet Melisa and Aldin', 'Upoznajte Melisu i Aldina', 10),
@@ -298,7 +279,6 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
         ('home.about.cta', 'O nama: CTA gumb', 'home', 'about_section', 'text', 'Get to know us', 'Upoznajte nas', 2),
         ('home.about.desc.1', 'O nama: Paragraf 1', 'home', 'about_section', 'text', 'We have followed couples across Bosnia and the Balkans for years, and the same thing amazes us every time: how many different stories love can tell.', 'Pratimo parove kroz Bosnu i Balkan već godinama, i svaki put ista stvar nas oduševi, koliko različitih priča ljubav zna ispričati.', 2),
         ('home.about.desc.2', 'O nama: Paragraf 2', 'home', 'about_section', 'text', 'We do not like posing or stiff frames. We like the moment when nobody is pretending.', 'Ne volimo poziranje ni ukočene kadrove. Volimo trenutak kad se niko ne pretvara.', 3),
-        ('home.about.desc.3', 'O nama: Paragraf 3', 'home', 'about_section', 'text', 'Every frame is intentional. Every story is unique.', 'Svaki kadar je namjeran. Svaka priča je jedinstvena.', 4),
         ('home.about.tag', 'O nama: Tag iznad naslova', 'home', 'about_section', 'text', 'About us', 'O nama', 9),
         ('home.about.heading.part1', 'O nama: Naslov — linija 1', 'home', 'about_section', 'text', 'More than photographs.', 'Više od fotografija.', 10),
         ('home.about.heading.part2', 'O nama: Naslov — linija 2', 'home', 'about_section', 'text', 'It is your story.', 'To je vaša priča.', 11),
@@ -313,7 +293,6 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
         ('hero.portfolio', 'Gumb: Portfolio', 'home', 'hero', 'text', 'View our work', 'Pogledajte radove', 4),
         ('hero.desc', 'Hero: Kratki opis ispod naslova', 'home', 'hero', 'textarea', 'We capture the emotions that remain long after everything else has passed.', 'Zabilježimo emocije koje traju kada sve drugo prođe.', 5),
         ('home.scroll', 'Hero: Scroll indicator tekst', 'home', 'hero', 'text', 'Scroll', 'Skroluj', 10),
-        ('portfolio.approach.title', 'Pristup: Tag', 'portfolio', 'approach', 'text', 'The Approach', 'Pristup', 0),
         ('portfolio.approach.desc', 'Pristup: Opis', 'portfolio', 'approach', 'textarea', 'These are the stories we have had the honour of telling: every frame, every moment, every *couple*. See what we make when you trust us with your day.', 'Ovo su priče koje smo imali čast ispričati, svaki kadar, svaki trenutak, svaki *par*. Pogledajte šta stvaramo kad nam povjerite svoj dan.', 3),
         ('portfolio.empty', 'Prazna kategorija', 'portfolio', 'approach', 'text', 'No images in this category', 'Nema slika u ovoj kategoriji', 10),
         ('portfolio.filter.all', 'Filter: Sve', 'portfolio', 'filter', 'text', 'ALL', 'SVE', 0),
@@ -638,43 +617,16 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
         WHERE value LIKE '%387cinematicweddings.com%';
     `);
 
-    // The Radovi cards used to fall back to gallery_images, which have no slug,
-    // so nothing was clickable and every filter said WEDDINGS. Each active image
-    // became a real story once. Guarded by its own marker now: before, deleting
-    // every story brought the old gallery back at the next start, and a new
-    // story whose address began with "rad-" had its AUTO cover layout copied
-    // into story_images, which only allows TALL/WIDE/SQUARE — the insert
-    // failed and the server could not start at all.
-    await once('gallery_import', () => client.query(`
-      INSERT INTO stories (slug, couple, category, cover_url, cover_alt, cover_layout, sort_order, is_published)
-      SELECT
-        'rad-' || g.id,
-        COALESCE(NULLIF(btrim(g.title), ''), 'Priča ' || g.id),
-        g.category,
-        g.url,
-        NULLIF(btrim(g.title), ''),
-        COALESCE(g.layout, 'TALL'),
-        g.sort_order,
-        TRUE
-      FROM gallery_images g
-      WHERE g.is_active = TRUE
-        AND NOT EXISTS (SELECT 1 FROM stories)
-      ON CONFLICT (slug) DO NOTHING;
-
-      -- the cover also becomes the story's first gallery photo
-      INSERT INTO story_images (story_id, url, alt, layout, sort_order)
-      SELECT s.id, s.cover_url, s.cover_alt,
-             CASE WHEN s.cover_layout IN ('TALL', 'WIDE', 'SQUARE') THEN s.cover_layout ELSE 'TALL' END, 0
-      FROM stories s
-      WHERE s.slug LIKE 'rad-%'
-        AND s.cover_url IS NOT NULL
-        AND NOT EXISTS (SELECT 1 FROM story_images i WHERE i.story_id = s.id);
-    `));
+    // The panel's data tidied once: unused texts and settings archived, the
+    // old gallery archived, every text in its place (server/adminCleanup.ts)
+    await once('admin_cleanup_2026_10', () => adminCleanup(client));
+    // "#" in the Instagram address meant "no address"; an empty field says
+    // the same without puzzling the owner
+    await once('instagram_placeholder', () => client.query(
+      "UPDATE site_settings SET value = '' WHERE key = 'instagram' AND btrim(value) = '#'"));
 
     // Indexes for the hot public queries (filter by is_active, order by sort_order).
     await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_gallery_active_sort   ON gallery_images (is_active, sort_order);
-      CREATE INDEX IF NOT EXISTS idx_gallery_category      ON gallery_images (category);
       CREATE INDEX IF NOT EXISTS idx_submissions_status    ON contact_submissions (status);
       CREATE INDEX IF NOT EXISTS idx_page_content_ordering ON page_content (page, section, sort_order);
       CREATE INDEX IF NOT EXISTS idx_stories_pub_sort  ON stories (is_published, sort_order);
