@@ -14,7 +14,7 @@ const InstagramGlyph = ({ size = 18 }: { size?: number }) => (
 );
 
 const Footer = () => {
-  const { t, getContentStyle } = useLanguage();
+  const { t, getContentStyle, language } = useLanguage();
   const paths = usePaths();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const location = useLocation();
@@ -115,6 +115,19 @@ const Footer = () => {
 
           <span style={getContentStyle('footer.rights')} className="normal-case text-center">
             © {new Date().getFullYear()} 387 Weddings. {t('footer.rights')}
+          </span>
+
+          {/* Who built the site */}
+          <span className="normal-case text-center">
+            {language === 'ENG' ? 'Website by' : 'Izrada stranice:'}{' '}
+            <a
+              href="https://luminor.solutions/"
+              target="_blank"
+              rel="noopener"
+              className="text-ink-900 underline decoration-gold-600/60 underline-offset-[3px] transition-opacity duration-250 hover:opacity-60"
+            >
+              Luminor.Solutions
+            </a>
           </span>
 
           <button
