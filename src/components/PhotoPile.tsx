@@ -8,8 +8,11 @@ export interface PilePhoto {
   alt: string;
   focus?: string;
   /** Where it rests, as the board lays the pile out */
-  pos: React.CSSProperties;
-  w: string;
+  /** Where it rests, as inline position — or `cls` for classes that can
+   *  differ between phone and desktop (then `pos` and `w` are not needed) */
+  pos?: React.CSSProperties;
+  w?: string;
+  cls?: string;
   ratio: string;
   /** Resting tilt, degrees */
   r: number;
@@ -54,7 +57,15 @@ const smooth = (t: number) => t * t * (3 - 2 * t);
 const r2 = (v: number) => String(Math.round(v * 100) / 100);
 const r3 = (v: number) => String(Math.round(v * 1000) / 1000);
 
-export default function PhotoPile({ photos, className = '' }: { photos: PilePhoto[]; className?: string }) {
+export default function PhotoPile({ photos, className = '', sizes = '(min-width: 1024px) 22vw, 45vw', overlay = false }: {
+  photos: PilePhoto[];
+  className?: string;
+  /** The `sizes` of the photographs */
+  sizes?: string;
+  /** Laid over other content (text, a button between the prints): only the
+   *  prints themselves take the mouse, so what is between stays clickable */
+  overlay?: boolean;
+}) {
   const box = useRef<HTMLDivElement>(null);
   const items = useRef<(HTMLDivElement | null)[]>([]);
   const tilts = useRef<(HTMLDivElement | null)[]>([]);
@@ -181,7 +192,7 @@ export default function PhotoPile({ photos, className = '' }: { photos: PilePhot
   return (
     <div
       ref={box}
-      className={`pile relative ${className}`}
+      className={`pile relative ${overlay ? 'pointer-events-none' : ''} ${className}`}
       onPointerMove={onMove}
       onPointerLeave={onLeave}
     >
@@ -189,10 +200,10 @@ export default function PhotoPile({ photos, className = '' }: { photos: PilePhot
         <div
           key={ph.key}
           ref={el => { items.current[i] = el; }}
-          className={`pile-item absolute ${hot === i ? 'is-hot' : hot !== null ? 'is-dim' : ''}`}
+          className={`pile-item absolute ${overlay ? 'pointer-events-auto' : ''} ${ph.cls ?? ''} ${hot === i ? 'is-hot' : hot !== null ? 'is-dim' : ''}`}
           onPointerEnter={onEnter(i)}
           onPointerLeave={onItemLeave}
-          style={{ ...ph.pos, width: ph.w, zIndex: hot === i ? 10 : i + 1 }}
+          style={{ ...(ph.cls ? {} : { ...ph.pos, width: ph.w }), zIndex: hot === i ? 10 : i + 1 }}
         >
           <div
             className="pile-float"
@@ -207,7 +218,7 @@ export default function PhotoPile({ photos, className = '' }: { photos: PilePhot
                 <img
                   src={ph.src}
                   srcSet={ph.srcSet}
-                  sizes="(min-width: 1024px) 22vw, 45vw"
+                  sizes={sizes}
                   alt={ph.alt}
                   style={{ objectPosition: ph.focus || undefined }}
                   className="w-full h-full object-cover"

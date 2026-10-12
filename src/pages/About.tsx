@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings, peekSettings } from '../lib/settingsCache';
-import { respImg, SIZES } from '../lib/img';
+import { respImg, SIZES, THUMB_WIDTHS } from '../lib/img';
+import PhotoPile, { type PilePhoto } from '../components/PhotoPile';
 import { OliveBranch, SectionLabel } from '../components/ornaments';
 import Reveal from '../components/Reveal';
 import { usePaths } from '../lib/routes';
@@ -134,6 +135,14 @@ const Bio = ({ n, portrait, ratio, flip, altText, focus }: {
   );
 };
 
+// [position classes (phone, then desktop), frame ratio, tilt, fly-in
+// (share of the screen width, px, extra tilt), depth drift, mouse depth]
+const INVITE: [string, string, number, [number, number, number], number, number][] = [
+  ['left-[2%] top-[6%] w-[36%] lg:left-0 lg:top-0 lg:w-[260px]', '260 / 348', -5, [-0.32, -20, -16], 26, 7],
+  ['left-[33%] top-[22%] w-[30%] lg:left-[154px] lg:top-[198px] lg:w-[157px]', '157 / 215', 4, [-0.2, 120, -14], 34, 9],
+  ['right-[2%] top-0 w-[38%] lg:right-0 lg:top-0 lg:w-[318px]', '318 / 424', 3, [0.32, -10, 18], 20, 6],
+];
+
 const About = () => {
   const { t, getContentStyle } = useLanguage();
   const paths = usePaths();
@@ -145,9 +154,15 @@ const About = () => {
 
   const melisa = respImg(imgs['img.about.melisa'] || FALLBACK_MELISA);
   const aldin  = respImg(imgs['img.about.aldin']  || FALLBACK_ALDIN);
-  const cta = [1, 2, 3].map((n, i) =>
-    respImg(imgs[`img.about.cta.${n}`] || FALLBACK_CTA[i])
-  );
+  const invitePile = useMemo<PilePhoto[]>(() => INVITE.map(([cls, ratio, r, from, px, depth], i) => {
+    const key = `img.about.cta.${i + 1}`;
+    const pic = respImg(imgs[key] || FALLBACK_CTA[i], THUMB_WIDTHS);
+    return {
+      key, cls, ratio, r, from, px, depth,
+      src: pic.src, srcSet: pic.srcSet,
+      alt: imgs[`${key}.alt`] || '', focus: imgs[`${key}.focus`] || '',
+    };
+  }), [imgs]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="bg-cream">
@@ -171,35 +186,26 @@ const About = () => {
           frames sit in a row between the title and the copy. `lg:contents`
           dissolves the phone row on desktop so the frames can be absolutely
           placed against this section — one set of elements, two layouts.     */}
-      <section className="bg-white text-ink-900 text-center px-5 lg:px-6 py-16 lg:py-28">
+      {/* overflow-x-clip: the prints fly in from beyond the screen's edges */}
+      <section className="overflow-x-clip bg-white text-ink-900 text-center px-5 lg:px-6 py-16 lg:py-28">
         <div className="relative max-w-[1250px] mx-auto lg:h-[424px]">
           <Reveal as="h2" className="font-serif font-light text-[clamp(26px,7.7vw,30px)] lg:text-[41.6px] leading-[1.2] lg:leading-[1.15] tracking-[0.05em] uppercase max-w-[490px] mx-auto m-0 mb-8">
             <span className="block" style={getContentStyle('about.invite.title.part1')}>{t('about.invite.title.part1')}</span>
             <span className="block" style={getContentStyle('about.invite.title.part2')}>{t('about.invite.title.part2')}</span>
           </Reveal>
 
-          {/* The small frame is 157x215 with no border; a 4px white border
-              inside that box is what left only 149x207 of photograph showing. */}
-          <div className="flex items-end gap-2 mb-9 lg:contents">
-            {[
-              { i: 0, place: 'lg:left-0 lg:top-0 lg:w-[260px] lg:h-[348px]' },
-              { i: 1, place: 'lg:left-[154px] lg:top-[198px] lg:w-[157px] lg:h-[215px]' },
-              { i: 2, place: 'lg:right-0 lg:top-0 lg:w-[318px] lg:h-[424px]' },
-            ].map(({ i, place }) => (
-              <Reveal
-                kind="mask"
-                key={i}
-                delay={i * 0.08}
-                className={`rv-zoom zoom flex-1 min-w-0 aspect-[3/4] bg-rule lg:flex-none lg:absolute lg:aspect-auto ${place}`}
-              >
-                <img src={cta[i].src} srcSet={cta[i].srcSet} sizes="(min-width: 1024px) 320px, 30vw"
-                  alt={imgs[`img.about.cta.${i + 1}.alt`] || ''}
-                  aria-hidden={imgs[`img.about.cta.${i + 1}.alt`] ? undefined : 'true'}
-                  style={{ objectPosition: imgs[`img.about.cta.${i + 1}.focus`] || undefined }}
-                  className="w-full h-full object-cover" loading="lazy" decoding="async" draggable={false} referrerPolicy="no-referrer" />
-              </Reveal>
-            ))}
-          </div>
+          {/* The three prints, made exactly like the pile in "O nama" on the
+              home page (the same PhotoPile): cream border, a tilt each, they
+              fly in from their sides with the scroll, breathe, lean toward
+              the mouse, and the one under it straightens, grows and catches
+              a sheen while the others step aside. Desktop keeps the board's
+              places around the text; a phone shows them in a row above it. */}
+          <PhotoPile
+            overlay
+            className="h-[230px] mb-9 lg:mb-0 lg:absolute lg:inset-0 lg:h-auto"
+            sizes="(min-width: 1024px) 330px, 40vw"
+            photos={invitePile}
+          />
 
           <div className="max-w-[300px] lg:max-w-[384px] mx-auto">
             {(['p1', 'p2'] as const).map((p, i) => (
