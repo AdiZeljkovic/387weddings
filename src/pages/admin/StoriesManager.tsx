@@ -422,7 +422,7 @@ export default function StoriesManager() {
                 }} />
             </Field>
             <Field label="Adresa stranice"
-              hint={`Prati ime para dok je ne promijeniš sama. Na sajtu: /radovi/${(slugAuto ? slugify(form.couple) : slugify(form.slug)) || '…'} (engleski /en/portfolio/…). Stara adresa nastavlja raditi i vodi na novu.`}>
+              hint={`Prati ime para dok je ne promijeniš sama. Na sajtu: /radovi/${(slugAuto ? slugify(form.couple) : slugify(form.slug)) || '…'} (engleski /en/work/…). Stara adresa nastavlja raditi i vodi na novu.`}>
               <div className="flex gap-2">
                 <input className={field} placeholder="amra-i-tarik" value={slugAuto ? slugify(form.couple) : form.slug}
                   onChange={e => { setSlugAuto(false); setForm(f => ({ ...f, slug: e.target.value })); }} />

@@ -47,9 +47,8 @@ router.get('/', async (_req, res) => {
 // GET /api/stories/fan — the stories chosen for the fan on the home page, in
 // their fan order. The fan has no data of its own: name and link come from the
 // story, the picture is the story's fan picture or else its cover.
-router.get('/fan', async (_req, res) => {
-  try {
-    const { rows } = await pool.query(
+export async function fanStories() {
+  const { rows } = await pool.query(
       `SELECT s.id, s.slug, s.couple, s.fan_order,
               COALESCE(NULLIF(s.fan_image, ''), s.cover_url) AS image,
               CASE WHEN COALESCE(s.fan_image, '') <> '' THEN s.fan_focus ELSE s.cover_focus END AS focus,
@@ -60,7 +59,13 @@ router.get('/fan', async (_req, res) => {
         WHERE s.is_published = TRUE AND s.fan_order IS NOT NULL
         ORDER BY s.fan_order, s.id
         LIMIT ${FAN_MAX}`
-    );
+  );
+  return rows;
+}
+
+router.get('/fan', async (_req, res) => {
+  try {
+    const rows = await fanStories();
     res.setHeader('Cache-Control', FRESH);
     res.json(rows);
   } catch (err) {

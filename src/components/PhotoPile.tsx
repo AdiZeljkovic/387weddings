@@ -122,7 +122,7 @@ export default function PhotoPile({ photos, className = '' }: { photos: PilePhot
           }
         });
       },
-      tau: 150,
+      tau: 90,
     });
     driver.current = d;
     // The breathing pauses while the pile is far from the screen

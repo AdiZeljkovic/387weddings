@@ -4,8 +4,10 @@
  * Why not just follow the scroll: a mouse wheel moves the page in steps of
  * about 100px, so anything tied straight to the scroll position jumps in
  * steps too. Here every value eases toward where the scroll says it should
- * be (an exponential follow, `tau` ms), so the motion stays fluid whatever
- * the input — wheel, trackpad, touch or a dragged scrollbar.
+ * be (an exponential follow, about `tau` ms), so the motion stays fluid
+ * whatever the input — wheel, trackpad, touch or a dragged scrollbar. The
+ * follow speeds up with the distance still to go, so it keeps pace with a
+ * fast scroll instead of trailing behind it.
  *
  * Why it does not stall the page:
  *  - the layout is read only when it can have changed (resize, the page
@@ -38,7 +40,7 @@ export function scrollDriver<M>(opts: {
   /** How close counts as arrived */
   epsilon?: number;
 }): ScrollDriver {
-  const { el, measure, target, paint, tau = 110, epsilon = 0.0006 } = opts;
+  const { el, measure, target, paint, tau = 70, epsilon = 0.0006 } = opts;
   let m = measure();
   let cur: number[] = target(m, window.scrollY, window.innerHeight);
   let raf = 0;
@@ -49,12 +51,15 @@ export function scrollDriver<M>(opts: {
     const dt = last ? Math.min(64, t - last) : 16;
     last = t;
     const goal = target(m, window.scrollY, window.innerHeight);
-    const k = 1 - Math.exp(-dt / tau);
     let moving = false;
     for (let i = 0; i < goal.length; i++) {
       const c = cur[i] ?? goal[i];
       const d = goal[i] - c;
       if (Math.abs(d) > epsilon) {
+        // The further behind, the faster it catches up: a quick scroll is
+        // followed almost at once, a slow one stays soft. A fixed delay made
+        // the motion trail behind a fast scroll and keep moving after it.
+        const k = 1 - Math.exp(-dt / (tau / (1 + Math.abs(d) * 25)));
         cur[i] = c + d * k;
         moving = true;
       } else {

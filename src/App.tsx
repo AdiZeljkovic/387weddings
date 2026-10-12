@@ -95,7 +95,7 @@ function PageMetadata({ pageKey, ownTitle = false }: { pageKey: string; ownTitle
 
       const baseUrl = (s['sitemap.base_url']?.trim() || 'https://387weddings.ba').replace(/\/$/, '');
       // `pathname` comes from the Router, so it has no /en prefix on it; the
-      // two languages may name the page differently (/radovi, /en/portfolio)
+      // two languages may name the page differently (/radovi, /en/work)
       const bsPath = pathFor('BOS', langCode === 'en' ? `/en${pathname}` : pathname);
       const enPath = pathFor('ENG', langCode === 'en' ? `/en${pathname}` : pathname);
       const here = langCode === 'en' ? enPath : bsPath;

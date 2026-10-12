@@ -52,6 +52,9 @@ const PILE: Omit<PilePhoto, 'src' | 'srcSet' | 'alt' | 'focus'>[] = [
   { key: 'img.home.stack.5', pos: { left: '56%', bottom: '2%' }, w: '30%', ratio: '3 / 4', r: -5, from: [0.30, 120, 20],   px: 40, depth: 10 },
 ];
 
+// The fan's stories, once known, for the rest of the visit
+let lastFan: FanStory[] | null = null;
+
 const Home = () => {
   const { t, getContentStyle, language } = useLanguage();
   const paths = usePaths();
@@ -73,7 +76,15 @@ const Home = () => {
   const startedAt = useRef(0);
 
   // The fan is filled from the stories chosen for it in the panel
-  const [fan, setFan] = useState<FanStory[] | null>(null);
+  // Sent with the page when the server has it (see server/shell.ts), and kept
+  // for the rest of the visit: coming back to the home page, the fan is there
+  // at its full height at once, so back/forward lands where it was left
+  const [fan, setFan] = useState<FanStory[] | null>(() => {
+    const boot = (window as unknown as { __BOOT__?: { fan?: FanStory[] } }).__BOOT__;
+    if (boot?.fan) { lastFan = boot.fan; delete boot.fan; return lastFan; }
+    return lastFan;
+  });
+  const fanSent = useRef(fan !== null);
 
   // Until the settings are in, the slots are unknown: no stand-in photograph
   // is fetched in the meantime (it used to compete with the real hero, which
@@ -84,10 +95,12 @@ const Home = () => {
     loadSettings()
       .then(s => { setSettings(s); setSettingsReady(true); })
       .catch(err => console.warn('Home: settings load failed', err));
-    fetch('/api/stories/fan')
-      .then(r => (r.ok ? r.json() : []))
-      .then(d => setFan(Array.isArray(d) ? d : []))
-      .catch(() => setFan([]));
+    if (!fanSent.current) {
+      fetch('/api/stories/fan')
+        .then(r => (r.ok ? r.json() : []))
+        .then(d => { lastFan = Array.isArray(d) ? d : []; setFan(lastFan); })
+        .catch(() => setFan([]));
+    }
   }, []);
 
   // A blurred full-screen layer costs the compositor something, so it goes away

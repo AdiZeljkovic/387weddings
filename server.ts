@@ -21,7 +21,7 @@ import seoRoutes from './server/routes/seoRoutes.js';
 import imageRoutes from './server/routes/imageRoutes.js';
 import storyRoutes from './server/routes/storyRoutes.js';
 import { renderShell } from './server/shell.js';
-import { langFromPath, stripLang, routeOf, pathFor } from './src/lib/lang.js';
+import { langFromPath, stripLang, routeOf, pathFor, pathOf } from './src/lib/lang.js';
 
 dotenv.config();
 
@@ -142,7 +142,7 @@ async function startServer() {
 
   // ── Every page at its own name, in its own language ────────────────────────
   // Bosnian pages are /radovi, /o-nama, /kontakt, /privatnost; English ones
-  // /en/portfolio, /en/about, /en/contact, /en/privacy. A Bosnian visit to an
+  // /en/work, /en/about, /en/contact, /en/privacy. A Bosnian visit to an
   // English name (the old /portfolio, /about, /contact, /privacy) or the other
   // way round moves permanently to the right one, so every old link and every
   // indexed address keeps working. A story renamed in the panel also sends its
@@ -163,7 +163,7 @@ async function startServer() {
             `SELECT s.slug FROM story_redirects r JOIN stories s ON s.id = r.story_id
               WHERE r.old_slug = $1 AND s.is_published = TRUE`, [route.slug]);
           if (moved.rows[0]) {
-            const to = pathFor(lang, lang === 'ENG' ? `/en/portfolio/${moved.rows[0].slug}` : `/radovi/${moved.rows[0].slug}`);
+            const to = pathFor(lang, pathOf(lang, 'portfolio', moved.rows[0].slug));
             return res.redirect(301, to + qs);
           }
         }

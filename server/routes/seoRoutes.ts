@@ -36,7 +36,7 @@ router.get('/sitemap.xml', async (_req, res) => {
     ];
 
     // Both languages are listed as their own addresses, each pointing at the
-    // other: /radovi and /en/portfolio are the same page in two languages.
+    // other: /radovi and /en/work are the same page in two languages.
     const entry = (loc: string, p: { bs: string; en: string; changefreq: string; priority: string }) => `
   <url>
     <loc>${baseUrl}${loc}</loc>

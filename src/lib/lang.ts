@@ -3,8 +3,12 @@
  *
  * Bosnian pages live at Bosnian addresses (/radovi, /o-nama, /kontakt,
  * /privatnost, /radovi/<story>), English pages under /en with English names
- * (/en/portfolio, /en/about, /en/contact, /en/privacy, /en/portfolio/<story>).
+ * (/en/work, /en/about, /en/contact, /en/privacy, /en/work/<story>).
  * Switching language moves to the same page in the other language.
+ *
+ * Names a page had before are kept as `old`: such an address is still
+ * recognised, and the server moves it permanently to the current one
+ * (/en/portfolio → /en/work, /portfolio → /radovi).
  *
  * React Router carries the /en prefix for us: the Router is mounted with /en as
  * its basename on an English URL, so route paths never mention it.
@@ -17,13 +21,14 @@ export type Language = 'ENG' | 'BOS';
 export const EN_PREFIX = '/en';
 
 /** Router paths (without the /en prefix) of every page, per language */
-export const ROUTES = {
+export const ROUTES: Record<'home' | 'portfolio' | 'about' | 'contact' | 'privacy',
+  { bs: string; en: string; old?: readonly string[] }> = {
   home:      { bs: '/',           en: '/' },
-  portfolio: { bs: '/radovi',     en: '/portfolio' },
+  portfolio: { bs: '/radovi',     en: '/work', old: ['/portfolio'] },
   about:     { bs: '/o-nama',     en: '/about' },
   contact:   { bs: '/kontakt',    en: '/contact' },
   privacy:   { bs: '/privatnost', en: '/privacy' },
-} as const;
+};
 
 export type RouteKey = keyof typeof ROUTES;
 export const ROUTE_KEYS = Object.keys(ROUTES) as RouteKey[];
@@ -51,7 +56,7 @@ export const pathOf = (lang: Language, key: RouteKey, slug?: string) => {
 export const routeOf = (routerPath: string): { key: RouteKey; slug?: string } | null => {
   const clean = routerPath.replace(/\/+$/, '') || '/';
   for (const key of ROUTE_KEYS) {
-    for (const p of [ROUTES[key].bs, ROUTES[key].en]) {
+    for (const p of [ROUTES[key].bs, ROUTES[key].en, ...(ROUTES[key].old ?? [])]) {
       if (clean === p) return { key };
       if (key === 'portfolio' && clean.startsWith(`${p}/`) && clean.length > p.length + 1) {
         const rest = clean.slice(p.length + 1);
@@ -66,7 +71,7 @@ export const routeOf = (routerPath: string): { key: RouteKey; slug?: string } | 
   return null;
 };
 
-/** A router path renamed into another language: /radovi → /portfolio */
+/** A router path renamed into another language: /radovi → /work */
 export const translatePath = (routerPath: string, to: Language) => {
   const r = routeOf(routerPath);
   return r ? pathOf(to, r.key, r.slug) : routerPath;

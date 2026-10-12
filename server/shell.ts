@@ -4,6 +4,7 @@ import { pool } from './db.js';
 import { storyExcerpt } from '../src/lib/excerpt.js';
 import { stripLang, routeOf, pathFor } from '../src/lib/lang.js';
 import { DEFAULT_META } from '../src/lib/seoDefaults.js';
+import { fanStories } from './routes/storyRoutes.js';
 
 /**
  * Server-rendered <head>, plus the data the page needs to draw itself.
@@ -87,7 +88,7 @@ export async function renderShell(pathname: string, lang: 'bs' | 'en'): Promise<
   const siteName = s['seo.site_name']?.trim() || '387 Weddings';
   // Which page this is comes from the shared address table, whatever language
   // the path is named in; the two addresses may differ by more than /en
-  // (/radovi and /en/portfolio).
+  // (/radovi and /en/work).
   const route = routeOf(stripLang(pathname));
   const bsPath = pathFor('BOS', pathname);
   const enPath = pathFor('ENG', pathname);
@@ -218,7 +219,14 @@ export async function renderShell(pathname: string, lang: 'bs' | 'en'): Promise<
     if (k.startsWith('migr.') || PRIVATE_KEYS.has(k)) continue;
     publicSettings[k] = v;
   }
-  head.push(`<script>window.__BOOT__=${inlineJson({ settings: publicSettings, content: data.content })}</script>`);
+  // On the home page the fan's stories too: the section then has its full
+  // height from the first render, so a reload in the middle of the fan comes
+  // back to the same place instead of to where the shorter page ended
+  let fan: unknown[] | undefined;
+  if (route?.key === 'home') {
+    try { fan = await fanStories(); } catch { /* the page asks for it itself */ }
+  }
+  head.push(`<script>window.__BOOT__=${inlineJson({ settings: publicSettings, content: data.content, fan })}</script>`);
 
   return put(html, '</head>', `  ${head.join('\n    ')}\n  </head>`);
 }

@@ -67,6 +67,7 @@ function geometry(column: number, viewport: number): Geo {
 }
 
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const smooth = (t: number) => t * t * (3 - 2 * t);
 const ease = (t: number) => 1 - Math.pow(1 - t, 3);
 // Written values are rounded: no visible difference, and an unchanged
 // string is not a style change at all
@@ -131,7 +132,17 @@ export default function StoryFan({ stories, heading, cta }: {
   const paint = (arrive: number, prog: number) => {
     const focusOn = ramp(prog, FOCUS_FROM - 0.02, FOCUS_FROM + 0.02) * (1 - ramp(prog, FOCUS_TO - 0.02, FOCUS_TO + 0.02));
     const per = (FOCUS_TO - FOCUS_FROM) / Math.max(n, 1);
-    const f = (prog - FOCUS_FROM) / per - 0.5;   // which story has the focus
+    // Where in the run of stories the scroll is: 0..n, story i owns [i, i+1)
+    const u = (prog - FOCUS_FROM) / per;
+    // Each story holds the focus over most of its stretch and hands it on in
+    // a short, eased overlap — never two cards half in focus at rest, which
+    // is what looked like a fault when the scroll stopped between stories
+    const hold = (x: number) => smooth(ramp(x, -0.12, 0.12)) * (1 - smooth(ramp(x, 0.88, 1.12)));
+    const shares = place.map((_, i) => hold(u - i) * focusOn);
+    // One card is on top: the one most in focus. Two cards with the same
+    // z-index swapped places back and forth while the focus passed.
+    let lead = -1;
+    shares.forEach((w, i) => { if (w > 0.01 && (lead < 0 || w > shares[lead])) lead = i; });
     if (head.current) {
       const h = Math.max(ease(ramp(arrive, 0.15, 0.6)), ramp(prog, 0, 0.12));
       head.current.style.opacity = r4(h);
@@ -142,13 +153,13 @@ export default function StoryFan({ stories, heading, cta }: {
       if (!el) return;
       // Each card a little after the one before; whole by 12% of the travel
       const open = Math.max(ease(ramp(arrive, 0.2 + 0.06 * i, 0.7 + 0.06 * i)), ramp(prog, 0, FOCUS_FROM));
-      const w = clamp(1 - Math.abs(f - i)) * focusOn;   // this story's share of the focus
+      const w = shares[i];   // this story's share of the focus
       const scale = 1 - 0.06 * focusOn + w * (geo.active - 0.94);
       el.style.translate = `${r2(pl.x * open)}px ${r2(60 * (1 - open) + pl.y * open)}px`;
       el.style.rotate = `${r2(pl.r * open * (1 - w))}deg`;
       el.style.scale = r4(scale);
       el.style.opacity = r4(clamp(open * 3) * (1 - 0.4 * (focusOn - w)));
-      el.style.zIndex = String(pl.z + Math.round(w * 20));
+      el.style.zIndex = String(i === lead ? 30 : pl.z);
       const sh = shades.current[i];
       if (sh) sh.style.opacity = r4(w);
       const cap = caps.current[i];
@@ -194,9 +205,9 @@ export default function StoryFan({ stories, heading, cta }: {
         ];
       },
       paint: ([arrive, prog]) => paint(arrive, prog),
-      // A little softer than the default: the opening multiplies a wheel
+      // Slightly softer than the default: the opening multiplies a wheel
       // notch into a large move at the end cards
-      tau: 160,
+      tau: 90,
     });
     return () => driver.destroy();
   }, [pinned, place, geo]);  // eslint-disable-line react-hooks/exhaustive-deps
