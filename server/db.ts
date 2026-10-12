@@ -30,6 +30,9 @@ export async function initDB() {
         password_hash TEXT NOT NULL,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+      -- Raised on a password change or "sign out everywhere": every sign-in
+      -- made before stops working (see server/auth.ts)
+      ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS token_version INT NOT NULL DEFAULT 0;
 
       CREATE TABLE IF NOT EXISTS gallery_images (
         id SERIAL PRIMARY KEY,

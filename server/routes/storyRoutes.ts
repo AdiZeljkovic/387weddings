@@ -3,6 +3,7 @@ import type { PoolClient } from 'pg';
 import { pool } from '../db.js';
 import { requireAuth } from '../auth.js';
 import { slugify } from '../../src/lib/slug.js';
+import { removeIfUnused } from '../uploadsCleanup.js';
 
 const router = Router();
 
@@ -466,9 +467,18 @@ router.put('/:id', requireAuth, async (req, res) => {
 
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
+    // Its photographs, so they can leave the disk with it (any of them still
+    // used elsewhere — another story, an image slot — is kept)
+    const files = await pool.query(
+      `SELECT cover_url AS u FROM stories WHERE id = $1
+       UNION ALL SELECT fan_image FROM stories WHERE id = $1
+       UNION ALL SELECT url FROM story_images WHERE story_id = $1`,
+      [req.params.id]
+    );
     await pool.query('DELETE FROM stories WHERE id = $1', [req.params.id]);
     // A story leaving the fan leaves no hole in its numbering
     await renumberFan();
+    removeIfUnused(files.rows.map(r => r.u)).catch(err => console.error('[cleanup]', err));
     res.json({ success: true });
   } catch (err) {
     console.error('[stories/delete]', err);
@@ -531,7 +541,9 @@ router.put('/images/:imageId', requireAuth, async (req, res) => {
 
 router.delete('/images/:imageId', requireAuth, async (req, res) => {
   try {
-    await pool.query('DELETE FROM story_images WHERE id = $1', [req.params.imageId]);
+    const { rows } = await pool.query('DELETE FROM story_images WHERE id = $1 RETURNING url', [req.params.imageId]);
+    // The file goes too, unless something else still shows it
+    removeIfUnused(rows.map(r => r.url)).catch(err => console.error('[cleanup]', err));
     res.json({ success: true });
   } catch (err) {
     console.error('[story/image/delete]', err);

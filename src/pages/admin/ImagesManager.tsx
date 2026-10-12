@@ -431,7 +431,7 @@ function ImageSlot({
             )}
 
             {/* Hover overlay */}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100 [@media(hover:none)]:hidden">
               <div className="flex flex-col items-center gap-1.5 text-white">
                 <Upload size={16} />
                 <span className="text-[9px] tracking-widest uppercase font-bold">Zamijeni</span>
@@ -456,7 +456,8 @@ function ImageSlot({
             <button
               onClick={e => { e.stopPropagation(); setPicking(v => !v); }}
               className={`absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-sm text-[9px] tracking-wider uppercase transition-colors ${
-                picking ? 'bg-gold-600 text-white' : 'bg-black/60 text-white/60 hover:text-white opacity-0 group-hover:opacity-100'
+                // Always shown on a touch screen, where there is no hover
+                picking ? 'bg-gold-600 text-white' : 'bg-black/60 text-white/60 hover:text-white opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100'
               }`}
               title="Odaberi tačku fokusa — dio slike koji mora ostati vidljiv pri izrezivanju"
             >
@@ -467,7 +468,7 @@ function ImageSlot({
             {value && (
               <button
                 onClick={e => { e.stopPropagation(); handleClear(); }}
-                className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center text-white/60 hover:text-red-400 hover:bg-black/80 transition-colors opacity-0 group-hover:opacity-100"
+                className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-black/60 flex items-center justify-center text-white/60 hover:text-red-400 hover:bg-black/80 transition-colors opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
                 title="Vrati na podrazumijevanu"
               >
                 <X size={10} />

@@ -1,6 +1,8 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import path from 'path';
+import fs from 'fs';
+import zlib from 'zlib';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -225,6 +227,8 @@ async function startServer() {
   // Only signing in is rate-limited: /me runs on every panel load, and counting
   // it locked the owner out after ten reloads while still signed in
   app.post('/api/auth/login', authLimiter);
+  // Guessing the current password through the change form is slowed the same way
+  app.post('/api/auth/password', authLimiter);
   app.use('/api/auth', authRoutes);
   app.use('/api/gallery', galleryRoutes);
   app.use('/api/stories', storyRoutes);
@@ -245,6 +249,30 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
+    // Scripts and styles in Brotli, which is about 15% smaller than the gzip
+    // the compression middleware produces on the fly. Each file is compressed
+    // once, in the background after start; until it is ready, gzip serves.
+    const brotli = new Map<string, Buffer>();
+    (async () => {
+      const dir = path.join(process.cwd(), 'dist', 'assets');
+      for (const name of fs.readdirSync(dir)) {
+        if (!/\.(js|css|svg)$/.test(name)) continue;
+        const data = fs.readFileSync(path.join(dir, name));
+        brotli.set(name, await new Promise<Buffer>((ok, fail) => zlib.brotliCompress(data, {
+          params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: data.length },
+        }, (err, out) => (err ? fail(err) : ok(out)))));
+      }
+    })().catch(err => console.error('[brotli]', err));
+    app.get('/assets/:file', (req, res, next) => {
+      const out = brotli.get(req.params.file);
+      if (!out || !/\bbr\b/.test(String(req.headers['accept-encoding'] || ''))) return next();
+      res.setHeader('Content-Encoding', 'br');
+      res.setHeader('Vary', 'Accept-Encoding');
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.type(path.extname(req.params.file));
+      res.send(out);
+    });
+
     // Hashed build files never change, so they are cached for a year; the
     // rest (favicons, robots-like files) must be able to change
     app.use('/assets', express.static(path.join(process.cwd(), 'dist', 'assets'), {

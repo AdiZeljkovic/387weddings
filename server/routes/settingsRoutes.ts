@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
-import { requireAuth, verifyToken } from '../auth.js';
+import { requireAuth, adminFromRequest } from '../auth.js';
 import { invalidateShellCache } from '../shell.js';
+import { orphanFiles, removeIfUnused } from '../uploadsCleanup.js';
 
 const router = Router();
 
@@ -11,16 +12,13 @@ const PRIVATE_KEYS = new Set(['contact_recipient', 'robots_txt']);
 // The panel reads its settings through this same route, so a signed-in admin
 // still gets the private keys — otherwise the field for the address the form
 // is sent to showed up empty and the owner could not see where mail was going.
-const isAdmin = (req: { cookies?: Record<string, string> }) => {
-  const token = req.cookies?.admin_token;
-  if (!token) return false;
-  try { verifyToken(token); return true; } catch { return false; }
-};
+const isAdmin = async (req: Parameters<typeof adminFromRequest>[0]) =>
+  Boolean(await adminFromRequest(req).catch(() => null));
 
 // GET /api/settings — public, plus the private keys for a signed-in admin
 router.get('/', async (req, res) => {
   try {
-    const admin = isAdmin(req);
+    const admin = await isAdmin(req);
     const result = await pool.query('SELECT key, value FROM site_settings');
     const settings: Record<string, string> = {};
     for (const row of result.rows) {
@@ -87,6 +85,31 @@ router.put('/', requireAuth, async (req, res) => {
     res.json(settings);
   } catch (err) {
     console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET /api/settings/uploads/orphans — photographs on disk nothing uses, to
+// show the owner before anything is removed
+router.get('/uploads/orphans', requireAuth, async (_req, res) => {
+  try {
+    res.json({ files: await orphanFiles() });
+  } catch (err) {
+    console.error('[orphans]', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/settings/uploads/orphans/delete — removes the listed files that
+// are still unused at this moment
+router.post('/uploads/orphans/delete', requireAuth, async (req, res) => {
+  const files = Array.isArray(req.body?.files)
+    ? (req.body.files as unknown[]).filter((f): f is string => typeof f === 'string').slice(0, 5000)
+    : [];
+  try {
+    res.json(await removeIfUnused(files));
+  } catch (err) {
+    console.error('[orphans/delete]', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

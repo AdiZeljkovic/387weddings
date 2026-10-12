@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function AdminLogin() {
   const { login, admin, isLoading } = useAuth();
   const navigate = useNavigate();
+  // The panel page that sent the owner here (only an /admin address is trusted)
+  const from = (useLocation().state as { from?: string } | null)?.from;
+  const target = from && from.startsWith('/admin') && !from.startsWith('/admin/login') ? from : '/admin';
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -13,7 +16,7 @@ export default function AdminLogin() {
   // Signed in already: straight to the panel (a redirect element, not a
   // navigate() during render); still checking: nothing, so the form does not
   // flash before it
-  if (admin) return <Navigate to="/admin" replace />;
+  if (admin) return <Navigate to={target} replace />;
   if (isLoading) return <div className="min-h-screen bg-moody-950" />;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,7 +25,7 @@ export default function AdminLogin() {
     setLoading(true);
     try {
       await login(username, password);
-      navigate('/admin', { replace: true });
+      navigate(target, { replace: true });
     } catch (err: any) {
       setError(err.message || 'Greška pri prijavi');
     } finally {

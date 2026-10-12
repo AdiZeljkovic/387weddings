@@ -6,14 +6,9 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings, peekSettings } from '../lib/settingsCache';
 import Logo from './Logo';
 import { usePaths } from '../lib/routes';
-
-const InstagramGlyph = ({ size = 16, stroke = 'currentColor' }: { size?: number; stroke?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.6" aria-hidden="true">
-    <rect x="3" y="3" width="18" height="18" rx="5" />
-    <circle cx="12" cy="12" r="4" />
-    <circle cx="17.2" cy="6.8" r=".8" fill={stroke} />
-  </svg>
-);
+import { InstagramGlyph } from './Instagram';
+import { instagramOf } from '../lib/instagram';
+import { lockScroll } from '../lib/scrollLock';
 
 const Navbar = () => {
   const { t, language, setLanguage, getContentStyle } = useLanguage();
@@ -45,8 +40,7 @@ const Navbar = () => {
     if (!isMobileMenuOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsMobileMenuOpen(false); };
     document.addEventListener('keydown', onKey);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const unlock = lockScroll();
     // The page behind the menu can be neither tabbed into nor read out
     const behind = Array.from(document.querySelectorAll<HTMLElement>('main, footer'));
     behind.forEach(el => el.setAttribute('inert', ''));
@@ -58,7 +52,7 @@ const Navbar = () => {
     wide.addEventListener('change', onWide);
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prevOverflow;
+      unlock();
       behind.forEach(el => el.removeAttribute('inert'));
       wide.removeEventListener('change', onWide);
     };
@@ -99,10 +93,7 @@ const Navbar = () => {
     if (location.pathname === path) window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const instagramHandle = settings.instagram_handle || '387.weddings';
-  const instagramUrl = settings.instagram && settings.instagram !== '#'
-    ? settings.instagram
-    : `https://instagram.com/${instagramHandle}`;
+  const { handle: instagramHandle, url: instagramUrl } = instagramOf(settings);
 
   // 12px on a phone (the agreed minimum there), the board's 10px on a desktop
   // Called as a function, not mounted as <LangSwitch/>: a component declared

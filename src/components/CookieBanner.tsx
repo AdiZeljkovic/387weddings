@@ -100,7 +100,7 @@ const CookieBanner = () => {
           className="flex-1 text-[12px] lg:text-[13px] font-light leading-[1.6] lg:leading-[1.8] text-ink-700 m-0"
         >
           {t('cookie.text')}{' '}
-          <Link to={paths('privacy')} className="text-ink-900 border-b border-[#bfb3a0] hover:opacity-70 transition-opacity">
+          <Link to={paths('privacy')} style={getContentStyle('cookie.more')} className="text-ink-900 border-b border-[#bfb3a0] hover:opacity-70 transition-opacity">
             {t('cookie.more')}
           </Link>
         </p>

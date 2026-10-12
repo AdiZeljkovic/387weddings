@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { pathOf, type RouteKey } from './lang';
 
-export { ROUTES, pathOf, routeOf, translatePath, type RouteKey } from './lang';
+export { type RouteKey } from './lang';
 
 /**
  * Links in the current language:

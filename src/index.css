@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --font-serif: "Playfair Display", Georgia, serif;
-  --font-sans: "Montserrat", system-ui, sans-serif;
+  --font-serif: "Playfair Display", "Playfair Display Fallback", Georgia, serif;
+  --font-sans: "Montserrat", "Montserrat Fallback", system-ui, sans-serif;
   --font-display: "Anton", "Oswald", Impact, sans-serif;
   --font-script: "Caveat", cursive;
 
@@ -455,6 +455,10 @@
   from { transform: scaleX(0); }
   to   { transform: scaleX(1); }
 }
+/* Coming Soon: the logo drops in, the heading rises, the line grows down */
+@keyframes csDown  { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: none; } }
+@keyframes csUp    { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+@keyframes csGrowY { from { transform: scaleY(0); } to { transform: none; } }
 @keyframes introLift {
   from { transform: translateY(0); }
   to   { transform: translateY(-100%); }

@@ -8,16 +8,13 @@ import { ratioFor } from '../lib/imageMeta';
 import { storyExcerpt } from '../lib/excerpt';
 import { DEFAULT_META } from '../lib/seoDefaults';
 import { balanceColumns } from '../lib/masonry';
-import { OliveBranch, SectionLabel, DiamondRule } from '../components/ornaments';
+import { OliveBranch, SectionLabel } from '../components/ornaments';
 import Reveal from '../components/Reveal';
 import Lightbox, { LightboxImage } from '../components/Lightbox';
 import { usePaths } from '../lib/routes';
-
-const CARD_LABEL_KEYS: Record<string, string> = {
-  WEDDINGS:  'portfolio.card.wedding',
-  STUDIO:    'portfolio.card.studio',
-  PORTRAITS: 'portfolio.card.portrait',
-};
+import CoupleName, { CARD_LABEL_KEYS } from '../components/CoupleName';
+import { InstagramBlock } from '../components/Instagram';
+import { instagramOf } from '../lib/instagram';
 
 interface StoryImage {
   id: number;
@@ -48,17 +45,6 @@ interface StoryData {
   prev_slug: string | null; prev_couple: string | null;
   next_slug: string | null; next_couple: string | null;
 }
-
-const CoupleName = ({ name, redAmp = true }: { name: string; redAmp?: boolean }) => {
-  const parts = name.split(/\s*&\s*/);
-  if (parts.length < 2) return <>{name}</>;
-  return (
-    <>
-      {parts[0]} <span className={redAmp ? 'italic text-love' : 'italic'}>&amp;</span>{' '}
-      {parts.slice(1).join(' & ')}
-    </>
-  );
-};
 
 const Story = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -208,10 +194,7 @@ const Story = () => {
   // The type used to be one untranslated column, so the English site read "PHOTO"
   const typeLabel = (language === 'ENG' ? story.tag_en : story.tag_bs) || story.tag || '';
 
-  const handle = settings.instagram_handle || '387.weddings';
-  const instagramUrl = settings.instagram && settings.instagram !== '#'
-    ? settings.instagram
-    : `https://instagram.com/${handle}`;
+  const { handle, url: instagramUrl } = instagramOf(settings);
 
   return (
     <div className="bg-cream">
@@ -370,34 +353,7 @@ const Story = () => {
           )}
 
           {/* Instagram */}
-          <div className="max-w-[720px] mx-auto mt-[72px] lg:mt-24 text-center">
-            <DiamondRule className="mb-7 lg:mb-8" />
-            <div
-              style={getContentStyle('instagram.tag')}
-              className="text-[11px] lg:text-[12px] tracking-[0.32em] uppercase text-gold-label mb-5"
-            >
-              {t('instagram.tag')}
-            </div>
-            <Reveal as="h2" className="font-serif font-normal text-[clamp(26px,7.7vw,30px)] lg:text-[38px] leading-[1.18] m-0 mb-[30px]">
-              <span style={getContentStyle('instagram.title.part1')}>{t('instagram.title.part1')}</span>{' '}
-              <span className="italic" style={getContentStyle('instagram.title.part2')}>
-                {t('instagram.title.part2')}
-              </span>
-            </Reveal>
-            <a
-              href={instagramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn inline-flex items-center gap-3.5 border border-ink-900 text-ink-900 text-[11px] lg:text-[12px] font-medium tracking-[0.22em] uppercase px-7 py-4 hover:text-white"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
-                <rect x="3" y="3" width="18" height="18" rx="5" />
-                <circle cx="12" cy="12" r="4" />
-                <circle cx="17.2" cy="6.8" r=".8" fill="currentColor" />
-              </svg>
-              <span>@{handle} <span className="btn-arrow">→</span></span>
-            </a>
-          </div>
+          <InstagramBlock handle={handle} url={instagramUrl} className="mt-[72px] lg:mt-24" />
       </section>
 
       {lightbox !== null && (
@@ -407,8 +363,8 @@ const Story = () => {
           onIndex={setLightbox}
           onClose={() => setLightbox(null)}
           title={story.couple}
-          meta={meta}
           closeLabel={t('story.close')}
+          closeStyle={getContentStyle('story.close')}
         />
       )}
     </div>

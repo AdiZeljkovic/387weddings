@@ -8,7 +8,7 @@ import { cn } from '../../lib/utils';
 import { invalidateSettingsCache } from '../../lib/settingsCache';
 import { adminFetch, json, errorText } from '../../lib/adminFetch';
 
-type Tab = 'contact' | 'general' | 'social' | 'seo' | 'technical';
+type Tab = 'contact' | 'general' | 'social' | 'seo' | 'technical' | 'security';
 
 
 const SEO_PAGES = [
@@ -101,6 +101,7 @@ export default function AdminSettings() {
           { id: 'social',    label: 'Društvene mreže' },
           { id: 'seo',       label: 'SEO' },
           { id: 'technical', label: 'Analitika & Tehnički' },
+          { id: 'security',  label: 'Sigurnost' },
         ] as { id: Tab; label: string }[]).map(t => (
           <button
             key={t.id}
@@ -257,7 +258,13 @@ export default function AdminSettings() {
                 <span className="text-white/20 font-mono normal-case tracking-normal font-normal">{page.path}</span>
               </div>
 
-              {/* Meta naslov */}
+              {/* Meta naslov — not for a story: its title is always the couple's name */}
+              {page.key === 'story' ? (
+                <p className="text-white/30 text-[11px] leading-relaxed">
+                  Naslov svake priče je ime para (npr. „Amra & Tarik | 387 Weddings"). Opis ispod koristi se samo za
+                  priče bez vlastitog „Opisa za Google" i s kratkim tekstom.
+                </p>
+              ) : (
               <div className="space-y-3 md:space-y-0 md:grid md:grid-cols-[180px_1fr_1fr] md:gap-4 md:items-start">
                 <div className="md:pt-1.5">
                   <span className="text-white/50 text-xs font-medium block">Meta naslov</span>
@@ -276,6 +283,7 @@ export default function AdminSettings() {
                     maxChars={60} placeholder={`${page.label} | 387 Weddings`} />
                 </div>
               </div>
+              )}
 
               {/* Meta opis */}
               <div className="space-y-3 md:space-y-0 md:grid md:grid-cols-[180px_1fr_1fr] md:gap-4 md:items-start">
@@ -307,6 +315,10 @@ export default function AdminSettings() {
       )}
 
       {/* ── Tab: Analitika & Tehnički ── */}
+      {tab === 'security' && <SecurityPanel />}
+
+      {tab === 'technical' && <DiskPanel />}
+
       {tab === 'technical' && (
         <div className="space-y-4">
 
@@ -438,6 +450,131 @@ function TechGroup({ icon, label, children }: { icon: React.ReactNode; label: st
         {icon} {label}
       </div>
       {children}
+    </div>
+  );
+}
+
+// ── Sigurnost: password and sign-ins ──────────────────────────────────────────
+function SecurityPanel() {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [repeat, setRepeat] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const change = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (next !== repeat) { setMsg({ ok: false, text: 'Nova lozinka i ponovljena se ne poklapaju.' }); return; }
+    setBusy(true);
+    setMsg(null);
+    try {
+      await adminFetch('/api/auth/password', json('POST', { current, next }));
+      setCurrent(''); setNext(''); setRepeat('');
+      setMsg({ ok: true, text: 'Lozinka je promijenjena. Sve ostale prijave (drugi uređaji, preglednici) su završene.' });
+    } catch (err) {
+      setMsg({ ok: false, text: errorText(err) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const logoutAll = async () => {
+    if (!confirm('Odjaviti sve uređaje, uključujući ovaj? Morat ćeš se ponovo prijaviti.')) return;
+    try {
+      await adminFetch('/api/auth/logout-all', { method: 'POST' });
+      window.location.assign('/admin/login');
+    } catch (err) {
+      setMsg({ ok: false, text: errorText(err) });
+    }
+  };
+
+  const input = 'w-full bg-moody-950/60 border border-white/10 rounded-sm px-3 py-2.5 text-sm text-white/85 outline-none focus:border-gold-600';
+  return (
+    <div className="space-y-4">
+      <form onSubmit={change} className="bg-moody-950/60 border border-white/5 rounded-sm p-6 space-y-4">
+        <div className="text-white/40 text-[10px] font-bold tracking-widest uppercase">Promjena lozinke</div>
+        <input type="password" autoComplete="current-password" placeholder="Trenutna lozinka" className={input}
+          value={current} onChange={e => setCurrent(e.target.value)} />
+        <input type="password" autoComplete="new-password" placeholder="Nova lozinka (najmanje 10 znakova)" className={input}
+          value={next} onChange={e => setNext(e.target.value)} />
+        <input type="password" autoComplete="new-password" placeholder="Ponovi novu lozinku" className={input}
+          value={repeat} onChange={e => setRepeat(e.target.value)} />
+        <p className="text-white/25 text-[11px]">Promjenom lozinke završavaju se sve ostale prijave; ovaj uređaj ostaje prijavljen.</p>
+        <button type="submit" disabled={busy || !current || next.length < 10}
+          className="px-5 py-2.5 bg-gold-600/15 hover:bg-gold-600/25 border border-gold-600/25 text-gold-400 text-xs font-bold tracking-widest uppercase rounded-sm disabled:opacity-40">
+          {busy ? 'Mijenjam…' : 'Promijeni lozinku'}
+        </button>
+      </form>
+      <div className="bg-moody-950/60 border border-white/5 rounded-sm p-6 space-y-3">
+        <div className="text-white/40 text-[10px] font-bold tracking-widest uppercase">Prijave</div>
+        <p className="text-white/30 text-xs">Ako si se prijavio/la na tuđem računaru ili je telefon izgubljen: ovo odmah završava sve prijave.</p>
+        <button type="button" onClick={logoutAll}
+          className="px-5 py-2.5 border border-red-500/30 text-red-300 hover:bg-red-500/10 text-xs font-bold tracking-widest uppercase rounded-sm">
+          Odjavi sve uređaje
+        </button>
+      </div>
+      {msg && <p role="status" className={cn('text-xs', msg.ok ? 'text-emerald-300' : 'text-red-300')}>{msg.text}</p>}
+    </div>
+  );
+}
+
+// ── Prostor na disku: photographs nothing uses any more ──────────────────────
+function DiskPanel() {
+  const [list, setList] = useState<{ file: string; size: number }[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const mb = (n: number) => `${(n / 1048576).toFixed(1)} MB`;
+
+  const find = async () => {
+    setBusy(true); setMsg(null);
+    try {
+      const r = await adminFetch<{ files: { file: string; size: number }[] }>('/api/settings/uploads/orphans');
+      setList(r.files);
+    } catch (err) { setMsg(errorText(err)); }
+    finally { setBusy(false); }
+  };
+
+  const remove = async () => {
+    if (!list?.length) return;
+    const total = list.reduce((a, f) => a + f.size, 0);
+    if (!confirm(`Trajno obrisati ${list.length} fotografija (${mb(total)}) koje se nigdje na sajtu ne koriste?`)) return;
+    setBusy(true);
+    try {
+      const r = await adminFetch<{ deleted: number; freed: number }>(
+        '/api/settings/uploads/orphans/delete', json('POST', { files: list.map(f => f.file) }));
+      setMsg(`Obrisano ${r.deleted} fotografija, oslobođeno ${mb(r.freed)}.`);
+      setList(null);
+    } catch (err) { setMsg(errorText(err)); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="bg-moody-950/60 border border-white/5 rounded-sm p-6 space-y-3 mb-4">
+      <div className="text-white/40 text-[10px] font-bold tracking-widest uppercase">Prostor na disku</div>
+      <p className="text-white/30 text-xs leading-relaxed">
+        Fotografije obrisanih priča brišu se same. Fotografije koje su zamijenjene novim ostaju na disku dok ih ovdje ne
+        pregledaš i obrišeš. Prvo se prikaže popis; ništa se ne briše bez potvrde.
+      </p>
+      <div className="flex flex-wrap gap-3">
+        <button type="button" onClick={find} disabled={busy}
+          className="px-4 py-2 border border-white/10 text-white/70 hover:bg-white/5 text-xs rounded-sm disabled:opacity-40">
+          Pronađi nekorištene fotografije
+        </button>
+        {list && list.length > 0 && (
+          <button type="button" onClick={remove} disabled={busy}
+            className="px-4 py-2 border border-red-500/30 text-red-300 hover:bg-red-500/10 text-xs rounded-sm disabled:opacity-40">
+            Obriši {list.length} ({mb(list.reduce((a, f) => a + f.size, 0))})
+          </button>
+        )}
+      </div>
+      {list && (list.length === 0
+        ? <p className="text-white/40 text-xs">Nema nekorištenih fotografija.</p>
+        : (
+          <ul className="max-h-48 overflow-y-auto text-[11px] text-white/40 font-mono space-y-0.5">
+            {list.map(f => <li key={f.file}>{f.file} · {mb(f.size)}</li>)}
+          </ul>
+        ))}
+      {msg && <p role="status" className="text-xs text-white/60">{msg}</p>}
     </div>
   );
 }

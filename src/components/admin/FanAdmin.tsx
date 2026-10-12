@@ -28,22 +28,27 @@ export function FanBoard({ items, onReorder }: {
     .sort((a, b) => (a.fan_order ?? 0) - (b.fan_order ?? 0));
   const [drag, setDrag] = useState<number | null>(null);
 
-  const drop = (target: number) => {
-    if (drag === null || drag === target) return;
+  const move = (from: number, to: number) => {
+    if (from === to || to < 0 || to >= inFan.length) return;
     const ids = inFan.map(s => s.id);
-    const [moved] = ids.splice(drag, 1);
-    ids.splice(target, 0, moved);
-    setDrag(null);
+    const [moved] = ids.splice(from, 1);
+    ids.splice(to, 0, moved);
     onReorder(ids);
+  };
+
+  const drop = (target: number) => {
+    if (drag === null) return;
+    move(drag, target);
+    setDrag(null);
   };
 
   return (
     <div className="bg-moody-900/40 border border-white/10 rounded-sm p-4 mb-7">
       <div className="flex items-baseline justify-between gap-4 mb-3">
         <p className="text-white/60 text-xs tracking-widest uppercase font-bold">Lepeza na naslovnoj</p>
-        <p className="text-white/25 text-[10px]">Povuci priču na drugo mjesto da promijeniš redoslijed.</p>
+        <p className="text-white/25 text-[10px]">Povuci priču na drugo mjesto, ili koristi strelice ← →.</p>
       </div>
-      <div className="grid grid-cols-5 gap-2.5">
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5">
         {Array.from({ length: 5 }, (_, i) => {
           const s = inFan[i];
           const img = s?.fan_image || s?.cover_url;
@@ -68,6 +73,15 @@ export function FanBoard({ items, onReorder }: {
                   </span>
                   <span className="absolute top-1.5 left-1.5 flex items-center gap-1 bg-black/60 text-gold-400 text-[10px] font-bold rounded-sm px-1.5 py-0.5">
                     <GripVertical size={10} /> {i + 1}
+                  </span>
+                  {/* Arrows for phones, where dragging does not work */}
+                  <span className="absolute inset-x-1 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none [&>button]:pointer-events-auto">
+                    <button type="button" onClick={() => move(i, i - 1)} disabled={i === 0}
+                      aria-label={`Pomjeri ${s.couple} lijevo`}
+                      className="w-7 h-7 rounded-sm bg-black/60 text-white/70 text-xs disabled:opacity-20">←</button>
+                    <button type="button" onClick={() => move(i, i + 1)} disabled={i === inFan.length - 1}
+                      aria-label={`Pomjeri ${s.couple} desno`}
+                      className="w-7 h-7 rounded-sm bg-black/60 text-white/70 text-xs disabled:opacity-20">→</button>
                   </span>
                 </>
               ) : (

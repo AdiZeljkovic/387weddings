@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { Save, ChevronDown, ChevronUp, CheckCircle2, AlertCircle, Loader2, Globe, RefreshCw, ServerCrash } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { adminFetch, json, errorText } from '../../lib/adminFetch';
@@ -185,15 +184,22 @@ export default function PagesManager() {
   const pages = Object.keys(PAGE_LABELS);
 
   const getSections = (page: string): string[] => {
-    const present = Array.from(new Set(content.filter(i => i.page === page).map(i => i.section)));
+    const present = Array.from(new Set(content.filter(i => i.page === page && !UNUSED.has(i.key)).map(i => i.section)));
     const order = SECTION_ORDER[page] ?? [];
     const ordered = order.filter(s => present.includes(s));
     const rest = present.filter(s => !order.includes(s));
     return [...ordered, ...rest];
   };
 
+  // Left over from older versions of the site: kept in the database (nothing
+  // is deleted), but not offered here, since editing them changes nothing
+  const UNUSED = new Set([
+    'footer.tagline', 'footer.contact', 'footer.navigation', 'footer.designed',
+    'nav.experience', 'portfolio.approach.title', 'contact.form.close', 'contact.form.success.another',
+  ]);
+
   const getFields = (page: string, section: string) =>
-    content.filter(i => i.page === page && i.section === section);
+    content.filter(i => i.page === page && i.section === section && !UNUSED.has(i.key));
 
   const handleChange = (key: string, lang: 'en' | 'bs', value: string) => {
     setEditMap(prev => ({ ...prev, [key]: { ...prev[key], [lang]: value } }));
@@ -385,15 +391,8 @@ export default function PagesManager() {
                 </button>
 
                 {/* Section Body */}
-                <AnimatePresence initial={false}>
-                  {isOpen && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden"
-                    >
+                {isOpen && (
+                    <div className="overflow-hidden animate-[fadeIn_.2s_ease_both]">
                       <div className="px-6 pb-6 pt-2 space-y-5">
 
                         {/* Column labels (desktop) */}
@@ -565,9 +564,8 @@ export default function PagesManager() {
                           </button>
                         </div>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                    </div>
+                )}
               </div>
             );
           })}

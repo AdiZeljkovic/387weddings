@@ -589,7 +589,10 @@ export default function StoriesManager() {
             <div key={s.id} className="bg-moody-900/40 border border-white/5 rounded-sm overflow-hidden">
               <div className="flex flex-wrap sm:flex-nowrap items-center gap-x-4 gap-y-2 p-3">
                 <span className="text-gold-600 text-xs font-medium tracking-[0.2em] w-7 flex-none">
-                  {String(i + 1).padStart(2, '0')}
+                  {/* The number the card shows on the site: drafts have none */}
+                  {s.is_published
+                    ? String(items.filter(x => x.is_published).findIndex(x => x.id === s.id) + 1).padStart(2, '0')
+                    : '—'}
                 </span>
                 <div className="w-14 h-14 flex-none bg-moody-950 rounded-sm overflow-hidden">
                   {s.cover_url && <img src={s.cover_url} alt="" className="w-full h-full object-cover" />}

@@ -56,7 +56,7 @@ const Privacy = () => {
         </div>
 
         {blocks.length === 0 ? (
-          <Reveal as="p" className="text-[15px] font-light leading-[1.9] text-ink-500">
+          <Reveal as="p" style={getContentStyle('privacy.empty')} className="text-[15px] font-light leading-[1.9] text-ink-500">
             {t('privacy.empty')}
           </Reveal>
         ) : (
@@ -82,6 +82,8 @@ const Privacy = () => {
                   as={Tag}
                   key={i}
                   delay={delay}
+                  // Font, size and colour set in the panel for the policy text
+                  style={getContentStyle('privacy.body')}
                   className={`text-[15px] lg:text-[16px] font-light leading-[1.9] text-ink-700 mb-5 pl-5 ${
                     block.ordered ? 'list-decimal' : 'list-disc'
                   }`}
@@ -97,6 +99,7 @@ const Privacy = () => {
                 as="p"
                 key={i}
                 delay={delay}
+                style={getContentStyle('privacy.body')}
                 className="text-[15px] lg:text-[16px] font-light leading-[1.9] text-ink-700 mb-5"
               >
                 {block.text}

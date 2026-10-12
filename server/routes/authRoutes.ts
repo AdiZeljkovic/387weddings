@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { pool } from '../db.js';
-import { signToken, requireAuth } from '../auth.js';
+import { signToken, requireAuth, forgetVersion, COOKIE, type AdminToken } from '../auth.js';
+import type { Request } from 'express';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -35,14 +36,9 @@ router.post('/login', async (req, res) => {
       return;
     }
 
-    const token = signToken({ id: user.id, username: user.username });
+    const token = signToken({ id: user.id, username: user.username, tv: user.token_version ?? 0 });
 
-    res.cookie('admin_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    res.cookie('admin_token', token, { ...COOKIE, maxAge: 7 * 24 * 60 * 60 * 1000 }); // 7 days
 
     res.json({ success: true, username: user.username });
   } catch (err) {
@@ -54,12 +50,59 @@ router.post('/login', async (req, res) => {
 // POST /api/auth/logout
 router.post('/logout', (_req, res) => {
   // Cleared with the same flags it was set with, or some browsers keep it
-  res.clearCookie('admin_token', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-  });
+  res.clearCookie('admin_token', COOKIE);
   res.json({ success: true });
+});
+
+const adminOf = (req: Request) => (req as Request & { admin: AdminToken }).admin;
+
+// POST /api/auth/password — a new password; every other sign-in ends, this
+// one carries on with a fresh cookie
+router.post('/password', requireAuth, async (req, res) => {
+  const { current, next } = req.body ?? {};
+  if (typeof current !== 'string' || typeof next !== 'string') {
+    res.status(400).json({ error: 'Upiši trenutnu i novu lozinku.' });
+    return;
+  }
+  if (next.length < 10) {
+    res.status(400).json({ error: 'Nova lozinka mora imati najmanje 10 znakova.' });
+    return;
+  }
+  try {
+    const me = adminOf(req);
+    const { rows } = await pool.query('SELECT password_hash FROM admin_users WHERE id = $1', [me.id]);
+    if (!rows[0] || !(await bcrypt.compare(current, rows[0].password_hash))) {
+      res.status(400).json({ error: 'Trenutna lozinka nije tačna.' });
+      return;
+    }
+    const hash = await bcrypt.hash(next, 12);
+    const up = await pool.query(
+      `UPDATE admin_users SET password_hash = $1, token_version = token_version + 1
+        WHERE id = $2 RETURNING token_version`,
+      [hash, me.id]
+    );
+    forgetVersion(me.id);
+    const token = signToken({ id: me.id, username: me.username, tv: up.rows[0].token_version });
+    res.cookie('admin_token', token, { ...COOKIE, maxAge: 7 * 24 * 60 * 60 * 1000 });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[auth/password]', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/auth/logout-all — ends every sign-in, this one included
+router.post('/logout-all', requireAuth, async (req, res) => {
+  try {
+    const me = adminOf(req);
+    await pool.query('UPDATE admin_users SET token_version = token_version + 1 WHERE id = $1', [me.id]);
+    forgetVersion(me.id);
+    res.clearCookie('admin_token', COOKIE);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[auth/logout-all]', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 // GET /api/auth/me

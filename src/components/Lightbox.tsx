@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { fullImg } from '../lib/img';
 import { useLanguage } from '../contexts/LanguageContext';
+import { lockScroll } from '../lib/scrollLock';
 
 export interface LightboxImage {
   id: number | string;
@@ -17,9 +18,9 @@ interface Props {
   onClose: () => void;
   /** Used for the dialog's accessible name */
   title?: string;
-  /** Kept for callers; the board shows no meta line in the viewer */
-  meta?: string;
   closeLabel?: string;
+  /** Font, size and colour of "Zatvori" as set in the panel */
+  closeStyle?: React.CSSProperties;
 }
 
 const SWIPE_PX = 50;
@@ -35,7 +36,7 @@ const SWIPE_PX = 50;
  * put the arrows in circles and the counter at the top — all three were on
  * the client's list.
  */
-const Lightbox = ({ images, index, onIndex, onClose, title, closeLabel = 'Zatvori' }: Props) => {
+const Lightbox = ({ images, index, onIndex, onClose, title, closeLabel = 'Zatvori', closeStyle }: Props) => {
   const en = useLanguage().language === 'ENG';
   const touchX = useRef<number | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -75,12 +76,11 @@ const Lightbox = ({ images, index, onIndex, onClose, title, closeLabel = 'Zatvor
       }
     };
     document.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const unlock = lockScroll();
     closeRef.current?.focus();
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
+      unlock();
       opener?.focus?.();
     };
   }, []);
@@ -148,6 +148,7 @@ const Lightbox = ({ images, index, onIndex, onClose, title, closeLabel = 'Zatvor
         ref={closeRef}
         type="button"
         onClick={e => { e.stopPropagation(); onClose(); }}
+        style={closeStyle}
         className="absolute top-3.5 right-[18px] z-10 min-h-11 px-1 text-white text-[11px] font-medium tracking-[0.2em] uppercase transition-opacity duration-250 hover:opacity-70"
       >
         {closeLabel} ✕

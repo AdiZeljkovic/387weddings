@@ -193,7 +193,9 @@ const About = () => {
                 className={`rv-zoom zoom flex-1 min-w-0 aspect-[3/4] bg-rule lg:flex-none lg:absolute lg:aspect-auto ${place}`}
               >
                 <img src={cta[i].src} srcSet={cta[i].srcSet} sizes="(min-width: 1024px) 320px, 30vw"
-                  alt="" aria-hidden="true"
+                  alt={imgs[`img.about.cta.${i + 1}.alt`] || ''}
+                  aria-hidden={imgs[`img.about.cta.${i + 1}.alt`] ? undefined : 'true'}
+                  style={{ objectPosition: imgs[`img.about.cta.${i + 1}.focus`] || undefined }}
                   className="w-full h-full object-cover" loading="lazy" decoding="async" draggable={false} referrerPolicy="no-referrer" />
               </Reveal>
             ))}

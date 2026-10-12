@@ -6,14 +6,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings, peekSettings } from '../lib/settingsCache';
 import { usePaths } from '../lib/routes';
 import { reopenConsent } from './CookieBanner';
-
-const InstagramGlyph = ({ size = 18 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#151311" strokeWidth="1.6" aria-hidden="true">
-    <rect x="3" y="3" width="18" height="18" rx="5" />
-    <circle cx="12" cy="12" r="4" />
-    <circle cx="17.2" cy="6.8" r=".8" fill="#151311" />
-  </svg>
-);
+import { InstagramGlyph } from './Instagram';
+import { instagramOf } from '../lib/instagram';
 
 const Footer = () => {
   const { t, getContentStyle, language } = useLanguage();
@@ -39,10 +33,7 @@ const Footer = () => {
     { to: paths('contact'),   label: t('nav.inquire'), styleKey: 'nav.inquire' },
   ];
 
-  const handle = settings.instagram_handle || '387.weddings';
-  const instagramUrl = settings.instagram && settings.instagram !== '#'
-    ? settings.instagram
-    : `https://instagram.com/${handle}`;
+  const { handle, url: instagramUrl } = instagramOf(settings);
 
   return (
     <footer className="bg-white text-ink-900 border-t border-rule uppercase px-6 sm:px-10 lg:px-16 pb-10">
@@ -111,7 +102,7 @@ const Footer = () => {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-3 md:gap-3.5 min-h-11 text-ink-900 text-[12px] md:text-[11px] tracking-[0.24em] uppercase transition-opacity duration-250 hover:opacity-60"
           >
-            <InstagramGlyph />
+            <InstagramGlyph size={18} stroke="#151311" />
             {handle}
           </a>
 

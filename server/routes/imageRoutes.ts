@@ -2,6 +2,7 @@ import { Router } from 'express';
 import path from 'path';
 import fs from 'fs';
 import sharp from 'sharp';
+import { onRemoved } from '../uploadsCleanup.js';
 
 const router = Router();
 
@@ -21,6 +22,7 @@ const QUALITY = 84;
 // An original's width, read once: sharp used to open the original (often
 // 3-40 MB) on every request, even when the variant was already on disk
 const widthOf = new Map<string, number | null>();
+onRemoved(file => widthOf.delete(file));
 async function originalWidth(src: string, file: string) {
   if (widthOf.has(file)) return widthOf.get(file)!;
   let width: number | null = null;

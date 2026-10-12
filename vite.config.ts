@@ -17,6 +17,10 @@ export default defineConfig(() => {
       hmr: process.env.DISABLE_HMR !== 'true',
     },
     build: {
+      // Fonts stay separate files: inlined into the CSS (Vite's default for
+      // small files) they would hold up the first paint and could not be
+      // skipped when a page does not need them
+      assetsInlineLimit: (file: string) => (file.endsWith('.woff2') ? false : undefined),
       rollupOptions: {
         output: {
           manualChunks: {
@@ -25,8 +29,6 @@ export default defineConfig(() => {
             // it lands in the app's own chunk and is downloaded again after
             // every deploy.
             'vendor-react': ['react', 'react-dom', 'react-dom/client', 'react-router-dom'],
-            // Animation library (Coming Soon and the panel only)
-            'vendor-motion': ['motion'],
             // Icons are no longer forced into one shared chunk: the public
             // site uses three, the panel the rest, and each now loads only
             // what it uses
