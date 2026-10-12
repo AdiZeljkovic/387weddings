@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { respImg } from '../lib/img';
 import { usePaths } from '../lib/routes';
 import { useLanguage } from '../contexts/LanguageContext';
+import { scrollDriver, docBox, headerHeight } from '../lib/scrollDriver';
 
 export interface FanStory {
   id: number;
@@ -67,6 +68,10 @@ function geometry(column: number, viewport: number): Geo {
 
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const ease = (t: number) => 1 - Math.pow(1 - t, 3);
+// Written values are rounded: no visible difference, and an unchanged
+// string is not a style change at all
+const r2 = (v: number) => String(Math.round(v * 100) / 100);
+const r4 = (v: number) => String(Math.round(v * 10000) / 10000);
 // 0 -> 1 between a and b
 const ramp = (p: number, a: number, b: number) => clamp((p - a) / (b - a));
 
@@ -129,8 +134,8 @@ export default function StoryFan({ stories, heading, cta }: {
     const f = (prog - FOCUS_FROM) / per - 0.5;   // which story has the focus
     if (head.current) {
       const h = Math.max(ease(ramp(arrive, 0.15, 0.6)), ramp(prog, 0, 0.12));
-      head.current.style.opacity = String(h);
-      head.current.style.translate = `0 ${(1 - h) * 28}px`;
+      head.current.style.opacity = r4(h);
+      head.current.style.translate = `0 ${r2((1 - h) * 28)}px`;
     }
     place.forEach((pl, i) => {
       const el = cards.current[i];
@@ -139,26 +144,26 @@ export default function StoryFan({ stories, heading, cta }: {
       const open = Math.max(ease(ramp(arrive, 0.2 + 0.06 * i, 0.7 + 0.06 * i)), ramp(prog, 0, FOCUS_FROM));
       const w = clamp(1 - Math.abs(f - i)) * focusOn;   // this story's share of the focus
       const scale = 1 - 0.06 * focusOn + w * (geo.active - 0.94);
-      el.style.translate = `${pl.x * open}px ${60 * (1 - open) + pl.y * open}px`;
-      el.style.rotate = `${pl.r * open * (1 - w)}deg`;
-      el.style.scale = String(scale);
-      el.style.opacity = String(clamp(open * 3) * (1 - 0.4 * (focusOn - w)));
+      el.style.translate = `${r2(pl.x * open)}px ${r2(60 * (1 - open) + pl.y * open)}px`;
+      el.style.rotate = `${r2(pl.r * open * (1 - w))}deg`;
+      el.style.scale = r4(scale);
+      el.style.opacity = r4(clamp(open * 3) * (1 - 0.4 * (focusOn - w)));
       el.style.zIndex = String(pl.z + Math.round(w * 20));
       const sh = shades.current[i];
-      if (sh) sh.style.opacity = String(w);
+      if (sh) sh.style.opacity = r4(w);
       const cap = caps.current[i];
       if (cap) {
         if (geo.phone) {
           // On a phone only the story in focus is named; while the focus
           // passes from one card to the next the two names never overlap
-          cap.style.opacity = String(clamp((w - 0.5) * 2.5));
+          cap.style.opacity = r4(clamp((w - 0.5) * 2.5));
         } else {
           cap.style.opacity = '';
-          cap.style.scale = String(1 + 0.15 * w);
+          cap.style.scale = r4(1 + 0.15 * w);
         }
       }
       const d = dashes.current[i];
-      if (d) d.style.transform = `scaleX(${w})`;
+      if (d) d.style.transform = `scaleX(${r4(w)})`;
     });
   };
 
@@ -169,61 +174,31 @@ export default function StoryFan({ stories, heading, cta }: {
     zIndex: place[i].z,
   });
 
+  // Follows the scroll through the shared driver: smoothed, no layout reads
+  // per frame, idle once everything has settled (lib/scrollDriver)
   useEffect(() => {
     if (!pinned || !wrap.current) return;
     const el = wrap.current;
-    let raf = 0;
-    let visible = false;
-    let last = '';
-    const headerH = () =>
-      parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 0;
-    const compute = () => {
-      const rect = el.getBoundingClientRect();
-      const top = headerH();
-      const vh = window.innerHeight;
-      const stage = vh - top;
-      // Arriving: the wrapper's top travelling from the bottom of the screen
-      // up to the header
-      const arrive = clamp((vh - rect.top) / Math.max(1, vh - top));
-      const prog = clamp((top - rect.top) / Math.max(1, rect.height - stage));
-      const key = `${arrive.toFixed(4)}|${prog.toFixed(4)}`;
-      if (key !== last) {
-        last = key;
-        paint(arrive, prog);
-      }
-    };
-    // While the section is on screen it is recomputed every frame, so it can
-    // never be left behind by a missed scroll event (momentum scrolling,
-    // address bars, restored scroll positions)
-    const loop = () => {
-      compute();
-      raf = visible ? requestAnimationFrame(loop) : 0;
-    };
-    const kick = () => {
-      if (!raf) raf = requestAnimationFrame(loop);
-    };
-    const io = new IntersectionObserver(([e]) => {
-      visible = e.isIntersecting;
-      if (visible) kick();
-      else compute();
-    }, { rootMargin: '25% 0px' });
-    io.observe(el);
-    const now = () => { compute(); if (visible) kick(); };
-    window.addEventListener('scroll', now, { passive: true });
-    window.addEventListener('resize', now, { passive: true });
-    window.addEventListener('pageshow', now);
-    window.addEventListener('hashchange', now);
-    window.addEventListener('load', now);
-    compute();
-    return () => {
-      io.disconnect();
-      window.removeEventListener('scroll', now);
-      window.removeEventListener('resize', now);
-      window.removeEventListener('pageshow', now);
-      window.removeEventListener('hashchange', now);
-      window.removeEventListener('load', now);
-      if (raf) cancelAnimationFrame(raf);
-    };
+    const driver = scrollDriver({
+      el,
+      measure: () => ({ ...docBox(el), hh: headerHeight() }),
+      target: (m, y, vh) => {
+        const top = m.top - y;              // the wrapper's top on screen
+        const stage = vh - m.hh;
+        return [
+          // Arriving: the wrapper's top travelling from the bottom of the
+          // screen up to the header
+          clamp((vh - top) / Math.max(1, vh - m.hh)),
+          // The pinned travel
+          clamp((m.hh - top) / Math.max(1, m.height - stage)),
+        ];
+      },
+      paint: ([arrive, prog]) => paint(arrive, prog),
+      // A little softer than the default: the opening multiplies a wheel
+      // notch into a large move at the end cards
+      tau: 160,
+    });
+    return () => driver.destroy();
   }, [pinned, place, geo]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const stage = (
@@ -242,7 +217,7 @@ export default function StoryFan({ stories, heading, cta }: {
                 ref={el => { cards.current[i] = el; }}
                 to={p('portfolio', s.slug)}
                 aria-label={`${en ? 'Story' : 'Priča'}: ${s.couple}`}
-                className="fan-card absolute top-6 block text-ink-900 will-change-transform"
+                className="fan-card absolute top-6 block text-ink-900"
                 style={{ left: `calc(50% - ${geo.w / 2}px)`, width: geo.w, ...rest(i) }}
               >
                 <span className="fan-photo relative block aspect-[2/3] overflow-hidden rounded-[3px] border-[3px] border-cream-light bg-rule">
@@ -265,7 +240,7 @@ export default function StoryFan({ stories, heading, cta }: {
                 <span
                   ref={el => { shades.current[i] = el; }}
                   aria-hidden="true"
-                  className="fan-shade pointer-events-none absolute left-0 right-0 top-0 aspect-[2/3] rounded-[3px] opacity-0"
+                  className="fan-shade will-change-[opacity] pointer-events-none absolute left-0 right-0 top-0 aspect-[2/3] rounded-[3px] opacity-0"
                 />
                 {/* Desktop: always under the card. Phone: the board shows the
                     fan without names; while the focus travels, the name of the

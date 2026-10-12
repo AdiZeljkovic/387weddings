@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { scrollDriver, type ScrollDriver } from '../lib/scrollDriver';
 
 export interface PilePhoto {
   key: string;
@@ -50,6 +51,8 @@ const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 // Even in and out, so the flight is seen while the pile is on screen rather
 // than spent in the first few pixels
 const smooth = (t: number) => t * t * (3 - 2 * t);
+const r2 = (v: number) => String(Math.round(v * 100) / 100);
+const r3 = (v: number) => String(Math.round(v * 1000) / 1000);
 
 export default function PhotoPile({ photos, className = '' }: { photos: PilePhoto[]; className?: string }) {
   const box = useRef<HTMLDivElement>(null);
@@ -62,105 +65,106 @@ export default function PhotoPile({ photos, className = '' }: { photos: PilePhot
   const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const pointer = () => window.matchMedia('(hover: hover) and (min-width: 1024px)').matches;
 
-  // ── Scroll: fly-in and depth ───────────────────────────────────────────────
+  // Everything that moves — the fly-in, the depth drift, the lean toward the
+  // mouse and the neighbours stepping aside — goes through one smoothed loop
+  // (lib/scrollDriver): no layout reads per frame or per mouse move, no CSS
+  // transitions restarted on every event, and nothing runs once it has settled.
+  const driver = useRef<ScrollDriver | null>(null);
+  const boxAt = useRef({ top: 0, left: 0, width: 1, height: 1 });
+
   useEffect(() => {
     const el = box.current;
     if (!el || reduce) return;
-    let raf = 0;
-    let visible = false;
-    let last = '';
-    const compute = () => {
-      const rect = el.getBoundingClientRect();
-      const vh = window.innerHeight;
-      const vw = window.innerWidth;
-      const desktop = vw >= 1024;
-      const centre = rect.top + rect.height / 2;
-      // 0 as the pile's top enters at the bottom, 1 with its middle at 60%
-      const start = vh + rect.height / 2;
-      const settle = clamp((start - centre) / Math.max(1, start - vh * 0.6));
-      // 0 -> 1 while the pile crosses the whole screen, for the depth drift
-      const cover = clamp((vh - rect.top) / Math.max(1, vh + rect.height));
-      const key = `${settle.toFixed(4)}|${cover.toFixed(4)}|${vw}`;
-      if (key === last) return;
-      last = key;
-      const reach = desktop ? 1 : 0.5;
-      photos.forEach((ph, i) => {
-        const node = items.current[i];
-        if (!node) return;
-        const t = smooth(clamp((settle - 0.06 * i) / 0.76));
-        const away = 1 - t;
-        const drift = desktop ? ph.px * (1 - 2 * cover) : 0;
-        node.style.translate = `${ph.from[0] * vw * reach * away}px ${ph.from[1] * reach * away + drift}px`;
-        node.style.rotate = `${ph.from[2] * away}deg`;
-        node.style.opacity = String(clamp(t * 1.6));
-      });
-    };
-    const loop = () => {
-      compute();
-      raf = visible ? requestAnimationFrame(loop) : 0;
-    };
-    const kick = () => { if (!raf) raf = requestAnimationFrame(loop); };
-    const io = new IntersectionObserver(([e]) => {
-      visible = e.isIntersecting;
-      if (visible) kick(); else compute();
-    }, { rootMargin: '30% 0px' });
+    const n = photos.length;
+    const d = scrollDriver({
+      el,
+      measure: () => {
+        const r = el.getBoundingClientRect();
+        boxAt.current = { top: r.top + window.scrollY, left: r.left, width: r.width, height: r.height };
+        return { top: r.top + window.scrollY, h: r.height };
+      },
+      target: (m, y, vh) => {
+        const top = m.top - y;
+        const centre = top + m.h / 2;
+        // 0 as the pile's top enters at the bottom, 1 with its middle at 60%
+        const start = vh + m.h / 2;
+        const settle = clamp((start - centre) / Math.max(1, start - vh * 0.6));
+        // 0 -> 1 while the pile crosses the whole screen, for the depth drift
+        const cover = clamp((vh - top) / Math.max(1, vh + m.h));
+        const v = [settle, cover, mouse.current.x, mouse.current.y];
+        for (let i = 0; i < n; i++) {
+          const pu = push.current[i] || { x: 0, y: 0 };
+          v.push(pu.x, pu.y);
+        }
+        return v;
+      },
+      paint: v => {
+        const [settle, cover, mx, my] = v;
+        const vw = window.innerWidth;
+        const desktop = vw >= 1024;
+        const reach = desktop ? 1 : 0.5;
+        photos.forEach((ph, i) => {
+          const node = items.current[i];
+          if (node) {
+            const t = smooth(clamp((settle - 0.06 * i) / 0.76));
+            const away = 1 - t;
+            const drift = desktop ? ph.px * (1 - 2 * cover) : 0;
+            node.style.translate = `${r2(ph.from[0] * vw * reach * away)}px ${r2(ph.from[1] * reach * away + drift)}px`;
+            node.style.rotate = `${r2(ph.from[2] * away)}deg`;
+            node.style.opacity = r3(clamp(t * 1.6));
+          }
+          const tl = tilts.current[i];
+          if (tl && desktop) {
+            const px = v[4 + i * 2], py = v[5 + i * 2];
+            tl.style.transform =
+              `perspective(900px) rotateY(${r2(mx * 6)}deg) rotateX(${r2(-my * 6)}deg) ` +
+              `translate(${r2(-mx * ph.depth + px)}px, ${r2(-my * ph.depth + py)}px)`;
+          }
+        });
+      },
+      tau: 150,
+    });
+    driver.current = d;
+    // The breathing pauses while the pile is far from the screen
+    const io = new IntersectionObserver(([e]) => el.classList.toggle('is-away', !e.isIntersecting),
+      { rootMargin: '20% 0px' });
     io.observe(el);
-    const now = () => { compute(); if (visible) kick(); };
-    window.addEventListener('scroll', now, { passive: true });
-    window.addEventListener('resize', now, { passive: true });
-    window.addEventListener('pageshow', now);
-    compute();
-    return () => {
-      io.disconnect();
-      window.removeEventListener('scroll', now);
-      window.removeEventListener('resize', now);
-      window.removeEventListener('pageshow', now);
-      if (raf) cancelAnimationFrame(raf);
-    };
+    return () => { d.destroy(); io.disconnect(); driver.current = null; };
   }, [photos, reduce]);
 
-  // ── Mouse: lean toward the cursor, step aside for the print under it ──────
-  const writeTilts = () => {
-    const { x, y } = mouse.current;
-    photos.forEach((ph, i) => {
-      const t = tilts.current[i];
-      if (!t) return;
-      const pu = push.current[i] || { x: 0, y: 0 };
-      t.style.transform =
-        `perspective(900px) rotateY(${x * 6}deg) rotateX(${-y * 6}deg) ` +
-        `translate(${-x * ph.depth + pu.x}px, ${-y * ph.depth + pu.y}px)`;
-    });
-  };
-
   const onMove = (e: React.PointerEvent) => {
-    if (reduce || e.pointerType !== 'mouse' || !pointer() || !box.current) return;
-    const r = box.current.getBoundingClientRect();
+    if (reduce || e.pointerType !== 'mouse' || !pointer()) return;
+    const b = boxAt.current;
+    const top = b.top - window.scrollY;
     mouse.current = {
-      x: clamp(((e.clientX - r.left) / r.width) * 2 - 1, -1, 1),
-      y: clamp(((e.clientY - r.top) / r.height) * 2 - 1, -1, 1),
+      x: clamp(((e.clientX - b.left) / b.width) * 2 - 1, -1, 1),
+      y: clamp(((e.clientY - top) / b.height) * 2 - 1, -1, 1),
     };
-    writeTilts();
+    driver.current?.kick();
   };
 
   const onLeave = () => {
     mouse.current = { x: 0, y: 0 };
     push.current = [];
     setHot(null);
-    writeTilts();
+    driver.current?.kick();
   };
 
   const onItemLeave = () => {
     push.current = [];
     setHot(null);
-    writeTilts();
+    driver.current?.kick();
   };
 
   const onEnter = (i: number) => (e: React.PointerEvent) => {
     if (reduce || e.pointerType !== 'mouse' || !pointer()) return;
     // Each neighbour steps 14px straight away from the print under the mouse
-    const centre = (n: number) => {
-      const b = items.current[n]?.getBoundingClientRect();
-      return b ? { x: b.left + b.width / 2, y: b.top + b.height / 2 } : { x: 0, y: 0 };
+    const nodes = items.current;
+    const centre = (k: number) => {
+      const it = nodes[k];
+      if (!it) return { x: 0, y: 0 };
+      // offsetLeft/Top are layout positions, untouched by the transforms
+      return { x: it.offsetLeft + it.offsetWidth / 2, y: it.offsetTop + it.offsetHeight / 2 };
     };
     const c = centre(i);
     push.current = photos.map((_, j) => {
@@ -171,7 +175,7 @@ export default function PhotoPile({ photos, className = '' }: { photos: PilePhot
       return { x: (dx / len) * 14, y: (dy / len) * 14 };
     });
     setHot(i);
-    writeTilts();
+    driver.current?.kick();
   };
 
   return (

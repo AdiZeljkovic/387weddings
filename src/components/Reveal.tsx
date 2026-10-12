@@ -5,7 +5,10 @@ import React, { useCallback, useEffect, useRef } from 'react';
  * animation library on the public bundle.
  *
  *  up   — headings, paragraphs, cards: fade in and rise 28px
- *  mask — photographs: a curtain opens from the top down
+ *  mask — photographs: a curtain opens from the top down. Done with two
+ *         counter-moving transforms rather than an animated clip-path: a
+ *         clip-path is repainted on the main thread every frame, for every
+ *         photograph at once, which is what made long galleries stutter.
  *  line — the gold rules beside small labels: draw out from the centre
  *  frame — the offset gold frames: slide in 28px from below-left and fade up
  *
@@ -15,8 +18,11 @@ import React, { useCallback, useEffect, useRef } from 'react';
  * stayed at opacity 0 forever. A callback ref fires for whatever node is in the
  * DOM right now, including replacements.
  *
- * A timer is the belt to that braces: if a node has not been revealed within
- * 1.5s, it is revealed regardless. Nothing stays invisible because of us.
+ * A timer is the belt to those braces: if a node is on screen and still not
+ * revealed after 1.5s, it is revealed regardless. It only looks at what is on
+ * screen — it used to reveal everything after 1.5s, so a long page started
+ * dozens of reveals at the same moment (a stall) and nothing further down was
+ * left to appear while scrolling.
  */
 export type RevealKind = 'up' | 'mask' | 'line' | 'frame';
 
@@ -57,7 +63,8 @@ export const useRevealRef = (delay = 0) => {
     node.current = el;
     if (!el) return;
 
-    if (delay) el.style.transitionDelay = `${delay}s`;
+    // Read by the reveal animations in index.css
+    if (delay) el.style.setProperty('--rv-delay', `${delay}s`);
 
     // On screen already (above the fold): show it without waiting for a scroll
     const rect = el.getBoundingClientRect();
@@ -67,9 +74,14 @@ export const useRevealRef = (delay = 0) => {
     }
 
     getObserver().observe(el);
-    timer.current = window.setTimeout(() => {
-      if (node.current) reveal(node.current);
-    }, SAFETY_MS + delay * 1000);
+    const check = () => {
+      const n = node.current;
+      if (!n || n.classList.contains('is-in')) return;
+      const r = n.getBoundingClientRect();
+      if (r.top < window.innerHeight && r.bottom > 0) reveal(n);
+      else timer.current = window.setTimeout(check, SAFETY_MS);
+    };
+    timer.current = window.setTimeout(check, SAFETY_MS + delay * 1000);
   }, [delay]);
 
   useEffect(() => () => {
@@ -103,7 +115,13 @@ export function Reveal<E extends keyof React.JSX.IntrinsicElements = 'div'>({
   const Tag = (as || 'div') as React.ElementType;
   return (
     <Tag ref={ref} className={`${CLASS[kind]} ${className}`} {...rest}>
-      {children}
+      {kind === 'mask' ? (
+        // The window slides down while the picture slides up by the same
+        // amount, so the picture stays put and is uncovered from the top
+        <span className="rv-mask-win">
+          <span className="rv-mask-pic">{children}</span>
+        </span>
+      ) : children}
     </Tag>
   );
 }

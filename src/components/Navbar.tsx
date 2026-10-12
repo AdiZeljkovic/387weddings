@@ -140,7 +140,7 @@ const Navbar = () => {
             ? 'pt-3 lg:pt-[22px] pb-[10px] text-ink-900 bg-cream border-b border-ink-900/[0.07]'
             : overHero
               ? 'pt-4 lg:pt-9 pb-0 text-white'
-              : 'pt-3 lg:pt-[22px] pb-[10px] text-ink-900 bg-[rgba(249,245,238,0.94)] backdrop-blur-[10px] border-b border-ink-900/[0.07] shadow-[0_1px_12px_rgba(21,19,17,0.05)]',
+              : 'pt-3 lg:pt-[22px] pb-[10px] text-ink-900 bg-[rgba(249,245,238,0.94)] backdrop-blur-[10px] header-blur border-b border-ink-900/[0.07] shadow-[0_1px_12px_rgba(21,19,17,0.05)]',
         )}
       >
         <Link

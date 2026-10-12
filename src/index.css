@@ -342,6 +342,9 @@
 }
 /* On a phone the shadows stay short, so not even a card's shadow reaches the
    16px margin the end cards keep from the screen edge */
+/* Each card is its own compositor layer, so moving, turning, scaling and
+   fading it while scrolling never repaints anything */
+.fan-card { will-change: translate, rotate, scale, opacity; }
 .fan-card .fan-photo {
   box-shadow: 0 8px 12px rgba(60,40,20,.24);
   transition: transform .5s cubic-bezier(.2,.6,.2,1), box-shadow .5s ease;
@@ -367,7 +370,11 @@
    The resting tilt sits on .pile-photo with the standalone rotate property,
    so the hover can straighten it without touching any other layer.           */
 .pile-item { will-change: translate, rotate, opacity; }
-.pile-tilt { transition: transform .6s cubic-bezier(.2,.6,.2,1); }
+/* The lean toward the mouse is eased in script, frame by frame; on a desktop
+   that layer is promoted so the lean never repaints the photograph */
+@media (hover: hover) and (min-width: 1024px) {
+  .pile-tilt { will-change: transform; }
+}
 .pile-photo {
   rotate: var(--r);
   box-shadow: 0 12px 26px rgba(60,40,20,.26);
@@ -383,6 +390,8 @@
   to   { transform: translateY(6px) rotate(1deg); }
 }
 .pile-float { animation: pileFloat var(--fd, 9s) ease-in-out var(--fo, 0s) infinite alternate; }
+/* Far from the screen the breathing waits */
+.pile.is-away .pile-float { animation-play-state: paused; }
 /* Hover (desktop): to the front, 40% of its tilt, 106%, a deeper shadow and
    one pass of light across it; the others dim to 85% */
 .pile-photo::after {
@@ -430,49 +439,49 @@
 
 /* ── Scroll reveals ────────────────────────────────────────────────────────
    Driven by one IntersectionObserver (see Reveal.tsx), which adds `is-in`.
-   Nothing here runs longer than the 1.2s per element the brief allows.      */
-.rv-up {
-  opacity: 0;
-  transform: translateY(28px);
-  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(.2, .6, .2, 1);
-}
-.rv-mask {
-  clip-path: inset(0 0 100% 0);
-  transition: clip-path 0.9s cubic-bezier(.2, .6, .2, 1);
-}
-.rv-line {
-  transform: scaleX(0);
-  transform-origin: center;
-  transition: transform 0.8s cubic-bezier(.2, .6, .2, 1);
-}
-.rv-frame {
-  opacity: 0;
-  transform: translate(-28px, 28px);
-  transition: opacity 0.9s ease, transform 0.9s cubic-bezier(.2, .6, .2, 1);
-}
-.rv-frame.is-in { opacity: 1; transform: none; }
-.rv-up.is-in   { opacity: 1; transform: none; }
-.rv-mask.is-in { clip-path: inset(0 0 0 0); }
-.rv-line.is-in { transform: none; }
+   Nothing here runs longer than the 1.2s per element the brief allows.
+
+   Each reveal is a keyframe animation, not a transition: measured on Radovi
+   while scrolling, transitions on these layers cost the main thread more
+   than twice the style work, which is what made pages stall. Keyframe
+   animations of transform and opacity are handed to the compositor whole.
+   The per-element delay arrives as --rv-delay.                              */
+@keyframes rvUp    { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
+@keyframes rvFrame { from { opacity: 0; transform: translate(-28px, 28px); } to { opacity: 1; transform: none; } }
+@keyframes rvLine  { from { transform: scaleX(0); } to { transform: none; } }
+@keyframes rvWin   { from { transform: translateY(-100%); } to { transform: none; } }
+@keyframes rvPic   { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes rvZoom  { from { scale: 1.07; } to { scale: 1; } }
+
+.rv-up, .rv-frame { opacity: 0; }
+.rv-up.is-in    { animation: rvUp .5s cubic-bezier(.2, .6, .2, 1) var(--rv-delay, 0s) both; }
+.rv-frame.is-in { animation: rvFrame .9s cubic-bezier(.2, .6, .2, 1) var(--rv-delay, 0s) both; }
+.rv-line { transform: scaleX(0); transform-origin: center; }
+.rv-line.is-in  { animation: rvLine .8s cubic-bezier(.2, .6, .2, 1) var(--rv-delay, 0s) both; }
+
+/* Photographs: a curtain opens from the top down. The window slides down
+   while the picture inside slides up by the same amount, so the picture
+   stays put. The frame's placeholder colour travels with the curtain, so the
+   part not yet uncovered shows the page behind it. */
+.rv-mask { overflow: hidden; background-color: transparent; }
+.rv-mask-win, .rv-mask-pic { display: block; width: 100%; height: 100%; }
+.rv-mask-win { overflow: hidden; transform: translateY(-100%); }
+.rv-mask-pic { transform: translateY(100%); background-color: var(--color-rule); }
+.rv-mask.is-in .rv-mask-win { animation: rvWin .9s cubic-bezier(.2, .6, .2, 1) var(--rv-delay, 0s) both; }
+.rv-mask.is-in .rv-mask-pic { animation: rvPic .9s cubic-bezier(.2, .6, .2, 1) var(--rv-delay, 0s) both; }
 
 /* The curtain opens over a photograph that is settling back from 1.07.
    This uses the standalone `scale` property rather than `transform`, so it
    composes with the 6% hover zoom on the same image instead of fighting it. */
-.rv-zoom img {
-  scale: 1.07;
-  transition: scale 1.3s cubic-bezier(.2, .6, .2, 1);
-}
-.rv-zoom.is-in img { scale: 1; }
+.rv-zoom img { scale: 1.07; }
+.rv-zoom.is-in img { animation: rvZoom 1.3s cubic-bezier(.2, .6, .2, 1) var(--rv-delay, 0s) both; }
 
 @media (prefers-reduced-motion: reduce) {
-  .rv-up, .rv-mask, .rv-line, .rv-frame {
-    opacity: 1;
-    transform: none;
-    clip-path: none;
-    transition: none;
-    transition-delay: 0s !important;
-  }
-  .rv-zoom img { scale: 1; transition: none; }
+  .rv-up, .rv-frame { opacity: 1; }
+  .rv-line, .rv-mask-win, .rv-mask-pic { transform: none; }
+  .rv-zoom img { scale: 1; }
+  .rv-up.is-in, .rv-frame.is-in, .rv-line.is-in,
+  .rv-mask.is-in .rv-mask-win, .rv-mask.is-in .rv-mask-pic, .rv-zoom.is-in img { animation: none; }
 }
 
 /* Page transition: the outgoing view fades rather than snapping */
@@ -570,4 +579,11 @@
     will-change: auto;
     transform: none !important;
   }
+}
+
+/* The sticky header's backdrop blur is redone for every scrolled frame. At 94%
+   cream it is next to invisible, so phones, where it costs the most, go
+   without it; a desktop keeps the board's soft blur. */
+@media (max-width: 1023px) {
+  .header-blur { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 }

@@ -89,6 +89,14 @@ const Home = () => {
     const id = window.setTimeout(() => setHeroReady(true), 2500);
     return () => clearTimeout(id);
   }, []);
+  // Once it has faded out the blurred layer leaves the page altogether: a
+  // full-screen filter kept at opacity 0 still costs the compositor
+  const [blurGone, setBlurGone] = useState(false);
+  useEffect(() => {
+    if (!heroReady) return;
+    const id = window.setTimeout(() => setBlurGone(true), 900);
+    return () => clearTimeout(id);
+  }, [heroReady]);
 
   // Only the hero slots the client has actually filled are shown. Each slot may
   // also carry an upright crop for phones: a landscape frame under
@@ -169,7 +177,7 @@ const Home = () => {
       >
         {/* A 24px-wide copy of the first frame, blurred up to fill the section,
             so the hero has its colours almost at once instead of a black panel */}
-        {heroBlur && (
+        {heroBlur && !blurGone && (
           <span
             aria-hidden="true"
             className="absolute inset-0 bg-cover bg-center transition-opacity duration-700 ease-out motion-reduce:transition-none"
