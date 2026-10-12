@@ -23,8 +23,12 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = async () => {
-    await logout();
-    navigate('/admin/login');
+    try {
+      await logout();
+      navigate('/admin/login');
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Odjava nije uspjela.');
+    }
   };
 
   const isActive = (item: typeof navItems[0]) => {

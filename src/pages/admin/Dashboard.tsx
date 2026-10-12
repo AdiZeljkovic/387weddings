@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Image, Mail, ArrowRight, BookOpen } from 'lucide-react';
+import { adminFetch } from '../../lib/adminFetch';
 
 interface Stats {
-  gallery: number;
   stories: number;
   total_submissions: number;
   new_submissions: number;
 }
 
 const statCards = [
-  { key: 'gallery', label: 'Slike u galeriji', icon: Image, path: '/admin/gallery', color: 'text-blue-400' },
+  // Points at Fotografije: the old "Galerija" page no longer exists
+  { key: 'new_submissions', label: 'Novih upita', icon: Mail, path: '/admin/submissions', color: 'text-blue-400' },
   { key: 'stories', label: 'Objavljenih priča', icon: BookOpen, path: '/admin/stories', color: 'text-purple-400' },
   { key: 'total_submissions', label: 'Ukupno upita', icon: Mail, path: '/admin/submissions', color: 'text-gold-400' },
 ];
@@ -19,8 +20,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
-    fetch('/api/settings/stats', { credentials: 'include' })
-      .then(r => r.json())
+    adminFetch<Stats>('/api/settings/stats')
       .then(setStats)
       .catch(console.error);
   }, []);
@@ -78,8 +78,8 @@ export default function Dashboard() {
       <div className="bg-moody-950/60 border border-white/5 rounded-sm p-6">
         <h3 className="text-white/60 text-xs tracking-[0.3em] uppercase font-bold mb-4">Brze akcije</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          <Link to="/admin/gallery" className="flex items-center gap-2 text-white/40 hover:text-white text-sm transition-colors py-2">
-            <Image size={14} /> Dodaj sliku
+          <Link to="/admin/images" className="flex items-center gap-2 text-white/40 hover:text-white text-sm transition-colors py-2">
+            <Image size={14} /> Fotografije stranica
           </Link>
           <Link to="/admin/stories" className="flex items-center gap-2 text-white/40 hover:text-white text-sm transition-colors py-2">
             <BookOpen size={14} /> Dodaj priču

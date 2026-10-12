@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { peekSettings } from '../lib/settingsCache';
 
 interface AdminUser {
   id: number;
@@ -19,10 +20,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if already logged in
-    // Only the admin needs this. Calling it on public pages burned through the
-    // login rate limit and logged a 429 in every visitor's console.
-    if (!window.location.pathname.startsWith('/admin')) {
+    // Only the panel needs to know — and the public site while it is closed
+    // for "Coming Soon", so the owner can still see it behind the gate
+    const closed = peekSettings()?.coming_soon === 'true';
+    if (!window.location.pathname.startsWith('/admin') && !closed) {
       setIsLoading(false);
       return;
     }
@@ -45,8 +46,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error || 'Login failed');
+      const data = await res.json().catch(() => ({}));
+      throw new Error(
+        res.status === 429
+          ? 'Previše pokušaja prijave. Pokušaj ponovo za 15 minuta.'
+          : data.error || 'Prijava nije uspjela.'
+      );
     }
 
     const data = await res.json();
@@ -54,7 +59,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function logout() {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    // Signed out on screen only once the server has cleared the session
+    const res = await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => null);
+    if (!res?.ok) throw new Error('Odjava nije uspjela. Pokušaj ponovo.');
     setAdmin(null);
   }
 

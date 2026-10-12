@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, Image, Loader2, Upload, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { invalidateSettingsCache } from '../../lib/settingsCache';
+import { adminFetch, json, errorText } from '../../lib/adminFetch';
 
 // ── Image catalogue ───────────────────────────────────────────────────────────
 // key   → stored in site_settings
@@ -92,40 +93,64 @@ type ImageKey = typeof SECTIONS[number]['groups'][number]['images'][number]['key
 
 export default function ImagesManager() {
   const [urls, setUrls]       = useState<Record<string, string>>({});
+  // What the server holds, so only real changes are sent and the page knows
+  // when there is something unsaved
+  const [stored, setStored]   = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving]   = useState(false);
   const [saved, setSaved]     = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [uploads, setUploads] = useState(0);
   const [openPages, setOpenPages] = useState<Record<string, boolean>>({ home: true, about: true, contact: true });
 
   useEffect(() => {
-    fetch('/api/settings', { credentials: 'include' })
-      .then(r => r.json())
-      .then((data: Record<string, string>) => {
-        setUrls(data ?? {});
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    adminFetch<Record<string, string>>('/api/settings')
+      .then(data => { setUrls(data ?? {}); setStored(data ?? {}); })
+      .catch(err => setLoadError(errorText(err)))
+      .finally(() => setLoading(false));
   }, []);
 
+  // A new photograph in a slot starts without the old one's focal point (it
+  // would crop the new picture around the previous face); clearing a slot
+  // clears its alt text too
   const setUrl = (key: string, value: string) =>
-    setUrls(prev => ({ ...prev, [key]: value }));
+    setUrls(prev => {
+      const next = { ...prev, [key]: value };
+      const isImage = !/\.(alt|focus)$/.test(key);
+      if (isImage && (prev[key] || '') !== value) {
+        next[`${key}.focus`] = '';
+        if (!value) next[`${key}.alt`] = '';
+      }
+      return next;
+    });
+
+  const changed = Object.fromEntries(
+    Object.entries(urls).filter(([k, v]) => k.startsWith('img.') && (stored[k] || '') !== (v || ''))
+  );
+  const dirty = Object.keys(changed).length > 0;
+
+  // Leaving with unsaved photographs asks first
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveError(null);
     try {
-      // Only send image keys
-      const imgKeys = Object.fromEntries(
-        Object.entries(urls).filter(([k]) => k.startsWith('img.'))
-      );
-      await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(imgKeys),
-      });
+      // Only what changed here: a save never writes back keys someone else
+      // may have changed meanwhile in another tab
+      await adminFetch('/api/settings', json('PUT', changed));
+      setStored(prev => ({ ...prev, ...changed }));
       invalidateSettingsCache();
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      setSaveError(errorText(err));
     } finally {
       setSaving(false);
     }
@@ -140,6 +165,9 @@ export default function ImagesManager() {
         <Loader2 size={24} className="animate-spin text-white/20" />
       </div>
     );
+  }
+  if (loadError) {
+    return <p className="text-red-400 text-sm py-10">Fotografije se nisu učitale: {loadError}</p>;
   }
 
   return (
@@ -205,6 +233,7 @@ export default function ImagesManager() {
                         onFocusChange={v => setUrl(`${img.key}.focus`, v)}
                         ratio={img.ratio}
                         defaultFocus={'defaultFocus' in img ? img.defaultFocus : undefined}
+                        onUploading={on => setUploads(n => Math.max(0, n + (on ? 1 : -1)))}
                       />
                     ))}
                   </div>
@@ -215,11 +244,19 @@ export default function ImagesManager() {
         </div>
       ))}
 
-      {/* Save */}
-      <div className="flex justify-end pt-2">
+      {/* Save — stays in view at the bottom while there is something unsaved */}
+      <div className={cn(
+        'flex flex-wrap items-center justify-end gap-3 pt-2',
+        dirty && 'sticky bottom-0 z-10 bg-moody-900/95 border-t border-gold-600/20 py-3 -mx-1 px-1',
+      )}>
+        {saveError && <p role="alert" className="mr-auto text-red-400 text-xs leading-snug max-w-xl">{saveError}</p>}
+        {!saveError && dirty && !saving && (
+          <p className="mr-auto text-amber-300/80 text-xs">Ima nesačuvanih promjena ({Object.keys(changed).length}).</p>
+        )}
+        {uploads > 0 && <p className="text-white/40 text-xs">Upload u toku…</p>}
         <button
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || uploads > 0 || !dirty}
           className="flex items-center gap-2 px-6 py-2.5 bg-gold-600/15 hover:bg-gold-600/25 border border-gold-600/25 hover:border-gold-600/40 text-gold-400 text-xs font-bold tracking-widest uppercase rounded-sm transition-all duration-200 disabled:opacity-40"
         >
           {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
@@ -234,6 +271,7 @@ export default function ImagesManager() {
 
 function ImageSlot({
   imageKey, label, fallback, value, onChange, alt, onAltChange, focus, onFocusChange, ratio, defaultFocus,
+  onUploading,
 }: {
   imageKey: string;
   label: string;
@@ -248,6 +286,8 @@ function ImageSlot({
   ratio: string;
   /** Where the crop sits when no point has been chosen (the site's default) */
   defaultFocus?: string;
+  /** Tells the page an upload started or ended, so it cannot save half-way */
+  onUploading?: (on: boolean) => void;
 }) {
   const fileRef  = useRef<HTMLInputElement>(null);
   const imgRef   = useRef<HTMLImageElement>(null);
@@ -292,6 +332,7 @@ function ImageSlot({
 
   const handleFile = async (file: File) => {
     setUploading(true);
+    onUploading?.(true);
     setUploadError(null);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 180_000);
@@ -316,8 +357,9 @@ function ImageSlot({
       // The original is kept as sent, so a small file stays small — say so
       // rather than letting it look soft on a big screen later.
       setNotice(
-        data.warning
-          || (data.width ? `Učitano u originalu: ${data.width}×${data.height} px.` : null)
+        (data.warning ? `${data.warning} ` : '')
+          + (data.width ? `Učitano u originalu: ${data.width}×${data.height} px. ` : '')
+          + 'Klikni „Sačuvaj sve fotografije" dolje da se pojavi na sajtu.'
       );
     } catch (err: any) {
       clearTimeout(timeout);
@@ -328,6 +370,7 @@ function ImageSlot({
       setNotice(null);
     } finally {
       setUploading(false);
+      onUploading?.(false);
     }
   };
 

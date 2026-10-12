@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { respImg } from '../lib/img';
+import { respImg, THUMB_WIDTHS } from '../lib/img';
 import { usePaths } from '../lib/routes';
 import { useLanguage } from '../contexts/LanguageContext';
 import { scrollDriver, docBox, headerHeight } from '../lib/scrollDriver';
@@ -210,7 +210,7 @@ export default function StoryFan({ stories, heading, cta }: {
       <div ref={column} className="relative w-full lg:flex-1 lg:min-w-0">
         <div className="relative" style={{ height: Math.round(geo.h) }}>
           {stories.map((s, i) => {
-            const r = respImg(s.image || '');
+            const r = respImg(s.image || '', THUMB_WIDTHS);
             return (
               <Link
                 key={s.id}
@@ -250,7 +250,10 @@ export default function StoryFan({ stories, heading, cta }: {
                   aria-hidden="true"
                   className={`fan-cap block text-center origin-top ${
                     geo.phone
-                      ? 'absolute left-1/2 top-full w-[180%] -translate-x-1/2 mt-2.5 opacity-0'
+                      // Without the scroll sequence (reduced motion) nothing
+                      // would ever show the name, so the still fan keeps its
+                      // captions under the cards
+                      ? pinned ? 'absolute left-1/2 top-full w-[180%] -translate-x-1/2 mt-2.5 opacity-0' : 'mt-2'
                       : 'mt-3.5'
                   }`}
                 >

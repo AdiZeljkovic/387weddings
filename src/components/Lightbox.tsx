@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { fullImg } from '../lib/img';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export interface LightboxImage {
   id: number | string;
@@ -35,8 +36,10 @@ const SWIPE_PX = 50;
  * the client's list.
  */
 const Lightbox = ({ images, index, onIndex, onClose, title, closeLabel = 'Zatvori' }: Props) => {
+  const en = useLanguage().language === 'ENG';
   const touchX = useRef<number | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const count = images.length;
 
   const go = useCallback(
@@ -44,12 +47,32 @@ const Lightbox = ({ images, index, onIndex, onClose, title, closeLabel = 'Zatvor
     [index, count, onIndex]
   );
 
-  // Arrow keys and Escape, plus a scroll lock while the viewer is open
+  // The keyboard handler reads the latest go/onClose through refs, so the
+  // effect below runs once per opening. It used to re-run on every step, and
+  // each run put the focus back on "Zatvori" — the next Enter then closed the
+  // viewer instead of moving on.
+  const goRef = useRef(go);
+  const closeFn = useRef(onClose);
+  goRef.current = go;
+  closeFn.current = onClose;
+
+  // Arrow keys, Escape and Tab kept inside the viewer; the page behind does
+  // not scroll; on closing, the focus goes back to the photograph opened
   useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-      else if (e.key === 'ArrowRight') go(1);
-      else if (e.key === 'ArrowLeft') go(-1);
+      if (e.key === 'Escape') closeFn.current();
+      else if (e.key === 'ArrowRight') goRef.current(1);
+      else if (e.key === 'ArrowLeft') goRef.current(-1);
+      else if (e.key === 'Tab' && dialogRef.current) {
+        const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button'));
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        else if (!dialogRef.current.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+      }
     };
     document.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
@@ -58,8 +81,9 @@ const Lightbox = ({ images, index, onIndex, onClose, title, closeLabel = 'Zatvor
     return () => {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;
+      opener?.focus?.();
     };
-  }, [go, onClose]);
+  }, []);
 
   // The next and previous photographs start loading now, so stepping through
   // a story does not wait on each one
@@ -86,10 +110,11 @@ const Lightbox = ({ images, index, onIndex, onClose, title, closeLabel = 'Zatvor
   // "Zatvori ✕" under it) stayed on top of the photograph.
   return createPortal(
     <div
+      ref={dialogRef}
       className="lightbox-in fixed inset-0 z-[2000] bg-[#0e0c0a] text-white select-none"
       role="dialog"
       aria-modal="true"
-      aria-label={title || 'Galerija'}
+      aria-label={title || (en ? 'Gallery' : 'Galerija')}
       // A click on the dark surround closes; clicks on the photograph and the
       // controls stop before they get here
       onClick={onClose}
@@ -133,7 +158,7 @@ const Lightbox = ({ images, index, onIndex, onClose, title, closeLabel = 'Zatvor
           <button
             type="button"
             onClick={e => { e.stopPropagation(); go(-1); }}
-            aria-label="Prethodna"
+            aria-label={en ? 'Previous photograph' : 'Prethodna fotografija'}
             className="absolute top-1/2 -translate-y-1/2 left-3.5 z-10 p-3 text-[30px] leading-none text-white transition-opacity duration-250 hover:opacity-70"
           >
             ←
@@ -141,7 +166,7 @@ const Lightbox = ({ images, index, onIndex, onClose, title, closeLabel = 'Zatvor
           <button
             type="button"
             onClick={e => { e.stopPropagation(); go(1); }}
-            aria-label="Sljedeća"
+            aria-label={en ? 'Next photograph' : 'Sljedeća fotografija'}
             className="absolute top-1/2 -translate-y-1/2 right-3.5 z-10 p-3 text-[30px] leading-none text-white transition-opacity duration-250 hover:opacity-70"
           >
             →

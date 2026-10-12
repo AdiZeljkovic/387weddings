@@ -1,40 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
-
 export type ImageMeta = { width: number; height: number; orientation: string };
-
-/**
- * Real pixel dimensions for a set of uploads, read off the files when they were
- * uploaded. Frames are reserved at the photograph's own ratio from these, so
- * nothing is cropped into a shape somebody picked by hand and the page does not
- * jump while the images arrive.
- */
-export function useImageMeta(urls: (string | null | undefined)[]) {
-  const [meta, setMeta] = useState<Record<string, ImageMeta>>({});
-
-  const files = useMemo(
-    () => urls
-      .filter((u): u is string => Boolean(u) && u.startsWith('/uploads/'))
-      .map(u => u.slice('/uploads/'.length))
-      .filter((f, i, a) => a.indexOf(f) === i),
-    [urls.join(',')]  // eslint-disable-line react-hooks/exhaustive-deps
-  );
-  const key = files.join(',');
-
-  useEffect(() => {
-    if (!key) return;
-    let alive = true;
-    fetch(`/api/gallery/meta?files=${encodeURIComponent(key)}`)
-      .then(r => (r.ok ? r.json() : {}))
-      .then((d: unknown) => {
-        if (alive && d && typeof d === 'object') setMeta(d as Record<string, ImageMeta>);
-      })
-      .catch(() => { /* fall back to the stored layout */ });
-    return () => { alive = false; };
-  }, [key]);
-
-  return (url: string | null | undefined): ImageMeta | undefined =>
-    url && url.startsWith('/uploads/') ? meta[url.slice('/uploads/'.length)] : undefined;
-}
 
 export type Layout = 'TALL' | 'SQUARE' | 'WIDE';
 

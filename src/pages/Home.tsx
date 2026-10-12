@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useLanguage } from '../contexts/LanguageContext';
-import { loadSettings } from '../lib/settingsCache';
-import { respImg, blurSrc } from '../lib/img';
+import { loadSettings, peekSettings } from '../lib/settingsCache';
+import { respImg, blurSrc, THUMB_WIDTHS } from '../lib/img';
 import { OliveBranch, SectionLabel } from '../components/ornaments';
 import Reveal from '../components/Reveal';
 import Emphasis from '../components/Emphasis';
@@ -53,9 +53,9 @@ const PILE: Omit<PilePhoto, 'src' | 'srcSet' | 'alt' | 'focus'>[] = [
 ];
 
 const Home = () => {
-  const { t, getContentStyle } = useLanguage();
+  const { t, getContentStyle, language } = useLanguage();
   const paths = usePaths();
-  const [settings, setSettings] = useState<Record<string, string>>({});
+  const [settings, setSettings] = useState<Record<string, string>>(() => peekSettings() ?? {});
   const [slide, setSlide] = useState(0);
   const [paused, setPaused] = useState(false);
   // Until the first hero frame has decoded the section was a flat dark panel
@@ -75,8 +75,15 @@ const Home = () => {
   // The fan is filled from the stories chosen for it in the panel
   const [fan, setFan] = useState<FanStory[] | null>(null);
 
+  // Until the settings are in, the slots are unknown: no stand-in photograph
+  // is fetched in the meantime (it used to compete with the real hero, which
+  // the server already preloads, at high priority)
+  const [settingsReady, setSettingsReady] = useState(() => peekSettings() !== null);
+
   useEffect(() => {
-    loadSettings().then(setSettings).catch(err => console.warn('Home: settings load failed', err));
+    loadSettings()
+      .then(s => { setSettings(s); setSettingsReady(true); })
+      .catch(err => console.warn('Home: settings load failed', err));
     fetch('/api/stories/fan')
       .then(r => (r.ok ? r.json() : []))
       .then(d => setFan(Array.isArray(d) ? d : []))
@@ -109,10 +116,10 @@ const Home = () => {
   })).filter(s => s.src || s.mobile);
   const heroSlides = uploaded.length
     ? uploaded.map(s => ({ ...s, src: s.src || s.mobile }))
-    : [{ n: 1, src: HERO_FALLBACK, mobile: '' }];
+    : settingsReady ? [{ n: 1, src: HERO_FALLBACK, mobile: '' }] : [];
   // Settings arrive after the first paint, so the count can shrink under us
-  const active = slide % heroSlides.length;
-  const heroBlur = blurSrc(heroSlides[0].mobile || heroSlides[0].src);
+  const active = slide % Math.max(1, heroSlides.length);
+  const heroBlur = heroSlides[0] ? blurSrc(heroSlides[0].mobile || heroSlides[0].src) : '';
   const many = heroSlides.length > 1;
 
   // The frames cross-fade on their own; hovering the hero holds the current one
@@ -121,7 +128,10 @@ const Home = () => {
   useEffect(() => {
     if (reduceMotion.current || !many) return;
     if (paused) {
-      remaining.current -= performance.now() - startedAt.current;
+      // Only time that was actually running is taken off, once: picking a
+      // frame while hovering used to subtract it again and again
+      if (startedAt.current) remaining.current -= performance.now() - startedAt.current;
+      startedAt.current = 0;
       return;
     }
     startedAt.current = performance.now();
@@ -142,7 +152,7 @@ const Home = () => {
   // Alt text and focal point live beside each image slot as "<key>.alt" /
   // ".focus". Built once per settings load, not on every slide of the hero.
   const pilePhotos = useMemo<PilePhoto[]>(() => PILE.map((ph, i) => {
-    const r = respImg(settings[ph.key] || FALLBACK[(i + 1) % FALLBACK.length]);
+    const r = respImg(settings[ph.key] || FALLBACK[(i + 1) % FALLBACK.length], THUMB_WIDTHS);
     return {
       ...ph, src: r.src, srcSet: r.srcSet,
       alt: settings[`${ph.key}.alt`] || '', focus: settings[`${ph.key}.focus`] || '',
@@ -172,8 +182,10 @@ const Home = () => {
         // Exactly the visible screen, so the hero is never half-cut and the
         // next section always starts below the fold.
         className="hero-screen min-h-[500px] lg:min-h-[560px] relative flex flex-col overflow-hidden w-full max-w-full bg-[#26221e] text-white"
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
+        // A mouse only: a phone fires mouseenter on every tap and never the
+        // leave, so one tap on the hero stopped the slideshow for good
+        onPointerEnter={e => { if (e.pointerType === 'mouse') setPaused(true); }}
+        onPointerLeave={e => { if (e.pointerType === 'mouse') setPaused(false); }}
       >
         {/* A 24px-wide copy of the first frame, blurred up to fill the section,
             so the hero has its colours almost at once instead of a black panel */}
@@ -214,8 +226,14 @@ const Home = () => {
                 // Only the frame on screen is announced; the others are decoration
                 alt={i === active ? (settings[`img.home.hero.${n}.alt`] || '') : ''}
                 aria-hidden={i === active ? undefined : 'true'}
-                className="w-full h-full object-cover"
-                style={{ objectPosition: settings[`img.home.hero.${n}.focus`] || undefined }}
+                // The phone frame has its own focal point, chosen on its own
+                // slot in the panel; the desktop one applies from lg up
+                className="hero-img w-full h-full object-cover"
+                style={{
+                  '--fp-d': settings[`img.home.hero.${n}.focus`] || '50% 50%',
+                  '--fp-m': (mobile && settings[`img.home.hero.mobile.${n}.focus`])
+                    || settings[`img.home.hero.${n}.focus`] || '50% 50%',
+                } as unknown as React.CSSProperties}
                 loading={i === 0 ? 'eager' : 'lazy'}
                 fetchPriority={i === 0 ? 'high' : 'low'}
                 onLoad={i === 0 ? () => setHeroReady(true) : undefined}
@@ -298,7 +316,7 @@ const Home = () => {
                 key={i}
                 type="button"
                 onClick={() => pick(i)}
-                aria-label={`Slika ${i + 1}`}
+                aria-label={language === 'ENG' ? `Photograph ${i + 1}` : `Slika ${i + 1}`}
                 aria-current={i === active ? 'true' : undefined}
                 className="flex items-center h-11 w-7 lg:w-11 p-0 border-0 cursor-pointer"
               >

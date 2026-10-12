@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 import { useLanguage } from '../contexts/LanguageContext';
-import { loadSettings } from '../lib/settingsCache';
+import { loadSettings, peekSettings } from '../lib/settingsCache';
 import { respImg } from '../lib/img';
 import { OliveBranch } from '../components/ornaments';
 import Reveal from '../components/Reveal';
@@ -70,14 +70,19 @@ const GroupLabel = ({ children, style, delay = 0 }: {
 
 const Contact = () => {
   const { t, getContentStyle } = useLanguage();
-  const [settings, setSettings] = useState<Record<string, string>>({});
+  const [settings, setSettings] = useState<Record<string, string>>(() => peekSettings() ?? {});
   const [formData, setFormData] = useState({ ...EMPTY });
   const [consent, setConsent] = useState(false);
   const [status, setStatus] = useState<Status>('idle');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // A field only bots fill in (see the server's contact route)
+  const trap = useRef<HTMLInputElement>(null);
 
+  const [settingsReady, setSettingsReady] = useState(() => peekSettings() !== null);
   useEffect(() => {
-    loadSettings().then(setSettings).catch(err => console.warn('Contact: settings load failed', err));
+    loadSettings()
+      .then(s => { setSettings(s); setSettingsReady(true); })
+      .catch(err => console.warn('Contact: settings load failed', err));
   }, []);
 
   const set = (k: keyof typeof EMPTY) => (v: string) => setFormData(p => ({ ...p, [k]: v }));
@@ -117,14 +122,16 @@ const Contact = () => {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, website: trap.current?.value || '' }),
       });
       if (!res.ok) throw new Error('Server error');
       setStatus('success');
       setFormData({ ...EMPTY });
       setConsent(false);
       setErrors({});
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // To the confirmation itself, which sits below the hero
+      requestAnimationFrame(() => document.getElementById('contact-status')
+        ?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
     } catch {
       setStatus('error');
     }
@@ -133,11 +140,17 @@ const Contact = () => {
   const submitting = status === 'submitting';
   const today = new Date().toISOString().split('T')[0];
 
-  // The brief asks for a separate mobile frame so a tall crop can be chosen
-  const heroDesktop = respImg(settings['img.contact.hero'] || HERO_FALLBACK);
-  const heroMobile = respImg(
-    settings['img.contact.hero.mobile'] || settings['img.contact.hero'] || HERO_FALLBACK,
-  );
+  // The brief asks for a separate mobile frame so a tall crop can be chosen.
+  // Nothing is fetched until the settings say which photographs these are.
+  const deskKey = 'img.contact.hero';
+  const mobKey = settings['img.contact.hero.mobile'] ? 'img.contact.hero.mobile' : deskKey;
+  const heroDesktop = respImg(settings[deskKey] || (settingsReady ? HERO_FALLBACK : ''));
+  const heroMobile = respImg(settings[mobKey] || (settingsReady ? HERO_FALLBACK : ''));
+  const heroFocus = {
+    '--fp-d': settings[`${deskKey}.focus`] || '50% 50%',
+    '--fp-m': settings[`${mobKey}.focus`] || settings[`${deskKey}.focus`] || '50% 50%',
+  } as unknown as React.CSSProperties;
+  const heroAlt = settings[`${deskKey}.alt`] || '';
 
   const optionsFor = (base: string, count: number) =>
     Array.from({ length: count }, (_, i) => t(`${base}.opt.${i + 1}`))
@@ -190,14 +203,18 @@ const Contact = () => {
         </div>
 
         <Reveal kind="mask" className="rv-zoom relative flex-none w-full h-[220px] lg:w-auto lg:flex-[0_0_50%] lg:h-auto overflow-hidden">
-          <picture className="block w-full h-full">
-            <source media="(min-width: 1024px)" srcSet={heroDesktop.srcSet || heroDesktop.src} sizes="50vw" />
-            <img
-              src={heroMobile.src} srcSet={heroMobile.srcSet} sizes="100vw" alt="" aria-hidden="true"
-              className="w-full h-full object-cover lg:animate-[slowZoom_18s_ease-in-out_infinite_alternate] motion-reduce:animate-none"
-              loading="eager" fetchPriority="high" decoding="async" draggable={false} referrerPolicy="no-referrer"
-            />
-          </picture>
+          {heroMobile.src && (
+            <picture className="block w-full h-full">
+              <source media="(min-width: 1024px)" srcSet={heroDesktop.srcSet || heroDesktop.src} sizes="50vw" />
+              <img
+                src={heroMobile.src} srcSet={heroMobile.srcSet} sizes="100vw"
+                alt={heroAlt} aria-hidden={heroAlt ? undefined : 'true'}
+                style={heroFocus}
+                className="hero-img w-full h-full object-cover lg:animate-[slowZoom_18s_ease-in-out_infinite_alternate] motion-reduce:animate-none"
+                loading="eager" fetchPriority="high" decoding="async" draggable={false} referrerPolicy="no-referrer"
+              />
+            </picture>
+          )}
           {/* Desktop: the frame fades into the text column on its left */}
           <span aria-hidden="true"
             className="hidden lg:block absolute inset-y-0 left-0 w-1/2 bg-[linear-gradient(90deg,#f7f6f3_0%,rgba(247,246,243,.65)_45%,rgba(247,246,243,0)_100%)]" />
@@ -211,6 +228,7 @@ const Contact = () => {
       <section className="bg-white px-5 lg:px-6 pt-12 lg:pt-24 pb-14 lg:pb-20">
         {status === 'success' ? (
           <div
+            id="contact-status"
             role="status"
             className="max-w-[560px] mx-auto border border-rule bg-cream-soft text-center px-6 lg:px-10 py-14 lg:py-16"
           >
@@ -246,6 +264,12 @@ const Contact = () => {
           action="/api/contact"
           className="max-w-[768px] mx-auto flex flex-col gap-7"
         >
+          {/* Off-screen and out of the tab order: people never see it */}
+          <div aria-hidden="true" className="absolute -left-[9999px] w-px h-px overflow-hidden">
+            <label htmlFor="c-website">Website</label>
+            <input ref={trap} id="c-website" name="website" type="text" tabIndex={-1} autoComplete="off" />
+          </div>
+
           {/* About you */}
           <GroupLabel delay={0.06} style={getContentStyle('contact.group.you')}>{t('contact.group.you')}</GroupLabel>
 

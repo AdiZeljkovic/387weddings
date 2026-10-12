@@ -20,12 +20,16 @@ export default defineConfig(() => {
       rollupOptions: {
         output: {
           manualChunks: {
-            // React core — changes rarely, benefits most from long-term cache
-            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            // Animation library
+            // React core — changes rarely, benefits most from long-term cache.
+            // react-dom/client (the bulk of react-dom) has to be named too, or
+            // it lands in the app's own chunk and is downloaded again after
+            // every deploy.
+            'vendor-react': ['react', 'react-dom', 'react-dom/client', 'react-router-dom'],
+            // Animation library (Coming Soon and the panel only)
             'vendor-motion': ['motion'],
-            // Icon library
-            'vendor-icons': ['lucide-react'],
+            // Icons are no longer forced into one shared chunk: the public
+            // site uses three, the panel the rest, and each now loads only
+            // what it uses
           },
         },
       },

@@ -55,7 +55,11 @@ export const routeOf = (routerPath: string): { key: RouteKey; slug?: string } | 
       if (clean === p) return { key };
       if (key === 'portfolio' && clean.startsWith(`${p}/`) && clean.length > p.length + 1) {
         const rest = clean.slice(p.length + 1);
-        if (!rest.includes('/')) return { key, slug: decodeURIComponent(rest) };
+        if (!rest.includes('/')) {
+          // A malformed escape (/radovi/%E0) names no page; decodeURIComponent
+          // would throw, and on the server that took the whole process down
+          try { return { key, slug: decodeURIComponent(rest) }; } catch { return null; }
+        }
       }
     }
   }

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Instagram, Facebook } from 'lucide-react';
-import { loadSettings } from '../lib/settingsCache';
+import { loadSettings, peekSettings } from '../lib/settingsCache';
 
 export default function ComingSoon() {
-  const [settings, setSettings] = useState<Record<string, string>>({});
+  const [settings, setSettings] = useState<Record<string, string>>(() => peekSettings() ?? {});
 
   useEffect(() => {
     loadSettings().then(setSettings).catch(() => {});

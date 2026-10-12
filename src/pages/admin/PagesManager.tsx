@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Save, ChevronDown, ChevronUp, CheckCircle2, AlertCircle, Loader2, Globe, RefreshCw, ServerCrash } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { adminFetch, json, errorText } from '../../lib/adminFetch';
 
 interface ContentItem {
   id: number;
@@ -55,22 +56,24 @@ const PAGE_LABELS: Record<string, string> = {
   story:     'Priča (zajedničke oznake)',
   privacy:   'Privatnost i kolačići',
   footer:    'Footer',
+  notfound:  'Stranica 404',
 };
 
 // Subtitle shown under the tab (matches URL path)
 const PAGE_PATHS: Record<string, string> = {
   home:      '/',
-  portfolio: '/portfolio',
-  about:     '/about',
-  contact:   '/contact',
-  story:     '/portfolio/...',
-  privacy:   '/privacy',
+  portfolio: '/radovi',
+  about:     '/o-nama',
+  contact:   '/kontakt',
+  story:     '/radovi/...',
+  privacy:   '/privatnost',
   footer:    '(sve stranice)',
+  notfound:  '(nepostojeća adresa)',
 };
 
 const SECTION_LABELS: Record<string, string> = {
   hero:          'Hero sekcija',
-  featured:      'Istaknuti radovi (mozaik galerija)',
+  featured:      'Istaknuti radovi (lepeza priča)',
   intro:         'Uvod',
   collections:   'Kolekcije (kategorije)',
   process:       'Proces / Koraci',
@@ -120,16 +123,13 @@ export default function PagesManager() {
   const [activePage, setActivePage] = useState('home');
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const fetchContent = useCallback(() => {
     setLoading(true);
     setFetchError(null);
-    fetch('/api/content/admin', { credentials: 'include' })
-      .then(r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((data: ContentItem[]) => {
+    adminFetch<ContentItem[]>('/api/content/admin')
+      .then(data => {
         if (!Array.isArray(data)) throw new Error('Unexpected response format');
         setContent(data);
         const map: EditMap = {};
@@ -145,12 +145,33 @@ export default function PagesManager() {
         setEditMap(map);
       })
       .catch(err => {
-        setFetchError(err.message || 'Unknown error');
+        setFetchError(errorText(err));
       })
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { fetchContent(); }, [fetchContent]);
+
+  // Anything typed but not yet saved, in any section
+  const dirty = content.some(item => {
+    const e = editMap[item.key];
+    return e && (e.en !== (item.value_en || '') || e.bs !== (item.value_bs || '')
+      || e.fontSize !== (item.font_size || '') || e.fontFamily !== (item.font_family || '')
+      || e.color !== (item.text_color || ''));
+  });
+
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (ev: BeforeUnloadEvent) => { ev.preventDefault(); ev.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
+
+  // "Osvježi" reloads from the server, which would drop unsaved typing
+  const refresh = () => {
+    if (dirty && !confirm('Neke izmjene nisu sačuvane. Osvježavanje ih briše. Nastaviti?')) return;
+    fetchContent();
+  };
 
   // Auto-open first section when page tab changes or content loads
   useEffect(() => {
@@ -197,17 +218,20 @@ export default function PagesManager() {
     }));
 
     try {
-      const res = await fetch('/api/content/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ items }),
-      });
-      if (!res.ok) throw new Error();
+      await adminFetch('/api/content/bulk', json('POST', { items }));
+      setSaveError(null);
+      // What is saved is now the baseline for "unsaved changes"
+      setContent(prev => prev.map(c => {
+        const it = items.find(i => i.key === c.key);
+        return it ? { ...c, value_en: it.value_en, value_bs: it.value_bs,
+          font_size: it.font_size ?? undefined, font_family: it.font_family ?? undefined,
+          text_color: it.text_color ?? undefined } : c;
+      }));
       setSectionStatus(prev => ({ ...prev, [sKey]: 'saved' }));
       reloadContent();
       setTimeout(() => setSectionStatus(prev => ({ ...prev, [sKey]: 'idle' })), 3000);
-    } catch {
+    } catch (err) {
+      setSaveError(`Sekcija nije sačuvana. ${errorText(err)}`);
       setSectionStatus(prev => ({ ...prev, [sKey]: 'error' }));
       setTimeout(() => setSectionStatus(prev => ({ ...prev, [sKey]: 'idle' })), 3000);
     }
@@ -284,12 +308,16 @@ export default function PagesManager() {
           </p>
         </div>
         <button
-          onClick={fetchContent}
+          onClick={refresh}
           className="flex items-center gap-2 text-white/30 hover:text-white/70 transition-colors text-sm"
         >
           <RefreshCw size={14} /> Osvježi
         </button>
       </div>
+
+      {saveError && (
+        <div role="alert" className="bg-red-500/10 border border-red-500/25 text-red-300 text-xs rounded-sm px-4 py-3">{saveError}</div>
+      )}
 
       {/* Page Tabs */}
       <div className="flex flex-wrap gap-2 border-b border-white/10 pb-4">

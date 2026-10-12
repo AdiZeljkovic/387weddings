@@ -182,11 +182,25 @@ router.get('/admin/:id/images', requireAuth, async (req, res) => {
 
 // PUT /api/stories/admin/fan — the fan's order, as dragged in the panel
 router.put('/admin/fan', requireAuth, async (req, res) => {
-  const ids: number[] = Array.isArray(req.body?.ids)
-    ? req.body.ids.map(Number).filter(Number.isFinite).slice(0, FAN_MAX) : [];
-  const client = await pool.connect();
+  // The board sends the stories in their new order. A missing or empty list,
+  // a repeated story or one that is not published is refused: an empty list
+  // used to clear the whole fan.
+  const raw: unknown[] = Array.isArray(req.body?.ids) ? req.body.ids : [];
+  const ids = raw.map(Number).filter(Number.isFinite);
+  if (!ids.length || ids.length > FAN_MAX || new Set(ids).size !== ids.length) {
+    res.status(400).json({ error: 'Neispravan redoslijed lepeze.' });
+    return;
+  }
+  let client: PoolClient | undefined;
   try {
+    client = await pool.connect();
     await client.query('BEGIN');
+    const ok = await client.query('SELECT id FROM stories WHERE id = ANY($1) AND is_published = TRUE', [ids]);
+    if (ok.rowCount !== ids.length) {
+      await client.query('ROLLBACK');
+      res.status(400).json({ error: 'U lepezi mogu biti samo objavljene priče.' });
+      return;
+    }
     await client.query('UPDATE stories SET fan_order = NULL WHERE fan_order IS NOT NULL AND NOT (id = ANY($1))', [ids]);
     for (let i = 0; i < ids.length; i++) {
       await client.query('UPDATE stories SET fan_order = $1 WHERE id = $2', [i + 1, ids[i]]);
@@ -194,13 +208,24 @@ router.put('/admin/fan', requireAuth, async (req, res) => {
     await client.query('COMMIT');
     res.json({ success: true });
   } catch (err) {
-    await client.query('ROLLBACK');
+    await client?.query('ROLLBACK').catch(() => {});
     console.error('[stories/fan/order]', err);
     res.status(500).json({ error: 'Server error' });
   } finally {
-    client.release();
+    client?.release();
   }
 });
+
+/** The fan's places, 1..n with no gaps, after any change to it */
+const renumberFan = (q: { query: PoolClient['query'] } = pool) => q.query(
+  `UPDATE stories s SET fan_order = r.n FROM (
+     SELECT id, ROW_NUMBER() OVER (ORDER BY fan_order, id) AS n
+       FROM stories WHERE fan_order IS NOT NULL
+   ) r WHERE s.id = r.id AND s.fan_order IS DISTINCT FROM r.n`
+);
+
+// Addresses the API already uses under /api/stories/, and the panel's own
+const RESERVED = new Set(['fan', 'admin', 'images']);
 
 /**
  * The address a story gets. Written by hand in the panel, it is taken as it is
@@ -209,9 +234,9 @@ router.put('/admin/fan', requireAuth, async (req, res) => {
  */
 async function addressFor(client: PoolClient, body: Record<string, unknown>, couple: string, id: number | null) {
   const fromTitle = slugify(couple);
-  const asked = slugify(String(body.slug || ''));
-  if (asked && asked !== fromTitle) return asked;
-  const base = fromTitle || `prica-${Date.now()}`;
+  const asked = slugify(typeof body.slug === 'string' ? body.slug : '');
+  if (asked && asked !== fromTitle && !RESERVED.has(asked)) return asked;
+  const base = fromTitle && !RESERVED.has(fromTitle) ? fromTitle : `prica-${fromTitle || Date.now()}`;
   for (let n = 1; n < 100; n++) {
     const candidate = n === 1 ? base : `${base}-${n}`;
     const { rowCount } = await client.query(
@@ -224,36 +249,43 @@ async function addressFor(client: PoolClient, body: Record<string, unknown>, cou
 const focusOk = (v: unknown) =>
   typeof v === 'string' && /^[\d.%\s a-z-]{0,40}$/i.test(v) ? (v || null) : null;
 
+// Text from the panel, trimmed and cut to what its column holds: an overlong
+// value used to fail the whole save with a bare "Server error"
+const txt = (v: unknown, max: number) =>
+  (typeof v === 'string' ? v.trim().slice(0, max) : typeof v === 'number' ? String(v) : '') || null;
+
 const readBody = (b: Record<string, unknown>) => {
   const fanOn = b.fan_on === true || (b.fan_on === undefined && Number(b.fan_order) > 0);
   const fanOrder = Number(b.fan_order);
   return {
-    couple: String(b.couple ?? '').trim(),
+    couple: (txt(b.couple, 255) ?? ''),
     category: CATEGORIES.includes(b.category as typeof CATEGORIES[number])
       ? (b.category as string) : 'WEDDINGS',
-    location: (b.location as string) || null,
-    date_text: (b.date_text as string) || null,
-    tag: (b.tag as string) || null,
-    tag_bs: (b.tag_bs as string) || (b.tag as string) || null,
-    tag_en: (b.tag_en as string) || (b.tag as string) || null,
-    cover_url: (b.cover_url as string) || null,
-    cover_alt: (b.cover_alt as string) || null,
+    location: txt(b.location, 255),
+    date_text: txt(b.date_text, 100),
+    tag: txt(b.tag, 100),
+    // The legacy single tag only fills a language that was not sent at all;
+    // a field the owner cleared stays clear
+    tag_bs: b.tag_bs !== undefined ? txt(b.tag_bs, 120) : txt(b.tag, 120),
+    tag_en: b.tag_en !== undefined ? txt(b.tag_en, 120) : txt(b.tag, 120),
+    cover_url: txt(b.cover_url, 500),
+    cover_alt: txt(b.cover_alt, 255),
     cover_layout: LAYOUTS.includes(b.cover_layout as typeof LAYOUTS[number])
       ? (b.cover_layout as string) : 'AUTO',
     // "50% 30%" — where the owner clicked on the photograph
     cover_focus: focusOk(b.cover_focus),
-    quote_bs: (b.quote_bs as string) || null,
-    quote_en: (b.quote_en as string) || null,
-    text_bs: (b.text_bs as string) || null,
-    text_en: (b.text_en as string) || null,
+    quote_bs: txt(b.quote_bs, 5000),
+    quote_en: txt(b.quote_en, 5000),
+    text_bs: txt(b.text_bs, 50000),
+    text_en: txt(b.text_en, 50000),
     // "Opis za Google": what search results and link previews show
-    seo_desc_bs: String(b.seo_desc_bs ?? '').trim().slice(0, 300) || null,
-    seo_desc_en: String(b.seo_desc_en ?? '').trim().slice(0, 300) || null,
+    seo_desc_bs: txt(b.seo_desc_bs, 300),
+    seo_desc_en: txt(b.seo_desc_en, 300),
     sort_order: Number.isFinite(Number(b.sort_order)) ? Number(b.sort_order) : 0,
     is_published: b.is_published !== false,
     fan_on: fanOn,
     fan_order: fanOn && fanOrder >= 1 && fanOrder <= FAN_MAX ? Math.round(fanOrder) : null,
-    fan_image: (b.fan_image as string) || null,
+    fan_image: txt(b.fan_image, 500),
     fan_focus: focusOk(b.fan_focus),
     // The story that makes room, when the fan is already full
     fan_replace: Number.isFinite(Number(b.fan_replace)) ? Number(b.fan_replace) : null,
@@ -271,7 +303,9 @@ async function placeInFan(
   id: number, v: ReturnType<typeof readBody>,
 ): Promise<{ status: number; body: unknown } | null> {
   if (!v.fan_on || !v.is_published) {
+    // Leaving the fan closes the gap it leaves behind
     await client.query('UPDATE stories SET fan_order = NULL WHERE id = $1', [id]);
+    await renumberFan(client);
     return null;
   }
   const others = await client.query(
@@ -286,7 +320,16 @@ async function placeInFan(
     }
     const out = others.rows.find(r => r.id === v.fan_replace)!;
     await client.query('UPDATE stories SET fan_order = NULL WHERE id = $1', [out.id]);
-    await client.query('UPDATE stories SET fan_order = $1 WHERE id = $2', [v.fan_order ?? out.fan_order, id]);
+    // The new story takes the place asked for (else the one it frees); the
+    // stories from that place on move along one, so no two share a place
+    const place = v.fan_order ?? out.fan_order;
+    await client.query(
+      `UPDATE stories SET fan_order = fan_order + 1
+        WHERE fan_order >= $1 AND id <> $2 AND fan_order IS NOT NULL`,
+      [place, id]
+    );
+    await client.query('UPDATE stories SET fan_order = $1 WHERE id = $2', [place, id]);
+    await renumberFan(client);
     return null;
   }
   // A free place: the one asked for, else the first one not taken
@@ -307,12 +350,7 @@ async function placeInFan(
   }
   await client.query('UPDATE stories SET fan_order = $1 WHERE id = $2', [place, id]);
   // Keep the places 1..n with no gaps
-  await client.query(
-    `UPDATE stories s SET fan_order = r.n FROM (
-       SELECT id, ROW_NUMBER() OVER (ORDER BY fan_order, id) AS n
-         FROM stories WHERE fan_order IS NOT NULL
-     ) r WHERE s.id = r.id`
-  );
+  await renumberFan(client);
   return null;
 }
 
@@ -322,8 +360,9 @@ router.post('/', requireAuth, async (req, res) => {
     res.status(400).json({ error: 'Ime para je obavezno' });
     return;
   }
-  const client = await pool.connect();
+  let client: PoolClient | undefined;
   try {
+    client = await pool.connect();
     await client.query('BEGIN');
     const slug = await addressFor(client, req.body, v.couple, null);
     const { rows } = await client.query(
@@ -349,7 +388,7 @@ router.post('/', requireAuth, async (req, res) => {
     const fresh = await pool.query('SELECT * FROM stories WHERE id = $1', [rows[0].id]);
     res.json(fresh.rows[0]);
   } catch (err: unknown) {
-    await client.query('ROLLBACK');
+    await client?.query('ROLLBACK').catch(() => {});
     if ((err as { code?: string }).code === '23505') {
       res.status(409).json({ error: 'Adresa stranice (slug) već postoji' });
       return;
@@ -357,7 +396,7 @@ router.post('/', requireAuth, async (req, res) => {
     console.error('[stories/create]', err);
     res.status(500).json({ error: 'Server error' });
   } finally {
-    client.release();
+    client?.release();
   }
 });
 
@@ -367,8 +406,9 @@ router.put('/:id', requireAuth, async (req, res) => {
     res.status(400).json({ error: 'Ime para je obavezno' });
     return;
   }
-  const client = await pool.connect();
+  let client: PoolClient | undefined;
   try {
+    client = await pool.connect();
     await client.query('BEGIN');
     const before = await client.query('SELECT slug FROM stories WHERE id = $1', [req.params.id]);
     if (before.rows.length === 0) {
@@ -412,7 +452,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     const fresh = await pool.query('SELECT * FROM stories WHERE id = $1', [rows[0].id]);
     res.json(fresh.rows[0]);
   } catch (err: unknown) {
-    await client.query('ROLLBACK');
+    await client?.query('ROLLBACK').catch(() => {});
     if ((err as { code?: string }).code === '23505') {
       res.status(409).json({ error: 'Adresa stranice (slug) već postoji' });
       return;
@@ -420,13 +460,15 @@ router.put('/:id', requireAuth, async (req, res) => {
     console.error('[stories/update]', err);
     res.status(500).json({ error: 'Server error' });
   } finally {
-    client.release();
+    client?.release();
   }
 });
 
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
     await pool.query('DELETE FROM stories WHERE id = $1', [req.params.id]);
+    // A story leaving the fan leaves no hole in its numbering
+    await renumberFan();
     res.json({ success: true });
   } catch (err) {
     console.error('[stories/delete]', err);
@@ -446,9 +488,9 @@ router.post('/:id/images', requireAuth, async (req, res) => {
     const { rows } = await pool.query(
       `INSERT INTO story_images (story_id, url, alt, caption, layout, focus, sort_order)
        VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [req.params.id, url, alt || null, caption || null,
+      [req.params.id, txt(url, 500), txt(alt, 255), txt(caption, 255),
        ['TALL', 'WIDE', 'SQUARE'].includes(layout) ? layout : 'TALL',
-       typeof focus === 'string' && focus ? focus.slice(0, 40) : null,
+       focusOk(focus),
        Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0]
     );
     res.json(rows[0]);
@@ -465,14 +507,16 @@ router.put('/images/:imageId', requireAuth, async (req, res) => {
       `UPDATE story_images
           SET alt = $1, caption = $2,
               layout = COALESCE($3, layout),
-              focus = COALESCE($4, focus),
+              -- sent: set it (an empty value clears it); not sent: keep it
+              focus = CASE WHEN $7::boolean THEN $4 ELSE focus END,
               sort_order = COALESCE($5, sort_order)
         WHERE id = $6 RETURNING *`,
-      [alt || null, caption || null,
+      [txt(alt, 255), txt(caption, 255),
        ['TALL', 'WIDE', 'SQUARE'].includes(layout) ? layout : null,
-       typeof focus === 'string' && focus ? focus.slice(0, 40) : null,
-       Number.isFinite(Number(sort_order)) ? Number(sort_order) : null,
-       req.params.imageId]
+       focusOk(focus),
+       Number.isFinite(Number(sort_order)) && sort_order !== null && sort_order !== '' ? Number(sort_order) : null,
+       req.params.imageId,
+       focus !== undefined]
     );
     if (rows.length === 0) {
       res.status(404).json({ error: 'Not found' });

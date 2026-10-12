@@ -2,10 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { useLanguage } from '../contexts/LanguageContext';
-import { loadSettings } from '../lib/settingsCache';
-import { respImg, SIZES } from '../lib/img';
+import { loadSettings, peekSettings } from '../lib/settingsCache';
+import { respImg, SIZES, THUMB_WIDTHS } from '../lib/img';
 import { ratioFor } from '../lib/imageMeta';
 import { storyExcerpt } from '../lib/excerpt';
+import { DEFAULT_META } from '../lib/seoDefaults';
 import { balanceColumns } from '../lib/masonry';
 import { OliveBranch, SectionLabel, DiamondRule } from '../components/ornaments';
 import Reveal from '../components/Reveal';
@@ -64,8 +65,9 @@ const Story = () => {
   const { t, language, getContentStyle } = useLanguage();
   const paths = usePaths();
   const [story, setStory] = useState<StoryData | null>(null);
-  const [status, setStatus] = useState<'loading' | 'ok' | 'missing'>('loading');
-  const [settings, setSettings] = useState<Record<string, string>>({});
+  const [status, setStatus] = useState<'loading' | 'ok' | 'missing' | 'error'>('loading');
+  const [retry, setRetry] = useState(0);
+  const [settings, setSettings] = useState<Record<string, string>>(() => peekSettings() ?? {});
   const [lightbox, setLightbox] = useState<number | null>(null);
 
   const navigate = useNavigate();
@@ -76,19 +78,21 @@ const Story = () => {
     fetch(`/api/stories/${encodeURIComponent(slug || '')}`)
       .then(async r => {
         if (r.ok) return r.json();
-        // The story was renamed: follow it to its new address
         const body = await r.json().catch(() => ({}));
+        // The story was renamed: follow it to its new address — unless the
+        // visitor has moved on meanwhile and this answer is for an old page
         if (body?.moved_to) {
-          navigate(`../${encodeURIComponent(body.moved_to)}`, { replace: true, relative: 'path' });
+          if (alive) navigate(`../${encodeURIComponent(body.moved_to)}`, { replace: true, relative: 'path' });
           return null;
         }
-        throw new Error('missing');
+        // Only "not found" is a missing story; a server fault is not a 404
+        throw new Error(r.status === 404 ? 'missing' : 'error');
       })
       .then(d => { if (alive && d) { setStory(d); setStatus('ok'); } })
-      .catch(() => { if (alive) setStatus('missing'); });
+      .catch(err => { if (alive) setStatus(err?.message === 'missing' ? 'missing' : 'error'); });
     loadSettings().then(setSettings).catch(() => {});
     return () => { alive = false; };
-  }, [slug]);
+  }, [slug, retry]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Five columns on a desktop, three on a tablet, two on a phone
   const colsFor = (w: number) => (w < 768 ? 2 : w < 1180 ? 3 : 5);
@@ -116,8 +120,8 @@ const Story = () => {
     };
     // A short account of the story itself, not just its date
     const lc = language === 'ENG' ? 'en' : 'bs';
-    const general = settings[`seo.story.desc.${lc}`]?.trim() || settings['seo.story.desc']?.trim()
-      || settings[`seo.portfolio.desc.${lc}`]?.trim() || settings['seo.portfolio.desc']?.trim() || '';
+    const general = settings[`seo.story.desc.${lc}`]?.trim()
+      || settings[`seo.portfolio.desc.${lc}`]?.trim() || DEFAULT_META.portfolio[lc][1];
     const desc = storyExcerpt(story, lc, general);
     set('meta[property="og:title"]', title);
     set('meta[name="twitter:title"]', title);
@@ -154,10 +158,29 @@ const Story = () => {
     id: i.id, url: i.url, alt: i.alt, caption: i.caption,
   }));
 
+  // A full screen while the story loads, so the footer below is never in
+  // view and pushed away the moment the story arrives (a layout shift)
   if (status === 'loading') {
     return (
-      <div className="bg-cream min-h-[70vh] flex items-center justify-center">
+      <div className="bg-cream min-h-[100svh] flex items-center justify-center">
         <span className="w-12 h-px bg-gold-600 animate-pulse" aria-hidden="true" />
+      </div>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="bg-cream min-h-[70vh] flex flex-col items-center justify-center text-center px-6 py-24 gap-6">
+        <p className="font-serif text-[22px] text-ink-900 m-0">
+          {language === 'ENG' ? 'This story could not be loaded.' : 'Priča se trenutno ne može učitati.'}
+        </p>
+        <button
+          type="button"
+          onClick={() => setRetry(n => n + 1)}
+          className="btn inline-block border border-ink-900 text-ink-900 text-[11px] font-medium tracking-[0.2em] uppercase px-7 py-4 hover:text-white"
+        >
+          {language === 'ENG' ? 'Try again' : 'Pokušaj ponovo'}
+        </button>
       </div>
     );
   }
@@ -269,7 +292,7 @@ const Story = () => {
           {columns.map((col, ci) => (
             <div key={ci} className="flex-1 min-w-0 flex flex-col gap-1 lg:gap-1.5">
               {col.map(({ item: { img, ratio }, index: i }) => {
-                const r = respImg(img.url);
+                const r = respImg(img.url, [...THUMB_WIDTHS, 1600]);
                 return (
                   <Reveal
                     as="button"
@@ -278,7 +301,7 @@ const Story = () => {
                     delay={Math.min(i, 10) * 0.04}
                     type="button"
                     onClick={() => setLightbox(i)}
-                    aria-label={img.alt || `Fotografija ${i + 1}`}
+                    aria-label={img.alt || (language === 'ENG' ? `Photograph ${i + 1}` : `Fotografija ${i + 1}`)}
                     className="zoom block w-full bg-rule cursor-zoom-in"
                     // Reserved at the photograph's own ratio, so nothing is
                     // cropped and the page does not jump as images arrive
@@ -313,7 +336,7 @@ const Story = () => {
           {/* Previous / next — always both, wrapping around the list */}
           {(story.prev_slug || story.next_slug) && (
             <nav
-              aria-label="Ostale priče"
+              aria-label={language === 'ENG' ? 'Other stories' : 'Ostale priče'}
               className="max-w-[1248px] mx-auto border-t border-rule pt-8 lg:pt-9 flex flex-wrap justify-between gap-6"
             >
               {story.prev_slug ? (

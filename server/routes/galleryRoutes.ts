@@ -1,4 +1,8 @@
 import { Router } from 'express';
+
+// Only uploading lives here now. The old gallery list/create/update/delete
+// routes and /meta were left over from before stories replaced the gallery;
+// nothing on the site or in the panel called them.
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -21,101 +25,16 @@ const upload = multer({
   storage,
   limits: { fileSize: 40 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowed = /jpeg|jpg|png|webp|avif/;
-    const ext = allowed.test(path.extname(file.originalname).toLowerCase());
-    const mime = allowed.test(file.mimetype);
+    // Whole names only (".xpng" used to pass); the file's real format is
+    // checked again by sharp once it has arrived
+    const ext = /^\.(jpe?g|png|webp|avif)$/.test(path.extname(file.originalname).toLowerCase());
+    const mime = /^image\/(jpeg|png|webp|avif)$/.test(file.mimetype);
     if (ext && mime) cb(null, true);
     else cb(new Error('Only image files are allowed'));
   },
 });
 
 const router = Router();
-
-// GET /api/gallery — public
-router.get('/', async (_req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT * FROM gallery_images WHERE is_active = TRUE ORDER BY sort_order ASC, created_at DESC'
-    );
-    res.setHeader('Cache-Control', 'public, max-age=60');
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// GET /api/gallery/all — admin (sve, uključujući neaktivne)
-router.get('/all', requireAuth, async (_req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT * FROM gallery_images ORDER BY sort_order ASC, created_at DESC'
-    );
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// POST /api/gallery — admin
-router.post('/', requireAuth, async (req, res) => {
-  const { url, category, title, location, sort_order, layout } = req.body;
-  if (!url || !category) {
-    res.status(400).json({ error: 'URL and category are required' });
-    return;
-  }
-  try {
-    const result = await pool.query(
-      'INSERT INTO gallery_images (url, category, layout, title, location, sort_order) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [url, category, layout || 'TALL', title || null, location || null, sort_order || 0]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// PUT /api/gallery/:id — admin
-router.put('/:id', requireAuth, async (req, res) => {
-  const { id } = req.params;
-  const { url, category, layout, title, location, sort_order, is_active } = req.body;
-  try {
-    const result = await pool.query(
-      `UPDATE gallery_images
-       SET url = COALESCE($1, url),
-           category = COALESCE($2, category),
-           layout = COALESCE($3, layout),
-           title = COALESCE($4, title),
-           location = COALESCE($5, location),
-           sort_order = COALESCE($6, sort_order),
-           is_active = COALESCE($7, is_active)
-       WHERE id = $8 RETURNING *`,
-      [url, category, layout, title, location, sort_order, is_active, id]
-    );
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Not found' });
-      return;
-    }
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// DELETE /api/gallery/:id — admin
-router.delete('/:id', requireAuth, async (req, res) => {
-  const { id } = req.params;
-  try {
-    await pool.query('DELETE FROM gallery_images WHERE id = $1', [id]);
-    res.json({ success: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
 
 // POST /api/gallery/upload — admin, file upload
 router.post('/upload', requireAuth, (req, res) => {
@@ -140,71 +59,61 @@ router.post('/upload', requireAuth, (req, res) => {
     // away resolution the photographer had paid for and softened every frame
     // on a retina screen. Delivery sizes are derived on demand by /img
     // instead, so the file on disk stays the master copy.
+    let width = 0, height = 0, orientation = '';
+    let filename = req.file.filename;
     try {
       const meta = await sharp(inputPath).metadata();
+      if (!meta.format || !['jpeg', 'png', 'webp', 'heif'].includes(meta.format)) throw new Error(`format ${meta.format}`);
       // EXIF orientation 5-8 stores the image rotated a quarter turn
       const turned = (meta.orientation ?? 1) >= 5;
-      const width  = (turned ? meta.height : meta.width) ?? 0;
-      const height = (turned ? meta.width : meta.height) ?? 0;
+      width  = (turned ? meta.height : meta.width) ?? 0;
+      height = (turned ? meta.width : meta.height) ?? 0;
       if (!width || !height) throw new Error('no dimensions');
+      orientation = width === height ? 'square' : width > height ? 'landscape' : 'portrait';
 
-      const orientation = width === height ? 'square' : width > height ? 'landscape' : 'portrait';
-
-      await pool.query(
-        `INSERT INTO image_meta (file, width, height, orientation)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (file) DO UPDATE
-           SET width = $2, height = $3, orientation = $4`,
-        [req.file.filename, width, height, orientation]
-      );
-
-      // The brief asks the panel to say so rather than silently accept it
-      const long = Math.max(width, height);
-      res.json({
-        url: `/uploads/${req.file.filename}`,
-        width,
-        height,
-        orientation,
-        warning: long < 2000
-          ? `Fotografija je ${width}x${height} px. Preporučeno je najmanje 2000 px `
-            + `po dužoj strani, inače može izgledati mekano na velikim ekranima.`
-          : undefined,
-      });
+      // The stored name carries the real format, not whatever the sender claimed
+      const realExt = meta.format === 'jpeg' ? '.jpg' : meta.format === 'heif' ? '.avif' : `.${meta.format}`;
+      if (path.extname(filename).toLowerCase() !== realExt) {
+        const renamed = filename.replace(/\.[^.]*$/, '') + realExt;
+        fs.renameSync(inputPath, path.join(process.cwd(), 'uploads', renamed));
+        filename = renamed;
+      }
     } catch (sharpErr) {
       // If sharp can't read it, the file isn't an image we trust — delete it
       // rather than serving an unverified upload.
       console.error('sharp could not read the upload, rejecting it:', sharpErr);
       try { fs.unlinkSync(inputPath); } catch { /* already gone */ }
       res.status(400).json({ error: 'Datoteka nije važeća slika.' });
+      return;
     }
-  });
-});
 
-// GET /api/gallery/meta?files=a.jpg,b.jpg — real dimensions, so the front end
-// can reserve each frame at the photograph's own aspect ratio and never crop.
-router.get('/meta', async (req, res) => {
-  const files = String(req.query.files || '')
-    .split(',')
-    .map(f => path.basename(f.trim()))
-    .filter(Boolean)
-    .slice(0, 200);
-  if (!files.length) {
-    res.json({});
-    return;
-  }
-  try {
-    const { rows } = await pool.query(
-      'SELECT file, width, height, orientation FROM image_meta WHERE file = ANY($1)',
-      [files]
-    );
-    const out: Record<string, { width: number; height: number; orientation: string }> = {};
-    for (const r of rows) out[r.file] = { width: r.width, height: r.height, orientation: r.orientation };
-    res.setHeader('Cache-Control', 'public, max-age=300');
-    res.json(out);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
+    // A database hiccup here must not throw away a good photograph: the file
+    // stays and is used; its size is filled in later by the start-up backfill
+    try {
+      await pool.query(
+        `INSERT INTO image_meta (file, width, height, orientation)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (file) DO UPDATE
+           SET width = $2, height = $3, orientation = $4`,
+        [filename, width, height, orientation]
+      );
+    } catch (dbErr) {
+      console.error('[upload] image_meta not stored:', dbErr);
+    }
+
+    // The brief asks the panel to say so rather than silently accept it
+    const long = Math.max(width, height);
+    res.json({
+      url: `/uploads/${filename}`,
+      width,
+      height,
+      orientation,
+      warning: long < 2000
+        ? `Fotografija je ${width}x${height} px. Preporučeno je najmanje 2000 px `
+          + `po dužoj strani, inače može izgledati mekano na velikim ekranima.`
+        : undefined,
+    });
+  });
 });
 
 export default router;

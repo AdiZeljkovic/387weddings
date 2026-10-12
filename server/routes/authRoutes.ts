@@ -8,11 +8,16 @@ dotenv.config();
 
 const router = Router();
 
+// Compared against when the username does not exist, so a wrong name takes
+// as long as a wrong password and the answer time does not reveal which
+// accounts exist
+const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', 12);
+
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) {
-    res.status(400).json({ error: 'Username and password required' });
+  const { username, password } = req.body ?? {};
+  if (typeof username !== 'string' || typeof password !== 'string' || !username || !password) {
+    res.status(400).json({ error: 'Upiši korisničko ime i lozinku.' });
     return;
   }
 
@@ -22,16 +27,11 @@ router.post('/login', async (req, res) => {
       [username]
     );
 
-    if (result.rows.length === 0) {
-      res.status(401).json({ error: 'Invalid credentials' });
-      return;
-    }
-
     const user = result.rows[0];
-    const valid = await bcrypt.compare(password, user.password_hash);
+    const valid = await bcrypt.compare(password, user?.password_hash ?? DUMMY_HASH);
 
-    if (!valid) {
-      res.status(401).json({ error: 'Invalid credentials' });
+    if (!user || !valid) {
+      res.status(401).json({ error: 'Pogrešno korisničko ime ili lozinka.' });
       return;
     }
 
@@ -53,7 +53,12 @@ router.post('/login', async (req, res) => {
 
 // POST /api/auth/logout
 router.post('/logout', (_req, res) => {
-  res.clearCookie('admin_token');
+  // Cleared with the same flags it was set with, or some browsers keep it
+  res.clearCookie('admin_token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+  });
   res.json({ success: true });
 });
 

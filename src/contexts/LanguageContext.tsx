@@ -198,16 +198,23 @@ const translations: Record<Language, Record<string, string>> = {
 };
 
 // Module-level cache — same pattern as settingsCache, prevents refetch on remount
-let _contentCache: { key: string; value_en: string; value_bs: string; font_size?: string; font_family?: string; text_color?: string }[] | null = null;
+type ContentRow = { key: string; value_en: string; value_bs: string; font_size?: string; font_family?: string; text_color?: string };
+// Inlined by the server (window.__BOOT__), so the texts are right on the first
+// render instead of switching from the built-in ones a moment later
+let _contentCache: ContentRow[] | null = (typeof window !== 'undefined'
+  ? (window as unknown as { __BOOT__?: { content?: ContentRow[] } }).__BOOT__?.content
+  : undefined) ?? null;
 let _contentPromise: Promise<typeof _contentCache> | null = null;
 
 function loadContent(): Promise<typeof _contentCache> {
   if (_contentCache) return Promise.resolve(_contentCache);
   if (_contentPromise) return _contentPromise;
-  _contentPromise = fetch('/api/content')
-    .then(r => r.json())
+  // A failed request is not remembered: the next caller tries again, rather
+  // than the whole visit showing the built-in fallback texts
+  _contentPromise = fetch('/api/content', { cache: 'no-cache' })
+    .then(r => (r.ok ? r.json() : Promise.reject(new Error(`content ${r.status}`))))
     .then(data => { _contentCache = Array.isArray(data) ? data : []; return _contentCache; })
-    .catch(() => { _contentCache = []; return _contentCache; });
+    .catch(() => { _contentPromise = null; return null; });
   return _contentPromise;
 }
 
@@ -217,6 +224,23 @@ export function invalidateContentCache() {
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+
+/** The texts (and any font, size or colour set in the panel) by key */
+function buildContent(data: ContentRow[]) {
+  const map: Record<string, { en: string; bs: string }> = {};
+  const styles: Record<string, { fontSize?: string; fontFamily?: string; color?: string }> = {};
+  data.forEach(item => {
+    map[item.key] = { en: item.value_en || '', bs: item.value_bs || '' };
+    if (item.font_size || item.font_family || item.text_color) {
+      styles[item.key] = {
+        ...(item.font_size   ? { fontSize:   item.font_size }   : {}),
+        ...(item.font_family ? { fontFamily: item.font_family } : {}),
+        ...(item.text_color  ? { color:      item.text_color }  : {}),
+      };
+    }
+  });
+  return { map, styles };
+}
 
 type DbContent = Record<string, { en: string; bs: string }>;
 type DbStyles = Record<string, { fontSize?: string; fontFamily?: string; color?: string }>;
@@ -228,38 +252,25 @@ const FONT_FAMILIES: Record<string, string> = {
 };
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  // The address decides the language: /en/... is English, everything else is
-  // Bosnian. A remembered choice only applies when the address says nothing,
-  // so a shared link always opens in the language it was written in.
+  // The address alone decides the language: /en/... is English, everything
+  // else is Bosnian. A remembered choice used to apply to Bosnian addresses
+  // too, so anyone who had once clicked ENG got English text — and English
+  // links without /en — on /radovi and every other Bosnian page. Old ?lang=
+  // links are moved to the right address by the server before this runs.
   const [language, setLanguageState] = useState<Language>(() => {
     try {
-      if (langFromPath(window.location.pathname) === 'ENG') return 'ENG';
-      // ?lang= is still honoured for links sent before the move to /en
-      const fromUrl = new URLSearchParams(window.location.search).get('lang');
-      if (fromUrl === 'en') return 'ENG';
-      if (fromUrl === 'bs') return 'BOS';
-      const saved = localStorage.getItem('387_language');
-      if (saved === 'ENG' || saved === 'BOS') return saved;
-    } catch {}
-    return 'BOS';
+      return langFromPath(window.location.pathname);
+    } catch {
+      return 'BOS';
+    }
   });
 
-  const [dbContent, setDbContent] = useState<DbContent>({});
-  const [dbStyles, setDbStyles] = useState<DbStyles>({});
+  // From the inlined texts when the server sent them, so nothing swaps
+  const [dbContent, setDbContent] = useState<DbContent>(() => (_contentCache ? buildContent(_contentCache).map : {}));
+  const [dbStyles, setDbStyles] = useState<DbStyles>(() => (_contentCache ? buildContent(_contentCache).styles : {}));
 
-  const applyContent = useCallback((data: NonNullable<typeof _contentCache>) => {
-    const map: DbContent = {};
-    const styles: DbStyles = {};
-    data.forEach(item => {
-      map[item.key] = { en: item.value_en || '', bs: item.value_bs || '' };
-      if (item.font_size || item.font_family || item.text_color) {
-        styles[item.key] = {
-          ...(item.font_size   ? { fontSize:   item.font_size }   : {}),
-          ...(item.font_family ? { fontFamily: item.font_family } : {}),
-          ...(item.text_color  ? { color:      item.text_color }  : {}),
-        };
-      }
-    });
+  const applyContent = useCallback((data: ContentRow[]) => {
+    const { map, styles } = buildContent(data);
     setDbContent(map);
     setDbStyles(styles);
   }, []);
@@ -272,7 +283,6 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => { loadContent().then(data => { if (data) applyContent(data); }); }, [applyContent]);
 
   const setLanguage = (lang: Language) => {
-    try { localStorage.setItem('387_language', lang); } catch {}
     if (lang === language) return;
 
     // Switching language moves to that language's address. The Router is

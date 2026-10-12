@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function AdminLogin() {
-  const { login, admin } = useAuth();
+  const { login, admin, isLoading } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  if (admin) {
-    navigate('/admin', { replace: true });
-    return null;
-  }
+  // Signed in already: straight to the panel (a redirect element, not a
+  // navigate() during render); still checking: nothing, so the form does not
+  // flash before it
+  if (admin) return <Navigate to="/admin" replace />;
+  if (isLoading) return <div className="min-h-screen bg-moody-950" />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

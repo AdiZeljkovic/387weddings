@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { useLanguage } from '../contexts/LanguageContext';
-import { loadSettings } from '../lib/settingsCache';
+import { loadSettings, peekSettings } from '../lib/settingsCache';
 import { respImg, SIZES } from '../lib/img';
 import { cardRatio } from '../lib/imageMeta';
 import { OliveBranch, SectionLabel, DiamondRule } from '../components/ornaments';
@@ -59,7 +59,7 @@ const CoupleName = ({ name, className = '' }: { name: string; className?: string
 };
 
 const Portfolio = () => {
-  const { t, getContentStyle } = useLanguage();
+  const { t, getContentStyle, language } = useLanguage();
   const paths = usePaths();
   const [searchParams] = useSearchParams();
   const initialCat = (searchParams.get('cat') || '').toUpperCase();
@@ -68,16 +68,23 @@ const Portfolio = () => {
   );
   const [stories, setStories] = useState<StoryCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [settings, setSettings] = useState<Record<string, string>>({});
+  const [failed, setFailed] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const [settings, setSettings] = useState<Record<string, string>>(() => peekSettings() ?? {});
   const [cols, setCols] = useState(() => (typeof window === 'undefined' ? 3 : colsFor(window.innerWidth)));
 
   useEffect(() => {
+    setLoading(true);
+    setFailed(false);
+    // A failure is not "no stories in this category": it says so and offers
+    // to try again
     fetch('/api/stories')
-      .then(r => (r.ok ? r.json() : []))
-      .then(d => { setStories(Array.isArray(d) ? d : []); setLoading(false); })
-      .catch(() => setLoading(false));
+      .then(r => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then(d => setStories(Array.isArray(d) ? d : []))
+      .catch(() => setFailed(true))
+      .finally(() => setLoading(false));
     loadSettings().then(setSettings).catch(() => {});
-  }, []);
+  }, [retry]);
 
   useEffect(() => {
     const onResize = () => setCols(colsFor(window.innerWidth));
@@ -151,8 +158,11 @@ const Portfolio = () => {
       <section className="px-5 lg:px-24 pb-[72px] lg:pb-32 pt-2 lg:pt-6">
         <div className="max-w-[1248px] mx-auto">
           <nav
-            aria-label="Filter radova"
-            className="flex flex-nowrap lg:flex-wrap justify-center gap-x-1 lg:gap-x-2 border-b border-rule max-w-[640px] mx-auto mb-10 lg:mb-16"
+            aria-label={language === 'ENG' ? 'Filter the work' : 'Filter radova'}
+            // One row, centred; on a very narrow phone it scrolls sideways
+            // instead of spilling out of the page ("safe" keeps the first
+            // filter reachable)
+            className="flex flex-nowrap lg:flex-wrap [justify-content:safe_center] overflow-x-auto no-scrollbar gap-x-1 lg:gap-x-2 border-b border-rule max-w-[640px] mx-auto mb-10 lg:mb-16"
           >
             {categories.map(c => {
               const active = activeFilter === c;
@@ -180,6 +190,19 @@ const Portfolio = () => {
               {[...Array(6)].map((_, i) => (
                 <div key={i} className={`${['aspect-[3/4]', 'aspect-[4/3]'][i % 2]} bg-rule/40 animate-pulse`} />
               ))}
+            </div>
+          ) : failed ? (
+            <div className="text-center py-24">
+              <p className="font-serif text-lg text-ink-400 m-0 mb-6">
+                {language === 'ENG' ? 'The stories could not be loaded.' : 'Priče se trenutno ne mogu učitati.'}
+              </p>
+              <button
+                type="button"
+                onClick={() => setRetry(n => n + 1)}
+                className="btn inline-block border border-ink-900 text-ink-900 text-[11px] font-medium tracking-[0.2em] uppercase px-7 py-4 hover:text-white"
+              >
+                {language === 'ENG' ? 'Try again' : 'Pokušaj ponovo'}
+              </button>
             </div>
           ) : filtered.length === 0 ? (
             <p
@@ -222,7 +245,9 @@ const Portfolio = () => {
                               alt={item.cover_alt || item.couple || ''}
                               className="w-full h-full object-cover"
                               style={{ objectPosition: item.cover_focus || undefined }}
-                              loading="lazy"
+                              // The first card is the largest thing on screen
+                              loading={index === 0 ? 'eager' : 'lazy'}
+                              fetchPriority={index === 0 ? 'high' : 'auto'}
                               decoding="async"
                               draggable={false}
                               referrerPolicy="no-referrer"

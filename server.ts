@@ -23,6 +23,23 @@ import { langFromPath, stripLang, routeOf, pathFor } from './src/lib/lang.js';
 
 dotenv.config();
 
+// ── Last-resort safety nets ──────────────────────────────────────────────────
+// Node ends the process on an unhandled rejection, and Express 4 does not catch
+// a rejected async handler — so one bad request used to restart the whole
+// site. Each is now logged and the request gets a 500 from the error handler.
+process.on('unhandledRejection', err => {
+  console.error('[unhandledRejection]', err);
+});
+process.on('uncaughtException', err => {
+  console.error('[uncaughtException]', err);
+});
+
+/** Runs an async middleware so a rejection reaches the error handler */
+const safe = (fn: (req: express.Request, res: express.Response, next: express.NextFunction) => Promise<unknown>) =>
+  (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    fn(req, res, next).catch(next);
+  };
+
 // ── Env validation ───────────────────────────────────────────────────────────
 const REQUIRED_ENV = ['DATABASE_URL', 'JWT_SECRET'] as const;
 const missing = REQUIRED_ENV.filter(k => !process.env[k]);
@@ -107,10 +124,15 @@ async function startServer() {
     }
     const lang = req.query.lang;
     if (lang !== 'en' && lang !== 'bs') return next();
+    // Only a page of this site is ever a target: //evil.com?lang=bs used to
+    // answer with a redirect to another domain
+    if (!routeOf(stripLang(req.path)) || /^[\/\\]{2}/.test(req.path)) return next();
 
     const target = pathFor(lang === 'en' ? 'ENG' : 'BOS', req.path);
 
-    const params = new URLSearchParams(req.query as Record<string, string>);
+    // The rest of the query as it was written, minus lang
+    const raw = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?') + 1) : '';
+    const params = new URLSearchParams(raw);
     params.delete('lang');
     const qs = params.toString();
     res.redirect(301, qs ? `${target}?${qs}` : target);
@@ -123,7 +145,7 @@ async function startServer() {
   // way round moves permanently to the right one, so every old link and every
   // indexed address keeps working. A story renamed in the panel also sends its
   // old address on to the new one.
-  app.use(async (req, res, next) => {
+  app.use(safe(async (req, res, next) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return next();
     if (/^\/(api|admin|uploads|img|assets)(\/|$)/.test(req.path) || path.extname(req.path)) return next();
     const lang = langFromPath(req.path);
@@ -150,7 +172,7 @@ async function startServer() {
     const here = req.path.replace(/\/+$/, '') || '/';
     if (own !== here) return res.redirect(301, own + qs);
     next();
-  });
+  }));
 
   // ── CORS ───────────────────────────────────────────────────────────────────
   const allowedOrigins = isProd
@@ -200,7 +222,10 @@ async function startServer() {
   });
 
   // ── API Routes ─────────────────────────────────────────────────────────────
-  app.use('/api/auth', authLimiter, authRoutes);
+  // Only signing in is rate-limited: /me runs on every panel load, and counting
+  // it locked the owner out after ten reloads while still signed in
+  app.post('/api/auth/login', authLimiter);
+  app.use('/api/auth', authRoutes);
   app.use('/api/gallery', galleryRoutes);
   app.use('/api/stories', storyRoutes);
   app.use('/api/contact', contactLimiter, contactRoutes);
@@ -220,9 +245,15 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static(path.join(process.cwd(), 'dist'), {
+    // Hashed build files never change, so they are cached for a year; the
+    // rest (favicons, robots-like files) must be able to change
+    app.use('/assets', express.static(path.join(process.cwd(), 'dist', 'assets'), {
       maxAge: '1y',
       immutable: true,
+      index: false,
+    }));
+    app.use(express.static(path.join(process.cwd(), 'dist'), {
+      maxAge: '1d',
       index: false,
     }));
     // A single-page app answered 200 for every URL, so unknown pages looked
@@ -233,7 +264,7 @@ async function startServer() {
 
     const shell = path.join(process.cwd(), 'dist', 'index.html');
 
-    app.get('*', async (req, res) => {
+    app.get('*', safe(async (req, res) => {
       // Anything with a file extension that reached this point does not exist
       if (path.extname(req.path)) {
         res.status(404).type('text/plain').send('Not found');
@@ -270,8 +301,31 @@ async function startServer() {
       } catch {
         res.status(ok ? 200 : 404).sendFile(shell);
       }
-    });
+    }));
   }
+
+  // ── Errors ─────────────────────────────────────────────────────────────────
+  // Anything thrown or rejected above ends here: logged, and answered with a
+  // plain 500 that gives nothing away
+  app.use(async (err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (res.headersSent) return;
+    // The visitor's mistake (a malformed address such as /radovi/%E0, a body
+    // that is not JSON): a 4xx, and for a page the site's own 404
+    const status = (err as { status?: number })?.status;
+    if (status && status >= 400 && status < 500) {
+      if (req.path.startsWith('/api/')) { res.status(status).json({ error: 'Bad request' }); return; }
+      try {
+        const lang = req.path === '/en' || req.path.startsWith('/en/') ? 'en' : 'bs';
+        res.status(404).type('html').send(await renderShell('/404', lang));
+      } catch {
+        res.status(404).type('text/plain').send('Not found');
+      }
+      return;
+    }
+    console.error('[error]', req.method, req.originalUrl, err);
+    if (req.path.startsWith('/api/')) res.status(500).json({ error: 'Server error' });
+    else res.status(500).type('text/plain').send('Server error');
+  });
 
   const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);
@@ -284,7 +338,7 @@ async function startServer() {
     console.log(`\n${signal} received — shutting down gracefully`);
     server.close(() => {
       console.log('HTTP server closed');
-      process.exit(0);
+      pool.end().catch(() => {}).finally(() => process.exit(0));
     });
     setTimeout(() => process.exit(1), 10_000); // force-kill after 10s
   };
@@ -293,4 +347,10 @@ async function startServer() {
   process.on('SIGINT',  () => shutdown('SIGINT'));
 }
 
-startServer().catch(console.error);
+// A failed start (database unreachable, a migration error) must not leave a
+// process running that never listens: exit non-zero so the platform restarts
+// it and shows the failure
+startServer().catch(err => {
+  console.error('[startup] failed:', err);
+  process.exit(1);
+});

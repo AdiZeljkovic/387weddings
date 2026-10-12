@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
 import { requireAuth, verifyToken } from '../auth.js';
+import { invalidateShellCache } from '../shell.js';
 
 const router = Router();
 
@@ -40,16 +41,27 @@ router.get('/', async (req, res) => {
 
 // PUT /api/settings — admin (bulk update)
 router.put('/', requireAuth, async (req, res) => {
-  const updates: Record<string, string> = req.body;
-  if (!updates || typeof updates !== 'object') {
+  const updates = req.body as Record<string, unknown>;
+  if (!updates || typeof updates !== 'object' || Array.isArray(updates)) {
     res.status(400).json({ error: 'Body must be a key-value object' });
     return;
+  }
+  // Text values only, and never the migration markers (migr.*), which only
+  // the server writes
+  const entries: [string, string][] = [];
+  for (const [key, value] of Object.entries(updates)) {
+    if (key.startsWith('migr.') || key.length > 200) continue;
+    if (value !== null && typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') {
+      res.status(400).json({ error: `Neispravna vrijednost za ${key}` });
+      return;
+    }
+    entries.push([key, value === null ? '' : String(value)]);
   }
   try {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      for (const [key, value] of Object.entries(updates)) {
+      for (const [key, value] of entries) {
         await client.query(
           `INSERT INTO site_settings (key, value) VALUES ($1, $2)
            ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
@@ -58,15 +70,18 @@ router.put('/', requireAuth, async (req, res) => {
       }
       await client.query('COMMIT');
     } catch (err) {
-      await client.query('ROLLBACK');
+      await client.query('ROLLBACK').catch(() => {});
       throw err;
     } finally {
       client.release();
     }
+    // The pages' head and inlined data show the change on the next view
+    invalidateShellCache();
 
     const result = await pool.query('SELECT key, value FROM site_settings');
     const settings: Record<string, string> = {};
     for (const row of result.rows) {
+      if (row.key.startsWith('migr.')) continue;
       settings[row.key] = row.value;
     }
     res.json(settings);
@@ -76,18 +91,16 @@ router.put('/', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/stats — admin dashboard
+// GET /api/settings/stats — admin dashboard
 router.get('/stats', requireAuth, async (_req, res) => {
   try {
-    const [gallery, stories, submissions, newSubmissions] = await Promise.all([
-      pool.query('SELECT COUNT(*) FROM gallery_images WHERE is_active = TRUE'),
+    const [stories, submissions, newSubmissions] = await Promise.all([
       pool.query('SELECT COUNT(*) FROM stories WHERE is_published = TRUE'),
       pool.query('SELECT COUNT(*) FROM contact_submissions'),
       pool.query("SELECT COUNT(*) FROM contact_submissions WHERE status = 'new'"),
     ]);
 
     res.json({
-      gallery: parseInt(gallery.rows[0].count),
       stories: parseInt(stories.rows[0].count),
       total_submissions: parseInt(submissions.rows[0].count),
       new_submissions: parseInt(newSubmissions.rows[0].count),

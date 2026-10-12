@@ -22,6 +22,20 @@ const write = (v: Exclude<Consent, null>) => {
   window.dispatchEvent(new CustomEvent('387:consent', { detail: v }));
 };
 
+/** Opens the banner again, so a choice can be changed (the footer's link) */
+export const reopenConsent = () => window.dispatchEvent(new Event('387:consent-reopen'));
+
+// Google Analytics' cookies, on this host and on the parent domain
+const clearAnalyticsCookies = () => {
+  const host = window.location.hostname;
+  const domains = ['', host, `.${host}`, `.${host.split('.').slice(-2).join('.')}`];
+  document.cookie.split(';').map(c => c.split('=')[0].trim())
+    .filter(name => /^(_ga|_gid|_gat|_gcl)/.test(name))
+    .forEach(name => domains.forEach(d => {
+      document.cookie = `${name}=; Max-Age=0; path=/${d ? `; domain=${d}` : ''}`;
+    }));
+};
+
 /**
  * Analytics was loading before anyone agreed to it. Nothing is injected now
  * until this returns "granted" — see AnalyticsInjector in App.tsx.
@@ -50,12 +64,24 @@ const CookieBanner = () => {
   useEffect(() => {
     // Give the page a moment so the banner never competes with the intro
     const id = window.setTimeout(() => setVisible(readConsent() === null), 1200);
-    return () => clearTimeout(id);
+    const reopen = () => setVisible(true);
+    window.addEventListener('387:consent-reopen', reopen);
+    return () => { clearTimeout(id); window.removeEventListener('387:consent-reopen', reopen); };
   }, []);
 
   if (!visible) return null;
 
-  const decide = (v: Exclude<Consent, null>) => { write(v); setVisible(false); };
+  const decide = (v: Exclude<Consent, null>) => {
+    const before = readConsent();
+    write(v);
+    setVisible(false);
+    // Withdrawing consent must undo it: the analytics cookies go, and the
+    // page reloads without the scripts that were already running
+    if (before === 'granted' && v === 'denied') {
+      clearAnalyticsCookies();
+      window.location.reload();
+    }
+  };
 
   return (
     <div
@@ -63,7 +89,8 @@ const CookieBanner = () => {
       role="dialog"
       aria-live="polite"
       aria-label={t('cookie.title')}
-      className="fixed inset-x-0 bottom-0 z-[1200] bg-white border-t border-rule px-5 sm:px-8 py-3.5 lg:py-5 shadow-[0_-2px_24px_rgba(0,0,0,0.08)]"
+      // Above the page, below the open mobile menu (1010) and its header
+      className="fixed inset-x-0 bottom-0 z-[1000] bg-white border-t border-rule px-5 sm:px-8 py-3.5 lg:py-5 shadow-[0_-2px_24px_rgba(0,0,0,0.08)]"
     >
       {/* Compact on a phone: the text in two short lines, both buttons beside
           each other under it */}

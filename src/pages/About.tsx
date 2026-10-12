@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useLanguage } from '../contexts/LanguageContext';
-import { loadSettings } from '../lib/settingsCache';
+import { loadSettings, peekSettings } from '../lib/settingsCache';
 import { respImg, SIZES } from '../lib/img';
 import { OliveBranch, SectionLabel } from '../components/ornaments';
 import Reveal from '../components/Reveal';
@@ -69,7 +69,9 @@ const Bio = ({ n, portrait, ratio, flip, altText, focus }: {
             alt={altText || t(`${base}.title.part2`)}
             style={{ objectPosition: focus || '50% 25%' }}
             className="w-full h-full object-cover"
-            loading="lazy"
+            // The first portrait is the largest thing on screen: fetched at once
+            loading={n === 1 ? 'eager' : 'lazy'}
+            fetchPriority={n === 1 ? 'high' : 'auto'}
             decoding="async"
             draggable={false}
             referrerPolicy="no-referrer"
@@ -135,7 +137,7 @@ const Bio = ({ n, portrait, ratio, flip, altText, focus }: {
 const About = () => {
   const { t, getContentStyle } = useLanguage();
   const paths = usePaths();
-  const [imgs, setImgs] = useState<Record<string, string>>({});
+  const [imgs, setImgs] = useState<Record<string, string>>(() => peekSettings() ?? {});
 
   useEffect(() => {
     loadSettings().then(setImgs).catch(err => console.warn('About: settings load failed', err));

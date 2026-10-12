@@ -129,7 +129,7 @@ export function FocusPicker({ src, value, onChange, ratio = '2 / 3' }: {
         <div className="rounded-sm overflow-hidden border border-white/10 bg-moody-950" style={{ aspectRatio: ratio }}>
           <img src={src} alt="" className="w-full h-full object-cover" style={{ objectPosition: value || '50% 50%' }} draggable={false} />
         </div>
-        <p className="text-white/25 text-[9px] mt-1 leading-snug">Ovako izgleda u lepezi</p>
+        <p className="text-white/25 text-[9px] mt-1 leading-snug">Pregled isječka</p>
       </div>
     </div>
   );

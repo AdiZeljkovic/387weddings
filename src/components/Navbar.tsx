@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { cn } from '../lib/utils';
+// clsx alone: tailwind-merge (8 KB) is only needed in the panel
+import { clsx as cn } from 'clsx';
 import { useLanguage } from '../contexts/LanguageContext';
-import { loadSettings } from '../lib/settingsCache';
+import { loadSettings, peekSettings } from '../lib/settingsCache';
 import Logo from './Logo';
 import { usePaths } from '../lib/routes';
 
@@ -30,7 +31,7 @@ const Navbar = () => {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const [settings, setSettings] = useState<Record<string, string>>({});
+  const [settings, setSettings] = useState<Record<string, string>>(() => peekSettings() ?? {});
   const location = useLocation();
 
   useEffect(() => {
@@ -41,16 +42,25 @@ const Navbar = () => {
 
   // Close on Escape and keep the page behind the open menu from scrolling
   useEffect(() => {
-    if (!isMobileMenuOpen) {
-      document.body.style.overflow = '';
-      return;
-    }
+    if (!isMobileMenuOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsMobileMenuOpen(false); };
     document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    // The page behind the menu can be neither tabbed into nor read out
+    const behind = Array.from(document.querySelectorAll<HTMLElement>('main, footer'));
+    behind.forEach(el => el.setAttribute('inert', ''));
+    // A tablet turned to landscape (or a window widened) gets the desktop
+    // header, which has no close button: the menu closes itself rather than
+    // leaving the page locked
+    const wide = window.matchMedia('(min-width: 1024px)');
+    const onWide = () => { if (wide.matches) setIsMobileMenuOpen(false); };
+    wide.addEventListener('change', onWide);
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
+      document.body.style.overflow = prevOverflow;
+      behind.forEach(el => el.removeAttribute('inert'));
+      wide.removeEventListener('change', onWide);
     };
   }, [isMobileMenuOpen]);
 
@@ -95,7 +105,10 @@ const Navbar = () => {
     : `https://instagram.com/${instagramHandle}`;
 
   // 12px on a phone (the agreed minimum there), the board's 10px on a desktop
-  const LangSwitch = ({ light }: { light?: boolean }) => (
+  // Called as a function, not mounted as <LangSwitch/>: a component declared
+  // inside Navbar is a new type on every render, so React rebuilt the two
+  // buttons each time and a keyboard user's focus on them was lost
+  const langSwitch = ({ light }: { light?: boolean }) => (
     <span className="flex items-center gap-[7px] leading-none text-[12px] lg:text-[10px] tracking-[0.16em]">
       {(['ENG', 'BOS'] as const).map((lang, i) => (
         <React.Fragment key={lang}>
@@ -194,13 +207,16 @@ const Navbar = () => {
           />
         </nav>
 
-        <LangSwitch light={overHero} />
+        {langSwitch({ light: overHero })}
 
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(o => !o)}
-            aria-label={isMobileMenuOpen ? 'Zatvori' : 'Meni'}
+            aria-label={isMobileMenuOpen
+              ? (language === 'ENG' ? 'Close the menu' : 'Zatvori meni')
+              : (language === 'ENG' ? 'Menu' : 'Meni')}
             aria-expanded={isMobileMenuOpen}
+            aria-controls="mobile-menu"
             className={cn(
               'lg:hidden px-1 py-3 min-w-11 min-h-11 justify-center',
               isMobileMenuOpen ? 'relative flex items-center' : 'flex flex-col items-end gap-[7px]',
@@ -225,16 +241,18 @@ const Navbar = () => {
       {/* ── Full-screen mobile menu ─────────────────────────────────────────── */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 z-[1010] bg-cream flex flex-col lg:hidden overflow-hidden animate-[fadeIn_0.3s_cubic-bezier(.2,.6,.2,1)_both] motion-reduce:animate-none"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Meni"
+          // Not a modal dialog: its close button and language switch are in
+          // the header above, which a modal would hide from screen readers.
+          // The page behind is made inert instead (see the effect above).
+          // It scrolls when the screen is short (a phone on its side).
+          className="fixed inset-0 z-[1010] bg-cream flex flex-col lg:hidden overflow-y-auto overscroll-contain animate-[fadeIn_0.3s_cubic-bezier(.2,.6,.2,1)_both] motion-reduce:animate-none"
+          id="mobile-menu"
         >
             {/* The header above stays put and carries the logo, the language
-                switch and the close button — the menu no longer draws its own. */}
-            <div aria-hidden="true" className="flex-none h-[58px]" />
+                switch and the close button — the menu leaves room for it. */}
+            <div aria-hidden="true" className="flex-none h-[var(--header-h,100px)]" />
 
-            <nav aria-label="Glavni meni" className="flex-1 flex flex-col items-center justify-center gap-1 pb-5">
+            <nav aria-label={language === 'ENG' ? 'Main menu' : 'Glavni meni'} className="flex-1 flex flex-col items-center justify-center gap-1 pb-5">
               {links.map(link => {
                 // A story belongs to Radovi, so Radovi stays marked while one is open
             const active = link.path === '/' ? location.pathname === '/'

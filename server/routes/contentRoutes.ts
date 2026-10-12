@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
 import { requireAuth } from '../auth.js';
+import { invalidateShellCache } from '../shell.js';
 
 const router = Router();
 
@@ -10,7 +11,8 @@ router.get('/', async (_req, res) => {
     const result = await pool.query(
       'SELECT key, value_en, value_bs, font_size, font_family, text_color FROM page_content ORDER BY page, section, sort_order'
     );
-    res.setHeader('Cache-Control', 'public, max-age=60');
+    // Revalidated every time, so a text saved in the panel shows at once
+    res.setHeader('Cache-Control', 'no-cache');
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -48,22 +50,25 @@ router.post('/bulk', requireAuth, async (req, res) => {
     return;
   }
 
-  const valid = items.filter(i => i.key);
+  // A null or non-text entry used to throw before the try and end the process
+  const str = (v: unknown) => (typeof v === 'string' ? v : v == null ? null : String(v));
+  const valid = items.filter(i => i && typeof i === 'object' && typeof i.key === 'string' && i.key);
   if (valid.length === 0) {
     res.status(400).json({ error: 'No valid items with keys' });
     return;
   }
 
-  const client = await pool.connect();
+  let client;
   try {
+    client = await pool.connect();
     await client.query('BEGIN');
 
     const keys        = valid.map(i => i.key);
-    const valuesEn    = valid.map(i => i.value_en ?? '');
-    const valuesBs    = valid.map(i => i.value_bs ?? '');
-    const fontSizes   = valid.map(i => i.font_size   ?? null);
-    const fontFamilies = valid.map(i => i.font_family ?? null);
-    const textColors  = valid.map(i => i.text_color  ?? null);
+    const valuesEn    = valid.map(i => str(i.value_en) ?? '');
+    const valuesBs    = valid.map(i => str(i.value_bs) ?? '');
+    const fontSizes   = valid.map(i => str(i.font_size));
+    const fontFamilies = valid.map(i => str(i.font_family));
+    const textColors  = valid.map(i => str(i.text_color));
 
     await client.query(
       `UPDATE page_content AS pc
@@ -79,38 +84,14 @@ router.post('/bulk', requireAuth, async (req, res) => {
     );
 
     await client.query('COMMIT');
+    invalidateShellCache();
     res.json({ success: true, updated: valid.length });
   } catch (err) {
-    await client.query('ROLLBACK');
+    await client?.query('ROLLBACK').catch(() => {});
     console.error(err);
     res.status(500).json({ error: 'Server error' });
   } finally {
-    client.release();
-  }
-});
-
-// PUT /api/content/:key — admin, update a single field
-// Note: keys like 'hero.title.part1' are passed via request body to avoid URL encoding issues
-router.put('/:key', requireAuth, async (req, res) => {
-  const key = req.params.key;
-  const { value_en, value_bs } = req.body;
-  try {
-    const result = await pool.query(
-      `UPDATE page_content
-       SET value_en = COALESCE($1, value_en),
-           value_bs = COALESCE($2, value_bs)
-       WHERE key = $3
-       RETURNING *`,
-      [value_en ?? null, value_bs ?? null, key]
-    );
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Content key not found' });
-      return;
-    }
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    client?.release();
   }
 });
 

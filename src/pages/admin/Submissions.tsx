@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Mail, Archive, CheckCheck, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { format } from 'date-fns';
+import { adminFetch, json, errorText } from '../../lib/adminFetch';
 
 interface Submission {
   id: number;
@@ -31,42 +32,56 @@ export default function Submissions() {
   const [filter, setFilter] = useState<'all' | 'new' | 'read' | 'archived'>('all');
   const [expanded, setExpanded] = useState<number | null>(null);
 
+  const [error, setError] = useState<string | null>(null);
+  // Opened from the "Nova" tab: stays in view while open even though it is
+  // now read, instead of vanishing from under the mouse
+  const [keepVisible, setKeepVisible] = useState<number | null>(null);
+
   const load = async () => {
-    const res = await fetch('/api/submissions', { credentials: 'include' });
-    const data = await res.json();
-    setItems(data);
-    setLoading(false);
+    try {
+      const data = await adminFetch<Submission[]>('/api/submissions');
+      setItems(Array.isArray(data) ? data : []);
+      setError(null);
+    } catch (err) {
+      // An error body is not a list: it used to be stored as one and crash
+      // the whole panel on items.filter
+      setError(`Upiti se nisu učitali. ${errorText(err)}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
 
   const updateStatus = async (id: number, status: Submission['status']) => {
-    await fetch(`/api/submissions/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ status }),
-    });
+    try {
+      await adminFetch(`/api/submissions/${id}`, json('PUT', { status }));
+    } catch (err) {
+      setError(errorText(err));
+    }
     load();
   };
 
   const deleteItem = async (id: number) => {
     if (!confirm('Trajno obrisati ovaj upit?')) return;
-    await fetch(`/api/submissions/${id}`, { method: 'DELETE', credentials: 'include' });
+    try {
+      await adminFetch(`/api/submissions/${id}`, { method: 'DELETE' });
+    } catch (err) {
+      setError(errorText(err));
+    }
     load();
   };
 
   const handleExpand = (id: number) => {
-    setExpanded(prev => {
-      if (prev === id) return null;
-      // Mark as read when opened
-      const item = items.find(i => i.id === id);
-      if (item?.status === 'new') updateStatus(id, 'read');
-      return id;
-    });
+    if (expanded === id) { setExpanded(null); setKeepVisible(null); return; }
+    setExpanded(id);
+    setKeepVisible(id);
+    // Marked read when opened — outside any state updater, so it runs once
+    const item = items.find(i => i.id === id);
+    if (item?.status === 'new') updateStatus(id, 'read');
   };
 
-  const filtered = filter === 'all' ? items : items.filter(i => i.status === filter);
+  const filtered = filter === 'all' ? items : items.filter(i => i.status === filter || i.id === keepVisible);
   const newCount = items.filter(i => i.status === 'new').length;
 
   return (
@@ -81,12 +96,16 @@ export default function Submissions() {
         </div>
       </div>
 
+      {error && (
+        <div role="alert" className="bg-red-500/10 border border-red-500/25 text-red-300 text-xs rounded-sm px-4 py-3">{error}</div>
+      )}
+
       {/* Filter tabs */}
       <div className="flex gap-2">
         {(['all', 'new', 'read', 'archived'] as const).map(f => (
           <button
             key={f}
-            onClick={() => setFilter(f)}
+            onClick={() => { setFilter(f); setKeepVisible(null); }}
             className={cn(
               'px-4 py-1.5 rounded-sm text-[10px] tracking-[0.2em] uppercase font-bold transition-colors',
               filter === f

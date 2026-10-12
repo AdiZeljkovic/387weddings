@@ -14,6 +14,12 @@ export const pool = new Pool({
   statement_timeout: 15_000,        // kill any query that runs longer than 15s
 });
 
+// An idle connection that dies (Postgres restarts, the network drops) is
+// reported on the pool; with no listener that event ended the whole process
+pool.on('error', err => {
+  console.error('[db] idle connection lost:', err.message);
+});
+
 export async function initDB() {
   const client = await pool.connect();
   try {
@@ -178,14 +184,14 @@ export async function initDB() {
         ('location', 'Sarajevo — Worldwide'),
         ('seo.site_name', '387 Cinematic Weddings'),
         ('seo.og_image', ''),
-        ('seo.home.title', 'Art in the Moments | 387 Cinematic Weddings'),
-        ('seo.home.desc', 'Fine art wedding photography documenting love stories with a focus on raw emotion and timeless elegance. Based in Sarajevo, traveling worldwide.'),
-        ('seo.about.title', 'About Us | 387 Cinematic Weddings'),
-        ('seo.about.desc', 'Get to know Melisa and Aldin — the husband-and-wife team behind 387 Cinematic Weddings.'),
-        ('seo.portfolio.title', 'Portfolio | 387 Cinematic Weddings'),
-        ('seo.portfolio.desc', 'Explore our curated collection of fine art wedding stories from Sarajevo and around the world.'),
-        ('seo.contact.title', 'Inquire | 387 Cinematic Weddings'),
-        ('seo.contact.desc', 'Let''s connect and start the dialogue about your wedding story. Based in Sarajevo, available worldwide.'),
+        ('seo.home.title.en', 'Art in the Moments | 387 Cinematic Weddings'),
+        ('seo.home.desc.en', 'Fine art wedding photography documenting love stories with a focus on raw emotion and timeless elegance. Based in Sarajevo, traveling worldwide.'),
+        ('seo.about.title.en', 'About Us | 387 Cinematic Weddings'),
+        ('seo.about.desc.en', 'Get to know Melisa and Aldin — the husband-and-wife team behind 387 Cinematic Weddings.'),
+        ('seo.portfolio.title.en', 'Portfolio | 387 Cinematic Weddings'),
+        ('seo.portfolio.desc.en', 'Explore our curated collection of fine art wedding stories from Sarajevo and around the world.'),
+        ('seo.contact.title.en', 'Inquire | 387 Cinematic Weddings'),
+        ('seo.contact.desc.en', 'Let''s connect and start the dialogue about your wedding story. Based in Sarajevo, available worldwide.'),
         ('analytics.ga_id', ''),
         ('analytics.gtm_id', ''),
         ('analytics.gsc_verification', ''),
@@ -338,13 +344,32 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
         ('story.tag', 'Priča: Oznaka uz tekst', 'story', 'labels', 'text', 'The story', 'Priča', 1),
         ('story.prev', 'Priča: Prethodna priča', 'story', 'labels', 'text', 'Previous story', 'Prethodna priča', 2),
         ('story.next', 'Priča: Sljedeća priča', 'story', 'labels', 'text', 'Next story', 'Sljedeća priča', 3),
-        ('story.close', 'Priča: Zatvori (lightbox)', 'story', 'labels', 'text', 'Close', 'Zatvori', 4)
+        ('story.close', 'Priča: Zatvori (lightbox)', 'story', 'labels', 'text', 'Close', 'Zatvori', 4),
+        ('notfound.tag', 'Oznaka iznad naslova', 'notfound', 'page', 'text', 'Error 404', 'Greška 404', 0),
+        ('notfound.title.part1', 'Naslov: 1. linija', 'notfound', 'page', 'text', 'Lost in', 'Izgubljeni u', 1),
+        ('notfound.title.part2', 'Naslov: 2. linija (kurziv)', 'notfound', 'page', 'text', 'the moment', 'trenutku', 2),
+        ('notfound.desc', 'Opis', 'notfound', 'page', 'textarea', 'The page you are looking for has drifted away like a fleeting memory. Let''s guide you back to where the stories begin.', 'Stranica koju tražite je nestala poput prolaznog sjećanja. Hajde da vas vratimo tamo gdje priče počinju.', 3),
+        ('notfound.home', 'Dugme: Početna', 'notfound', 'page', 'text', 'Return home', 'Povratak na početnu', 4),
+        ('notfound.portfolio', 'Dugme: Radovi', 'notfound', 'page', 'text', 'View our work', 'Pogledajte radove', 5)
       ON CONFLICT (key) DO NOTHING
     `);
 
+    // Data migrations run once each, marked in site_settings as migr.<name>.
+    // They used to run on every start, so a field the owner had emptied on
+    // purpose was refilled and any "24-48 sati" anywhere — the privacy text
+    // included — was rewritten at each deploy. A new migration gets a new name.
+    const once = async (name: string, run: () => Promise<unknown>) => {
+      const key = `migr.${name}`;
+      const done = await client.query('SELECT 1 FROM site_settings WHERE key = $1', [key]);
+      if (done.rowCount) return;
+      await run();
+      await client.query(
+        'INSERT INTO site_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING', [key, '1']);
+    };
+
     // Homepage redesign (client mockup) — only rewrites rows still sitting at an
     // older seed default or empty, so anything edited in the admin is preserved.
-    await client.query(`
+    await once('content_home_2026_10', () => client.query(`
       UPDATE page_content SET value_en = 'Your story.', value_bs = 'Vaša priča.'
         WHERE key = 'hero.title.part1' AND value_bs IN ('Umjetnost u', '');
       UPDATE page_content SET value_en = 'Our art.', value_bs = 'Naša umjetnost.'
@@ -376,11 +401,11 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
           AND value_bs IN ('Fine-art vjenčana fotografija koja dokumentuje ljubavne priče s fokusom na sirovu emociju i bezvremensku eleganciju.', '');
       UPDATE page_content SET value_en = 'Design and build', value_bs = 'Dizajn i izrada'
         WHERE key = 'footer.designed' AND value_bs IN ('Dizajnirano s namjerom.', '');
-    `);
+    `));
 
     // Contact redesign — these rows predate the new form and were seeded with
     // older copy, so each update is guarded on the exact value it replaces.
-    await client.query(`
+    await once('content_redesign_2026_10', () => client.query(`
       UPDATE page_content SET value_en = 'Full name', value_bs = 'Ime i prezime'
         WHERE key = 'contact.form.name' AND value_bs IN ('Vaše Ime', '');
       UPDATE page_content SET value_en = 'Enter your full name', value_bs = 'Unesite vaše ime i prezime'
@@ -534,7 +559,7 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
         WHERE key = 'contact.hero.title.part2' AND value_bs IN ('nam poruku', '');
       UPDATE page_content SET value_en = 'Send message', value_bs = 'Pošalji poruku'
         WHERE key = 'contact.form.submit' AND value_bs IN ('Pošalji Upit', 'Pošaljite Upit', '');
-    `);
+    `));
 
     // Once: every story's address is made from its title, as the brief asks.
     // Test addresses such as /radovi/yo-yo for the story "Visoko" become
@@ -567,8 +592,22 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
       );
     }
 
+    // The first SEO values were stored without a language (seo.home.title),
+    // in English. The panel shows only the .bs/.en fields, yet these hidden
+    // ones filled any empty Bosnian field — so a Bosnian page could carry an
+    // English title the owner could neither see nor change. Their values move
+    // into the English fields (only where those are empty) and they go.
+    await once('seo_legacy_split', () => client.query(`
+      INSERT INTO site_settings (key, value)
+        SELECT key || '.en', value FROM site_settings
+         WHERE key ~ '^seo\\.[a-z]+\\.(title|desc)$' AND COALESCE(btrim(value), '') <> ''
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+        WHERE COALESCE(btrim(site_settings.value), '') = '';
+      DELETE FROM site_settings WHERE key ~ '^seo\\.[a-z]+\\.(title|desc)$';
+    `));
+
     // Update promo section to Custom Package design (only if still at seed defaults)
-    await client.query(`
+    await once('content_promo', () => client.query(`
       UPDATE page_content
         SET value_bs = 'Prilagođeni paket', value_en = 'Custom Package'
         WHERE key = 'experience.promo.tag'
@@ -578,7 +617,7 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
             value_en = 'Custom coverage · Destination weddings · Multi-day events · Custom albums · Mix of film and digital photography'
         WHERE key = 'experience.promo.desc'
           AND value_bs IN ('Rezervišite fotografisanje vjenčanja i dobijte besplatan kinematski highlight film.', '');
-    `);
+    `));
 
     // Domain migration — the site answered on 387cinematicweddings.com while the
     // brief names 387weddings.ba as the canonical host. Each update is guarded on
@@ -598,9 +637,12 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
 
     // The Radovi cards used to fall back to gallery_images, which have no slug,
     // so nothing was clickable and every filter said WEDDINGS. Each active image
-    // becomes a real story once, keeping its photo, title and category, and the
-    // client edits the rest in Admin → Priče.
-    await client.query(`
+    // became a real story once. Guarded by its own marker now: before, deleting
+    // every story brought the old gallery back at the next start, and a new
+    // story whose address began with "rad-" had its AUTO cover layout copied
+    // into story_images, which only allows TALL/WIDE/SQUARE — the insert
+    // failed and the server could not start at all.
+    await once('gallery_import', () => client.query(`
       INSERT INTO stories (slug, couple, category, cover_url, cover_alt, cover_layout, sort_order, is_published)
       SELECT
         'rad-' || g.id,
@@ -618,12 +660,13 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
 
       -- the cover also becomes the story's first gallery photo
       INSERT INTO story_images (story_id, url, alt, layout, sort_order)
-      SELECT s.id, s.cover_url, s.cover_alt, s.cover_layout, 0
+      SELECT s.id, s.cover_url, s.cover_alt,
+             CASE WHEN s.cover_layout IN ('TALL', 'WIDE', 'SQUARE') THEN s.cover_layout ELSE 'TALL' END, 0
       FROM stories s
       WHERE s.slug LIKE 'rad-%'
         AND s.cover_url IS NOT NULL
         AND NOT EXISTS (SELECT 1 FROM story_images i WHERE i.story_id = s.id);
-    `);
+    `));
 
     // Indexes for the hot public queries (filter by is_active, order by sort_order).
     await client.query(`

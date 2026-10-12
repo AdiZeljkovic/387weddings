@@ -1,15 +1,14 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { loadSettings } from './lib/settingsCache';
+import { loadSettings, peekSettings } from './lib/settingsCache';
 import { useLanguage } from './contexts/LanguageContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { routerBasename, pathFor, ROUTES } from './lib/lang';
+import { DEFAULT_META } from './lib/seoDefaults';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { ProtectedRoute } from './components/admin/ProtectedRoute';
-import { AdminLayout } from './components/admin/AdminLayout';
 import Preloader from './components/Preloader';
 import CookieBanner, { readConsent } from './components/CookieBanner';
 
@@ -53,33 +52,24 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Admin pages
 const AdminLogin = lazy(() => import('./pages/admin/Login'));
-const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
-const StoriesManager = lazy(() => import('./pages/admin/StoriesManager'));
-const Submissions = lazy(() => import('./pages/admin/Submissions'));
-const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
-const PagesManager = lazy(() => import('./pages/admin/PagesManager'));
-const ImagesManager = lazy(() => import('./pages/admin/ImagesManager'));
+const AdminRoot = lazy(() => import('./pages/admin/AdminRoot'));
 
 // `ownTitle` means the page writes its own title and link preview — a story
 // page carries its couple's name, which the server already rendered into the
 // HTML. Without it this overwrote that correct title with a generic "Priča",
 // which is what the client saw flicker.
-function PageMetadata({ title, description, pageKey, ownTitle = false }: {
-  title: string; description: string; pageKey: string; ownTitle?: boolean;
-}) {
+function PageMetadata({ pageKey, ownTitle = false }: { pageKey: string; ownTitle?: boolean }) {
   const { language } = useLanguage();
   const langCode = language === 'ENG' ? 'en' : 'bs';
   const { pathname } = useLocation();
 
   React.useEffect(() => {
     loadSettings().then(s => {
-      const siteName  = s['seo.site_name']?.trim() || '387 Cinematic Weddings';
-      const finalTitle = s[`seo.${pageKey}.title.${langCode}`]?.trim()
-        || s[`seo.${pageKey}.title`]?.trim()
-        || `${title} | ${siteName}`;
-      const finalDesc  = s[`seo.${pageKey}.desc.${langCode}`]?.trim()
-        || s[`seo.${pageKey}.desc`]?.trim()
-        || description;
+      // The same fallback name the server uses
+      const siteName  = s['seo.site_name']?.trim() || '387 Weddings';
+      const [title, description] = DEFAULT_META[pageKey]?.[langCode] ?? [siteName, ''];
+      const finalTitle = s[`seo.${pageKey}.title.${langCode}`]?.trim() || `${title} | ${siteName}`;
+      const finalDesc  = s[`seo.${pageKey}.desc.${langCode}`]?.trim() || description;
 
       const setMeta = (sel: string, value: string) => {
         const el = document.querySelector(sel);
@@ -88,11 +78,13 @@ function PageMetadata({ title, description, pageKey, ownTitle = false }: {
 
       if (!ownTitle) {
         document.title = finalTitle;
-        setMeta('meta[name="description"]',        finalDesc);
         setMeta('meta[property="og:title"]',        finalTitle);
-        setMeta('meta[property="og:description"]',  finalDesc);
         setMeta('meta[name="twitter:title"]',       finalTitle);
-        setMeta('meta[name="twitter:description"]', finalDesc);
+        if (finalDesc) {
+          setMeta('meta[name="description"]',        finalDesc);
+          setMeta('meta[property="og:description"]',  finalDesc);
+          setMeta('meta[name="twitter:description"]', finalDesc);
+        }
 
         const ogImage = s['seo.og_image']?.trim();
         if (ogImage) {
@@ -128,7 +120,7 @@ function PageMetadata({ title, description, pageKey, ownTitle = false }: {
         document.head.appendChild(link);
       }
     });
-  }, [title, description, pageKey, langCode, pathname, ownTitle]);
+  }, [pageKey, langCode, pathname, ownTitle]);
   return null;
 }
 
@@ -238,7 +230,9 @@ const AdminLoadingFallback = (
 // ── Coming Soon Gate ─────────────────────────────────────────────────────────
 function ComingSoonGate({ children }: { children: React.ReactNode }) {
   const { admin, isLoading: authLoading } = useAuth();
-  const [comingSoon, setComingSoon] = React.useState<boolean>(false);
+  // Known from the first render (the settings come inside the page), so
+  // visitors never glimpse the real site before the gate closes
+  const [comingSoon, setComingSoon] = React.useState<boolean>(() => peekSettings()?.coming_soon === 'true');
 
   React.useEffect(() => {
     loadSettings()
@@ -246,7 +240,6 @@ function ComingSoonGate({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }, []);
 
-  // Default false — site renders immediately; switches to ComingSoon only if API confirms
   if (!comingSoon) return <>{children}</>;
 
   // Coming soon is ON — wait for auth to resolve
@@ -265,6 +258,7 @@ function ComingSoonGate({ children }: { children: React.ReactNode }) {
             </span>
           </div>
           <Link
+            reloadDocument
             to="/admin/settings"
             className="text-[10px] tracking-[0.25em] uppercase font-bold text-gold-400 hover:text-white transition-colors whitespace-nowrap border border-gold-600/30 px-3 py-1.5 rounded-sm hover:border-gold-400/60"
           >
@@ -302,20 +296,9 @@ function App() {
             <Route
               path="/admin/*"
               element={
-                <ProtectedRoute>
-                  <AdminLayout>
-                    <Suspense fallback={AdminLoadingFallback}>
-                      <Routes>
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="/pages" element={<PagesManager />} />
-                        <Route path="/images" element={<ImagesManager />} />
-                        <Route path="/stories" element={<StoriesManager />} />
-                        <Route path="/submissions" element={<Submissions />} />
-                        <Route path="/settings" element={<AdminSettings />} />
-                      </Routes>
-                    </Suspense>
-                  </AdminLayout>
-                </ProtectedRoute>
+                <Suspense fallback={AdminLoadingFallback}>
+                  <AdminRoot />
+                </Suspense>
               }
             />
 
@@ -332,7 +315,7 @@ function App() {
                       <Routes>
                         <Route path="/" element={
                           <>
-                            <PageMetadata title="Home" description="Fine art wedding photography documenting love stories with a focus on raw emotion and timeless elegance." pageKey="home" />
+                            <PageMetadata pageKey="home" />
                             <Home />
                           </>
                         } />
@@ -342,7 +325,7 @@ function App() {
                         {[ROUTES.portfolio.bs, ROUTES.portfolio.en].map(path => (
                           <Route key={path} path={path} element={
                             <>
-                              <PageMetadata title="Portfolio" description="Explore our curated collection of wedding, engagement, and elopement stories." pageKey="portfolio" />
+                              <PageMetadata pageKey="portfolio" />
                               <Portfolio />
                             </>
                           } />
@@ -350,7 +333,7 @@ function App() {
                         {[ROUTES.portfolio.bs, ROUTES.portfolio.en].map(path => (
                           <Route key={`${path}/story`} path={`${path}/:slug`} element={
                             <>
-                              <PageMetadata title="Priča" description="Priča jednog para." pageKey="story" ownTitle />
+                              <PageMetadata pageKey="story" ownTitle />
                               <Story />
                             </>
                           } />
@@ -358,7 +341,7 @@ function App() {
                         {[ROUTES.privacy.bs, ROUTES.privacy.en].map(path => (
                           <Route key={path} path={path} element={
                             <>
-                              <PageMetadata title="Privatnost" description="Politika privatnosti i kolačića." pageKey="privacy" />
+                              <PageMetadata pageKey="privacy" />
                               <Privacy />
                             </>
                           } />
@@ -366,7 +349,7 @@ function App() {
                         {[ROUTES.about.bs, ROUTES.about.en].map(path => (
                           <Route key={path} path={path} element={
                             <>
-                              <PageMetadata title="About Us" description="Get to know Melisa and Aldin, the artists behind 387 Cinematic Weddings." pageKey="about" />
+                              <PageMetadata pageKey="about" />
                               <About />
                             </>
                           } />
@@ -374,14 +357,14 @@ function App() {
                         {[ROUTES.contact.bs, ROUTES.contact.en].map(path => (
                           <Route key={path} path={path} element={
                             <>
-                              <PageMetadata title="Inquire" description="Let's connect and start the dialogue about your wedding story." pageKey="contact" />
+                              <PageMetadata pageKey="contact" />
                               <Contact />
                             </>
                           } />
                         ))}
                         <Route path="*" element={
                           <>
-                            <PageMetadata title="404 Not Found" description="The page you are looking for doesn't exist." pageKey="404" />
+                            <PageMetadata pageKey="404" />
                             <NotFound />
                           </>
                         } />

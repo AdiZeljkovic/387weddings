@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { cn } from '../lib/utils';
+// clsx alone: tailwind-merge (8 KB) is only needed in the panel
+import { clsx as cn } from 'clsx';
 import { useLanguage } from '../contexts/LanguageContext';
-import { loadSettings } from '../lib/settingsCache';
+import { loadSettings, peekSettings } from '../lib/settingsCache';
 import { usePaths } from '../lib/routes';
+import { reopenConsent } from './CookieBanner';
 
 const InstagramGlyph = ({ size = 18 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#151311" strokeWidth="1.6" aria-hidden="true">
@@ -14,9 +16,9 @@ const InstagramGlyph = ({ size = 18 }: { size?: number }) => (
 );
 
 const Footer = () => {
-  const { t, getContentStyle } = useLanguage();
+  const { t, getContentStyle, language } = useLanguage();
   const paths = usePaths();
-  const [settings, setSettings] = useState<Record<string, string>>({});
+  const [settings, setSettings] = useState<Record<string, string>>(() => peekSettings() ?? {});
   const location = useLocation();
 
   useEffect(() => {
@@ -116,6 +118,15 @@ const Footer = () => {
           <span style={getContentStyle('footer.rights')} className="normal-case text-center">
             © {new Date().getFullYear()} 387 Weddings. {t('footer.rights')}
           </span>
+
+          {/* Consent can be changed as easily as it was given */}
+          <button
+            type="button"
+            onClick={reopenConsent}
+            className="normal-case text-ink-500 underline decoration-rule underline-offset-[3px] min-h-11 px-2 transition-opacity duration-250 hover:opacity-60"
+          >
+            {language === 'ENG' ? 'Cookie settings' : 'Postavke kolačića'}
+          </button>
 
           {/* Who built the site */}
           <span className="normal-case text-center">

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { invalidateSettingsCache } from '../../lib/settingsCache';
+import { adminFetch, json, errorText } from '../../lib/adminFetch';
 
 type Tab = 'contact' | 'general' | 'social' | 'seo' | 'technical';
 
@@ -23,33 +24,49 @@ const SEO_PAGES = [
 export default function AdminSettings() {
   const [tab, setTab] = useState<Tab>('contact');
   const [settings, setSettings] = useState<Record<string, string>>({});
+  // What the server holds: only real changes are sent, so saving here never
+  // writes back photographs or texts changed meanwhile in another tab
+  const [stored, setStored] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/settings', { credentials: 'include' })
-      .then(r => r.json())
-      .then(data => setSettings(data ?? {}))
-      .catch(() => {})
+    adminFetch<Record<string, string>>('/api/settings')
+      .then(data => { setSettings(data ?? {}); setStored(data ?? {}); })
+      .catch(err => setLoadError(errorText(err)))
       .finally(() => setLoading(false));
   }, []);
 
   const set = (key: string, value: string) =>
     setSettings(prev => ({ ...prev, [key]: value }));
 
+  const changed = Object.fromEntries(
+    Object.entries(settings).filter(([k, v]) => (stored[k] ?? '') !== (v ?? ''))
+  );
+  const dirty = Object.keys(changed).length > 0;
+
+  // Leaving with unsaved settings asks first
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
+
   const handleSave = async () => {
     setSaving(true);
+    setSaveError(null);
     try {
-      await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(settings),
-      });
+      await adminFetch('/api/settings', json('PUT', changed));
+      setStored(prev => ({ ...prev, ...changed }));
       invalidateSettingsCache();
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      setSaveError(errorText(err));
     } finally {
       setSaving(false);
     }
@@ -61,6 +78,9 @@ export default function AdminSettings() {
         <Loader2 size={24} className="animate-spin text-white/20" />
       </div>
     );
+  }
+  if (loadError) {
+    return <p className="text-red-400 text-sm py-10">Postavke se nisu učitale: {loadError}</p>;
   }
 
   return (
@@ -127,7 +147,7 @@ export default function AdminSettings() {
           </div>
 
           <p className="text-white/20 text-[10px] leading-relaxed pt-1">
-            Tekstovi stranice (Napomena, "Pratite nas", tekst gumba...) uređuju se u <strong className="text-white/40">Pages → Upit</strong>.
+            Tekstovi stranice (Napomena, "Pratite nas", tekst gumba...) uređuju se u <strong className="text-white/40">Stranice → Kontakt</strong>.
           </p>
         </div>
       )}
@@ -191,7 +211,7 @@ export default function AdminSettings() {
               value={settings['instagram'] ?? ''} onChange={v => set('instagram', v)} />
             <Field label="Korisničko ime (bez @)" placeholder="387cinematic"
               value={settings['instagram_handle'] ?? ''} onChange={v => set('instagram_handle', v)}
-              hint="Prikazuje se u Instagram Feed sekciji na sajtu." />
+              hint="Prikazuje se u footeru, meniju i bloku „Pogledajte još na Instagramu“." />
           </SocialGroup>
 
           <div className="bg-moody-950/40 border border-white/5 rounded-sm px-4 py-3 text-[10px] text-white/25 leading-relaxed">
@@ -365,7 +385,7 @@ export default function AdminSettings() {
               />
               <p className="text-white/20 text-[10px] mt-1.5 leading-relaxed">
                 Direktivom <span className="text-white/40 font-mono">Disallow: /admin/</span> spriječavaš indeksiranje admin panela.
-                Izmjene su vidljive odmah na <span className="text-white/40">/robots.txt</span>.
+                Izmjene su vidljive na <span className="text-white/40">/robots.txt</span> najkasnije za sat (pretraživači ga ionako čitaju rijetko).
               </p>
             </div>
             <RobotsLinks baseUrl={settings['sitemap.base_url'] || 'https://387weddings.ba'} />
@@ -377,10 +397,17 @@ export default function AdminSettings() {
         </div>
       )}
 
-      <div className="flex justify-end pt-2">
+      <div className={cn(
+        'flex flex-wrap items-center justify-end gap-3 pt-2',
+        dirty && 'sticky bottom-0 z-10 bg-moody-900/95 border-t border-gold-600/20 py-3',
+      )}>
+        {saveError && <p role="alert" className="mr-auto text-red-400 text-xs leading-snug max-w-xl">{saveError}</p>}
+        {!saveError && dirty && !saving && (
+          <p className="mr-auto text-amber-300/80 text-xs">Ima nesačuvanih promjena.</p>
+        )}
         <button
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || !dirty}
           className="flex items-center gap-2 px-6 py-2.5 bg-gold-600/15 hover:bg-gold-600/25 border border-gold-600/25 hover:border-gold-600/40 text-gold-400 text-xs font-bold tracking-widest uppercase rounded-sm transition-all duration-200 disabled:opacity-40"
         >
           {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
