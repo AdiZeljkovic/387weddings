@@ -83,12 +83,15 @@ async function startServer() {
       ? {
           directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", 'https://www.googletagmanager.com', 'https://www.google-analytics.com'],
+            scriptSrc: ["'self'", "'unsafe-inline'", 'https://*.googletagmanager.com', 'https://www.google-analytics.com'],
             styleSrc: ["'self'", "'unsafe-inline'"],
             // Fonts are self-hosted now; nothing comes from Google
             fontSrc: ["'self'", 'data:'],
-            imgSrc: ["'self'", 'data:', 'https://images.unsplash.com', 'https://www.google-analytics.com', 'https://www.googletagmanager.com'],
-            connectSrc: ["'self'", 'https://www.google-analytics.com', 'https://analytics.google.com', 'https://www.googletagmanager.com'],
+            // GA4 sends its hits to regional hosts (region1.google-analytics.com),
+            // so the wildcards Google lists for GA4 are needed — with only
+            // www.google-analytics.com every hit was refused and GA saw no data
+            imgSrc: ["'self'", 'data:', 'https://images.unsplash.com', 'https://*.google-analytics.com', 'https://*.googletagmanager.com'],
+            connectSrc: ["'self'", 'https://*.google-analytics.com', 'https://*.analytics.google.com', 'https://*.googletagmanager.com'],
             frameSrc: ["'self'", 'https://www.googletagmanager.com'],
             objectSrc: ["'none'"],
             baseUri: ["'self'"],
