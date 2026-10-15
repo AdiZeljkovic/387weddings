@@ -1,6 +1,6 @@
 # 387 Cinematic Weddings — full stack (app + its own Postgres).
 # Deployed on the Luminor/FuturaOS server via Dokploy (compose from Git).
-# Secrets (DB_PASSWORD, JWT_SECRET, ADMIN_*, ALLOW_SETUP) are injected by
+# Secrets (DB_PASSWORD, JWT_SECRET, ADMIN_*, ALLOW_SETUP, SMTP_*) are injected by
 # Dokploy's compose environment, not committed here.
 services:
   db:
@@ -37,6 +37,13 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ALLOW_SETUP: ${ALLOW_SETUP:-false}
+      # Inquiry e-mails (server/mailer.ts). Empty = nothing is sent, the
+      # inquiry is still saved; the recipient is set in Admin → Postavke.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
     volumes:
       # Named volume seeds from the image's /app/uploads (the committed gallery)
       # on first run, then persists admin uploads across redeploys.
