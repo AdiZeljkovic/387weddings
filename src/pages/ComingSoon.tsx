@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { InstagramGlyph } from '../components/Instagram';
+import Logo from '../components/Logo';
 import { instagramOf } from '../lib/instagram';
 import { loadSettings, peekSettings } from '../lib/settingsCache';
 
@@ -36,13 +37,8 @@ export default function ComingSoon() {
           compressed) was loaded only for these six fades */}
       <div className="relative z-10 flex flex-col items-center text-center">
         {/* Logo */}
-        <div className="mb-16 md:mb-24 flex flex-col items-center gap-1 animate-[csDown_1.5s_cubic-bezier(.16,1,.3,1)_both] motion-reduce:animate-none">
-          <span className="text-3xl md:text-4xl font-serif font-light tracking-tighter uppercase text-white">
-            387
-          </span>
-          <span className="text-[10px] tracking-[0.55em] uppercase font-bold text-gold-600">
-            Weddings
-          </span>
+        <div className="mb-16 md:mb-24 flex flex-col items-center animate-[csDown_1.5s_cubic-bezier(.16,1,.3,1)_both] motion-reduce:animate-none">
+          <Logo size={60} color="#ffffff" className="w-[58px] md:w-[72px] h-auto" />
         </div>
 
         {/* Thin line */}

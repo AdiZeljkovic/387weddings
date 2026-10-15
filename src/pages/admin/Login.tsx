@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import Logo from '../../components/Logo';
 
 export default function AdminLogin() {
   const { login, admin, isLoading } = useAuth();
@@ -36,8 +37,8 @@ export default function AdminLogin() {
   return (
     <div className="min-h-screen bg-moody-950 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-10">
-          <span className="text-4xl font-script text-white block mb-1">387 Weddings</span>
+        <div className="text-center mb-10 flex flex-col items-center">
+          <Logo size={60} color="#ffffff" className="w-[64px] h-auto mb-4" />
           <span className="text-[9px] tracking-[0.5em] uppercase font-bold text-gold-600">Admin Panel</span>
         </div>
 

@@ -74,7 +74,8 @@ const Preloader = () => {
     >
       {/* The same mark as the header, at the intro sizes from the brief: 88px
           numerals over a 30px wordmark, the two arriving one after the other */}
-      <Logo size={88} word={30} color="#151311" intro />
+      {/* As wide as the earlier 88 + 30 lockup (about 198px) */}
+      <Logo size={202} color="#151311" intro />
       <span
         className="block w-[120px] h-px bg-gold-600 origin-left mt-10 scale-x-0 animate-[introLine_0.7s_cubic-bezier(.6,0,.3,1)_0.75s_both]"
       />

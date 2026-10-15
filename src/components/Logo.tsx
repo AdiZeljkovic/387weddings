@@ -1,25 +1,26 @@
-// Brand lockup from the mockup: "387" stacked vertically in Anton with
-// "WEDDINGS" beneath it. One SVG, used at every size so the mark never differs
-// between header, footer and the intro curtain.
+// The client's logo (October 2026): "387" set on its side with "WEDDINGS"
+// beneath it. The outlines are the client's own file (387weddings-logo-*.svg),
+// so the mark no longer depends on the Anton font loading. One SVG, used at
+// every size; it takes the colour of the surrounding text (white over the hero,
+// ink on cream).
 //
-// The first version spaced the digits by 0.72em, which is less than Anton's own
-// cap height — the numerals overlapped and sheared into each other. A vertical
-// stack needs a full em between baselines, which is what ROW below is.
+// The viewBox is cropped tight to the artwork (the file carries a margin), so
+// "WEDDINGS" spans the full width, as the earlier lockup did.
 
-const CAP = 0.73;  // Anton cap height, as a fraction of the font size
-const ROW = 1.0;   // baseline-to-baseline for the stacked digits
-const GAP = 0.42;  // space between the stack and the wordmark
-const WORD = 0.368; // wordmark size relative to the numerals (38 -> 14)
-// Headroom above the first digit. With the baseline at exactly CAP the top of
-// the "3" lands on y=0, so Anton's rounded overshoot was shaved off at every
-// size — in the header, the footer and the intro animation alike.
-const PAD = 0.08;
+// Bounds of the artwork in the file's own coordinates
+const VIEW = { x: 88, y: 104, w: 122.75, h: 162 };
+// Height of the "387" part, which `size` refers to
+const MARK_H = 125.78;
+
+const MARK =
+  'M109 125.47Q109 114.23 114.93 109.11Q120.87 104 132.83 104H141.71V121.42H132.78Q129.41 121.42 127.07 122.26Q124.73 123.1 124.73 126.05Q124.73 129.04 127.26 129.86Q129.79 130.68 135.53 130.68H137.66Q142.05 130.68 145.33 129.21Q148.61 127.74 148.61 123.44Q148.61 122.91 148.58 122.5Q148.56 122.09 148.51 121.8H163.75Q163.75 126.19 165.71 128.51Q167.66 130.82 172.25 130.82Q179.43 130.82 179.43 126.67Q179.43 123.97 177.34 123.03Q175.24 122.09 172 122.09H169.45V104.53Q170.03 104.48 170.85 104.46Q171.67 104.43 172.44 104.43Q184.11 104.43 189.56 109.89Q195.02 115.34 195.02 126.58Q195.02 148.29 172.44 148.29Q166.17 148.29 162.09 146.6Q158.01 144.91 156.37 140.33Q154.64 143.94 151.94 145.68Q149.23 147.42 145.23 147.95Q141.23 148.48 135.53 148.48Q122.8 148.48 115.9 143.15Q109 137.82 109 125.47ZM109.05 167.25Q109.05 155.29 115.9 150.17Q122.75 145.06 135.29 145.06H140.94Q147.4 145.06 151.4 146.6Q155.41 148.15 157.53 152.3Q159.12 148.39 162.86 146.75Q166.6 145.11 172.15 145.11H174.37Q185.66 145.11 190.79 150.78Q195.93 156.44 195.93 167.25Q195.93 178.35 190.65 183.85Q185.37 189.35 173.69 189.35Q167.57 189.35 163.42 187.9Q159.27 186.45 157.44 182.16Q155.07 186.74 151.24 188.09Q147.4 189.44 140.94 189.44H135.29Q122.75 189.44 115.9 184.33Q109.05 179.21 109.05 167.25ZM164.67 167.25Q164.67 171.74 172.78 171.74Q175.48 171.74 177.89 170.8Q180.3 169.86 180.3 167.25Q180.3 164.65 177.89 163.7Q175.48 162.76 172.78 162.76Q164.67 162.76 164.67 167.25ZM125.84 167.25Q125.84 171.88 133.31 171.88H141.08Q144.94 171.88 147.11 170.84Q149.28 169.81 149.28 167.25Q149.28 164.6 147.11 163.63Q144.94 162.67 141.08 162.67H133.31Q125.84 162.67 125.84 167.25ZM110.01 190.56Q121.88 191.33 132.2 193.88Q142.53 196.44 151.43 199.77Q160.33 203.1 167.76 206.19L179.19 210.91V186.94H194.92V229.78H185.66Q180.54 229.78 175.33 228.09Q170.12 226.4 163.85 223.65Q150.25 217.67 136.76 214.12Q123.28 210.58 110.01 209.76Z';
+
+const WORDMARK =
+  'M90.95 265.75 88 238.25H93.38L94.89 255.61L96.44 238.25H101.56L103.03 255.61L104.5 238.25H109.94L106.94 265.75H100.34L98.97 252.52L97.66 265.75ZM111.98 265.75V238.25H122.98V243.56H117.57V248.92H122.76V254.09H117.57V260.39H123.34V265.75ZM125.55 265.75V238.25H133.11Q136.08 238.25 137.58 239.9Q139.08 241.55 139.08 244.72V257.59Q139.08 261.5 137.71 263.62Q136.35 265.75 132.93 265.75ZM131.08 260.89H132.03Q133.55 260.89 133.55 259.42V245.23Q133.55 243.86 133.18 243.46Q132.82 243.06 131.69 243.06H131.08ZM141.73 265.75V238.25H149.29Q152.26 238.25 153.76 239.9Q155.26 241.55 155.26 244.72V257.59Q155.26 261.5 153.9 263.62Q152.53 265.75 149.11 265.75ZM147.26 260.89H148.22Q149.73 260.89 149.73 259.42V245.23Q149.73 243.86 149.36 243.46Q149 243.06 147.87 243.06H147.26ZM157.66 265.75V238.25H162.97V265.75ZM165.56 265.75V238.25H171.22L173.75 251.42V238.25H179.06V265.75H173.69L170.94 252V265.75ZM187.57 266Q181.68 266 181.68 257.56V245.7Q181.68 238 188.43 238Q191.21 238 192.7 239.12Q194.18 240.23 194.74 242.38Q195.31 244.52 195.31 247.59H189.93V245.16Q189.93 244.27 189.69 243.66Q189.45 243.06 188.68 243.06Q187.73 243.06 187.42 243.7Q187.12 244.34 187.12 245.11V258.44Q187.12 259.55 187.41 260.24Q187.7 260.94 188.54 260.94Q189.42 260.94 189.7 260.24Q189.99 259.55 189.99 258.41V254.48H188.53V249.73H195.24V265.75H193.04L192.1 263.44Q190.67 266 187.57 266ZM204.35 266Q200.58 266 198.92 264.12Q197.25 262.25 197.25 258.16V255.47H202.69V258.91Q202.69 259.86 202.98 260.4Q203.27 260.94 203.99 260.94Q204.74 260.94 205.03 260.5Q205.32 260.06 205.32 259.06Q205.32 257.8 205.07 256.95Q204.82 256.09 204.2 255.32Q203.58 254.55 202.49 253.52L200.02 251.17Q197.25 248.56 197.25 245.2Q197.25 241.69 198.89 239.84Q200.52 238 203.61 238Q207.39 238 208.98 240.02Q210.57 242.03 210.57 246.14H204.97V244.25Q204.97 243.69 204.65 243.38Q204.33 243.06 203.78 243.06Q203.13 243.06 202.82 243.43Q202.52 243.8 202.52 244.38Q202.52 244.95 202.83 245.62Q203.14 246.3 204.07 247.17L207.24 250.22Q208.19 251.12 208.99 252.13Q209.78 253.14 210.27 254.48Q210.75 255.81 210.75 257.73Q210.75 261.61 209.32 263.8Q207.89 266 204.35 266Z';
 
 type Props = {
-  /** Height of the "387" glyphs in px; the wordmark scales with it */
+  /** Height of the "387" part in px; the whole lockup scales with it */
   size?: number;
-  /** Wordmark size in px, where the brief fixes it (the intro's 88 + 30) */
-  word?: number;
   color?: string;
   className?: string;
   title?: string;
@@ -28,20 +29,15 @@ type Props = {
 };
 
 const Logo = ({
-  size = 38, word: wordSize, color = 'currentColor', className = '', title = '387 Weddings', intro = false,
+  size = 38, color = 'currentColor', className = '', title = '387 Weddings', intro = false,
 }: Props) => {
-  const digits = ['3', '8', '7'];
-  const word = wordSize ?? Math.round(size * WORD * 10) / 10;
-  const top = PAD * size;
-  const stackH = top + CAP * size + (digits.length - 1) * ROW * size;
-  const wordBaseline = stackH + GAP * size + word * CAP;
-  const height = wordBaseline + word * 0.18;
-  // The wordmark is the wider of the two, so it sets the box
-  const width = Math.max(size * 0.78, word * 6.6);
+  const scale = size / MARK_H;
+  const width = Math.round(VIEW.w * scale * 10) / 10;
+  const height = Math.round(VIEW.h * scale * 10) / 10;
 
   return (
     <svg
-      viewBox={`0 0 ${width} ${height}`}
+      viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`}
       width={width}
       height={height}
       className={className}
@@ -49,19 +45,9 @@ const Logo = ({
       aria-label={title}
     >
       <title>{title}</title>
-      <g fill={color} fontFamily="Anton, Oswald, Impact, sans-serif" fontWeight="400" textAnchor="middle">
-        <g className={intro ? 'logo-in logo-in-1' : undefined}>
-          {digits.map((d, i) => (
-            <text key={d} x={width / 2} y={top + CAP * size + i * ROW * size} fontSize={size}>
-              {d}
-            </text>
-          ))}
-        </g>
-        <g className={intro ? 'logo-in logo-in-2' : undefined}>
-          <text x={width / 2} y={wordBaseline} fontSize={word} letterSpacing={word * (intro ? 0.08 : 0.06)}>
-            WEDDINGS
-          </text>
-        </g>
+      <g fill={color}>
+        <path className={intro ? 'logo-in logo-in-1' : undefined} d={MARK} />
+        <path className={intro ? 'logo-in logo-in-2' : undefined} d={WORDMARK} />
       </g>
     </svg>
   );

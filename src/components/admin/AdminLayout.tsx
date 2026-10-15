@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
+import Logo from '../Logo';
 
 const navItems = [
   // In the order the owner works: stories first, then the site's photographs
@@ -42,10 +43,8 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     <aside className="flex flex-col h-full bg-moody-950 border-r border-white/5">
       {/* Logo */}
       <div className="px-6 py-8 border-b border-white/5">
-        <Link to="/" target="_blank" className="flex flex-col group">
-          <span className="text-2xl font-script text-white group-hover:text-gold-400 transition-colors">
-            387 Weddings
-          </span>
+        <Link to="/" target="_blank" className="flex items-center gap-4 group">
+          <Logo size={40} className="w-[34px] h-auto text-white group-hover:text-gold-400 transition-colors" />
           <span className="text-[9px] tracking-[0.5em] uppercase font-bold text-gold-600">
             Admin Panel
           </span>
