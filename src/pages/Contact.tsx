@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, X } from 'lucide-react';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadSettings, peekSettings } from '../lib/settingsCache';
@@ -230,8 +230,19 @@ const Contact = () => {
           <div
             id="contact-status"
             role="status"
-            className="max-w-[560px] mx-auto border border-rule bg-cream-soft text-center px-6 lg:px-10 py-14 lg:py-16"
+            className="relative max-w-[560px] mx-auto border border-rule bg-cream-soft text-center px-6 lg:px-10 py-14 lg:py-16"
           >
+            {/* Visitors looked for a way to close the confirmation; it returns
+                to the (empty) form, as "send another" does */}
+            <button
+              type="button"
+              onClick={() => setStatus('idle')}
+              aria-label={t('story.close')}
+              title={t('story.close')}
+              className="absolute top-2 right-2 inline-flex items-center justify-center w-11 h-11 text-ink-500 hover:text-ink-900 transition-colors"
+            >
+              <X size={20} strokeWidth={1.4} aria-hidden="true" />
+            </button>
             <CheckCircle2 size={38} strokeWidth={1.2} className="text-gold-600 mx-auto mb-5" aria-hidden="true" />
             <h2
               style={getContentStyle('contact.form.success.title')}
