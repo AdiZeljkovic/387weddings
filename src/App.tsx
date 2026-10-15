@@ -101,9 +101,21 @@ function PageMetadata({ pageKey, ownTitle = false }: { pageKey: string; ownTitle
       const here = langCode === 'en' ? enPath : bsPath;
 
       setMeta('meta[property="og:url"]', `${baseUrl}${here}`);
-      const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+
+      // A page that does not exist asks not to be indexed and names no
+      // canonical or alternates; the next real page puts them back
+      const notFound = pageKey === '404';
+      setMeta('meta[name="robots"]', notFound ? 'noindex, follow' : 'index, follow');
+      document.querySelectorAll('link[rel="alternate"][hreflang]').forEach(el => el.remove());
+      let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+      if (notFound) { canonical?.remove(); return; }
+      if (!canonical) {
+        canonical = document.createElement('link');
+        canonical.rel = 'canonical';
+        document.head.appendChild(canonical);
+      }
       // The canonical always points at the language actually being shown
-      if (canonical) canonical.href = `${baseUrl}${here}`;
+      canonical.href = `${baseUrl}${here}`;
 
       // hreflang needs one address per language, plus an x-default
       const alternates: [string, string][] = [
@@ -111,7 +123,6 @@ function PageMetadata({ pageKey, ownTitle = false }: { pageKey: string; ownTitle
         ['en', `${baseUrl}${enPath}`],
         ['x-default', `${baseUrl}${bsPath}`],
       ];
-      document.querySelectorAll('link[rel="alternate"][hreflang]').forEach(el => el.remove());
       for (const [lang, href] of alternates) {
         const link = document.createElement('link');
         link.rel = 'alternate';

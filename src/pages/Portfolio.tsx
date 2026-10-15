@@ -167,14 +167,26 @@ const Portfolio = () => {
             })}
           </nav>
 
+          {/* Each state has its own key. Without them React kept the
+              placeholder's boxes and turned them into the columns of cards,
+              so the cards slid in from wherever the placeholder had put them —
+              a layout shift of 0.2 on a desktop and 0.5 on a phone. The
+              placeholder is also laid out as the columns are, so the first
+              card appears where its stand-in was. */}
           {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-x-8 lg:gap-y-12">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className={`${['aspect-[3/4]', 'aspect-[4/3]'][i % 2]} bg-rule/40 animate-pulse`} />
+            <div key="loading" aria-hidden="true" className="flex gap-8 items-start">
+              {Array.from({ length: cols }, (_, ci) => (
+                <div
+                  key={ci}
+                  className="flex-1 min-w-0"
+                  style={{ paddingTop: (COL_OFFSET[cols] ?? [])[ci] || 0 }}
+                >
+                  <div className="aspect-[3/4] bg-rule/40 animate-pulse" />
+                </div>
               ))}
             </div>
           ) : failed ? (
-            <div className="text-center py-24">
+            <div key="failed" className="text-center py-24">
               <p className="font-serif text-lg text-ink-400 m-0 mb-6">
                 {language === 'ENG' ? 'The stories could not be loaded.' : 'Priče se trenutno ne mogu učitati.'}
               </p>
@@ -188,13 +200,14 @@ const Portfolio = () => {
             </div>
           ) : filtered.length === 0 ? (
             <p
+              key="empty"
               style={getContentStyle('portfolio.empty')}
               className="text-center py-24 font-serif text-lg text-ink-400"
             >
               {t('portfolio.empty')}
             </p>
           ) : (
-            <div className="flex gap-8 items-start">
+            <div key="cards" className="flex gap-8 items-start">
               {columns.map((col, ci) => (
                 <div
                   key={ci}

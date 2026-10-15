@@ -98,6 +98,13 @@ export async function renderShell(pathname: string, lang: 'bs' | 'en'): Promise<
   // The default preview picture: the one set in the panel, else the first hero
   let image = previewImage(base, s['seo.og_image']?.trim() || s['img.home.hero.1']?.trim() || '');
 
+  // No such page (the 404, the panel, a story that is not published): it must
+  // not ask to be indexed or name itself as the canonical address
+  let missing = !route;
+  if (!route && !stripLang(pathname).startsWith('/admin')) {
+    title = `${DEFAULT_META['404'][lang][0]} | ${siteName}`;
+  }
+
   const key = route && !route.slug ? route.key : null;
   if (key) {
     const [defTitle, defDesc] = DEFAULT_META[key]?.[lang] ?? [siteName, ''];
@@ -119,6 +126,9 @@ export async function renderShell(pathname: string, lang: 'bs' | 'en'): Promise<
           || s[`seo.portfolio.desc.${lang}`]?.trim() || DEFAULT_META.portfolio[lang][1];
         desc = storyExcerpt(rows[0], lang, general);
         if (rows[0].cover_url) image = previewImage(base, rows[0].cover_url);
+      } else {
+        missing = true;
+        title = `${DEFAULT_META['404'][lang][0]} | ${siteName}`;
       }
     } catch { /* fall through to the defaults */ }
   }
@@ -142,7 +152,12 @@ export async function renderShell(pathname: string, lang: 'bs' | 'en'): Promise<
   html = replaceTag(html, /<meta name="twitter:title"[^>]*>/, 'content', meta.title);
   html = replaceTag(html, /<meta property="og:url"[^>]*>/, 'content', meta.url);
   html = replaceTag(html, /<meta property="og:locale"[^>]*>/, 'content', meta.locale);
-  html = put(html, /<link rel="canonical"[^>]*>/, `<link rel="canonical" href="${esc(meta.url)}" />`);
+  if (missing) {
+    html = replaceTag(html, /<meta name="robots"[^>]*>/, 'content', 'noindex, follow');
+    html = put(html, /\s*<link rel="canonical"[^>]*>/, '');
+  } else {
+    html = put(html, /<link rel="canonical"[^>]*>/, `<link rel="canonical" href="${esc(meta.url)}" />`);
+  }
   if (meta.image) {
     html = replaceTag(html, /<meta property="og:image"[^>]*>/, 'content', meta.image);
     html = replaceTag(html, /<meta name="twitter:image"[^>]*>/, 'content', meta.image);
@@ -184,11 +199,13 @@ export async function renderShell(pathname: string, lang: 'bs' | 'en'): Promise<
 
   // hreflang, so the two language variants are declared in the source. Each is
   // its own address now rather than the same one with a parameter.
-  head.push(
-    `<link rel="alternate" hreflang="bs" href="${esc(base + bsPath)}" />`,
-    `<link rel="alternate" hreflang="en" href="${esc(base + enPath)}" />`,
-    `<link rel="alternate" hreflang="x-default" href="${esc(base + bsPath)}" />`,
-  );
+  if (!missing) {
+    head.push(
+      `<link rel="alternate" hreflang="bs" href="${esc(base + bsPath)}" />`,
+      `<link rel="alternate" hreflang="en" href="${esc(base + enPath)}" />`,
+      `<link rel="alternate" hreflang="x-default" href="${esc(base + bsPath)}" />`,
+    );
+  }
 
   // Structured data from what the owner set in the panel, rather than a fixed
   // block with a placeholder telephone number and invented opening hours

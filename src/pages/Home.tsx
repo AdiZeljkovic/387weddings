@@ -135,6 +135,16 @@ const Home = () => {
   const heroBlur = heroSlides[0] ? blurSrc(heroSlides[0].mobile || heroSlides[0].src) : '';
   const many = heroSlides.length > 1;
 
+  // Every frame used to download with the page: on a phone about a megabyte
+  // the visitor would not see for seconds, competing with the first frame and
+  // the scripts. A frame is now put in only once the first one is up, one
+  // ahead of the one on screen, so it has its whole 4s turn to arrive.
+  const [mountedSlides, setMountedSlides] = useState(1);
+  useEffect(() => {
+    if (!heroReady) return;
+    setMountedSlides(m => Math.max(m, Math.min(heroSlides.length, active + 2)));
+  }, [heroReady, active, heroSlides.length]);
+
   // The frames cross-fade on their own; hovering the hero holds the current one
   // and resumes with whatever time it had left, so the slide and its filling
   // tick stay in step. Under reduced motion only the first frame is shown.
@@ -216,6 +226,8 @@ const Home = () => {
         )}
 
         {heroSlides.map(({ n, src, mobile }, i) => {
+          // A frame picked by its tick before its turn comes in at once
+          if (i >= mountedSlides && i !== active) return null;
           const r = respImg(src);
           const m = mobile ? respImg(mobile) : null;
           // A phone covers a 390x844 screen from a frame about 1.5 screens wide,
@@ -247,7 +259,6 @@ const Home = () => {
                   '--fp-m': (mobile && settings[`img.home.hero.mobile.${n}.focus`])
                     || settings[`img.home.hero.${n}.focus`] || '50% 50%',
                 } as unknown as React.CSSProperties}
-                loading={i === 0 ? 'eager' : 'lazy'}
                 fetchPriority={i === 0 ? 'high' : 'low'}
                 onLoad={i === 0 ? () => setHeroReady(true) : undefined}
                 decoding="async"

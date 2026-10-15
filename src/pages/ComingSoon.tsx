@@ -38,7 +38,7 @@ export default function ComingSoon() {
         {/* Logo */}
         <div className="mb-16 md:mb-24 flex flex-col items-center gap-1 animate-[csDown_1.5s_cubic-bezier(.16,1,.3,1)_both] motion-reduce:animate-none">
           <span className="text-3xl md:text-4xl font-serif font-light tracking-tighter uppercase text-white">
-            387 Cinematic
+            387
           </span>
           <span className="text-[10px] tracking-[0.55em] uppercase font-bold text-gold-600">
             Weddings

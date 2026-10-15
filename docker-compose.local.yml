@@ -1,0 +1,18 @@
+# Local run on Docker Desktop, layered over the production compose file:
+#   docker compose -p artstudio --env-file .env.docker -f docker-compose.yml -f docker-compose.local.yml up -d --build
+# Same image and Postgres as production; only what differs on this machine is
+# changed here, so docker-compose.yml stays exactly what Dokploy deploys.
+services:
+  db:
+    ports:
+      # 5433 on the host so it never clashes with a locally installed Postgres
+      - "5433:5432"
+
+  app:
+    environment:
+      # The canonical-host redirect sends every other host to SITE_URL, so it
+      # must be the address the browser uses here (not 127.0.0.1)
+      SITE_URL: http://localhost:3001
+    ports:
+      # 3001 on the host: 3000 is taken by another project's container
+      - "3001:3000"

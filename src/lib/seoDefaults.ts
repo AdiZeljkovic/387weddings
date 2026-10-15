@@ -14,8 +14,8 @@ export const DEFAULT_META: Record<string, { bs: [string, string]; en: [string, s
   },
   story: { bs: ['Priča', ''], en: ['Story', ''] },
   privacy: {
-    bs: ['Politika privatnosti', 'Politika privatnosti i kolačića.'],
-    en: ['Privacy policy', 'Privacy and cookie policy.'],
+    bs: ['Politika privatnosti', 'Kako 387 Weddings prikuplja, koristi i čuva podatke s kontakt forme i analitike, koje kolačiće sajt koristi i koja prava imate.'],
+    en: ['Privacy policy', 'How 387 Weddings collects, uses and keeps data from the contact form and analytics, which cookies the site uses and what rights you have.'],
   },
   about: {
     bs: ['O nama', 'Upoznajte Melisu i Aldina, tim iza 387 Weddings.'],

@@ -2,6 +2,7 @@ import pg from 'pg';
 import dotenv from 'dotenv';
 import { slugify } from '../src/lib/slug.js';
 import { adminCleanup } from './adminCleanup.js';
+import { PRIVACY_BS, PRIVACY_EN } from './privacyPolicy.js';
 
 dotenv.config();
 
@@ -174,15 +175,15 @@ export async function initDB() {
         ('instagram', ''),
         ('instagram_handle', '387.weddings'),
         ('coming_soon', 'false'),
-        ('seo.site_name', '387 Cinematic Weddings'),
+        ('seo.site_name', '387 Weddings'),
         ('seo.og_image', ''),
-        ('seo.home.title.en', 'Art in the Moments | 387 Cinematic Weddings'),
+        ('seo.home.title.en', 'Art in the Moments | 387 Weddings'),
         ('seo.home.desc.en', 'Fine art wedding photography documenting love stories with a focus on raw emotion and timeless elegance. Based in Sarajevo, traveling worldwide.'),
-        ('seo.about.title.en', 'About Us | 387 Cinematic Weddings'),
-        ('seo.about.desc.en', 'Get to know Melisa and Aldin — the husband-and-wife team behind 387 Cinematic Weddings.'),
-        ('seo.portfolio.title.en', 'Portfolio | 387 Cinematic Weddings'),
+        ('seo.about.title.en', 'About Us | 387 Weddings'),
+        ('seo.about.desc.en', 'Get to know Melisa and Aldin — the husband-and-wife team behind 387 Weddings.'),
+        ('seo.portfolio.title.en', 'Portfolio | 387 Weddings'),
         ('seo.portfolio.desc.en', 'Explore our curated collection of fine art wedding stories from Sarajevo and around the world.'),
-        ('seo.contact.title.en', 'Inquire | 387 Cinematic Weddings'),
+        ('seo.contact.title.en', 'Inquire | 387 Weddings'),
         ('seo.contact.desc.en', 'Let''s connect and start the dialogue about your wedding story. Based in Sarajevo, available worldwide.'),
         ('analytics.ga_id', ''),
         ('analytics.gtm_id', ''),
@@ -624,6 +625,40 @@ Ako niste dobili odgovor, provjerite spam ili nam pišite na Instagram. ', 3),
     // the same without puzzling the owner
     await once('instagram_placeholder', () => client.query(
       "UPDATE site_settings SET value = '' WHERE key = 'instagram' AND btrim(value) = '#'"));
+
+    // The site went live with an empty privacy page. The policy fills each
+    // language only where it is still empty, so text written in the panel stays.
+    await once('privacy_body_2026_10', async () => {
+      await client.query(
+        "UPDATE page_content SET value_bs = $1 WHERE key = 'privacy.body' AND COALESCE(btrim(value_bs), '') = ''",
+        [PRIVACY_BS]);
+      await client.query(
+        "UPDATE page_content SET value_en = $1 WHERE key = 'privacy.body' AND COALESCE(btrim(value_en), '') = ''",
+        [PRIVACY_EN]);
+    });
+
+    // Anja & Kenan was entered with the English text in the Bosnian fields and
+    // the other way round. Each pair is swapped only while it still holds the
+    // English wording on the Bosnian side, so a fix made in the panel survives.
+    await once('story_anja_kenan_languages', () => client.query(`
+      UPDATE stories SET quote_bs = quote_en, quote_en = quote_bs
+        WHERE slug = 'anja-kenan' AND quote_bs LIKE 'Love doesn%';
+      UPDATE stories SET text_bs = text_en, text_en = text_bs
+        WHERE slug = 'anja-kenan' AND text_bs LIKE 'She spends her days%';
+      UPDATE stories SET seo_desc_bs = seo_desc_en, seo_desc_en = seo_desc_bs
+        WHERE slug = 'anja-kenan' AND seo_desc_bs LIKE 'The wedding of Anja%';
+    `));
+
+    // The studio is 387 Weddings now; the old name still closed every title and
+    // named the business in the structured data. Only the name is replaced —
+    // the site name, and the brand at the end of a page title — never the
+    // wording the owner wrote before it.
+    await once('brand_387_weddings', () => client.query(`
+      UPDATE site_settings SET value = '387 Weddings'
+        WHERE key = 'seo.site_name' AND btrim(value) IN ('387 Cinematic Weddings', '387 Cinematic');
+      UPDATE site_settings SET value = regexp_replace(value, '387 Cinematic( Weddings)?\\s*$', '387 Weddings')
+        WHERE key ~ '^seo\\.[a-z]+\\.title\\.(bs|en)$' AND value ~ '387 Cinematic( Weddings)?\\s*$';
+    `));
 
     // Indexes for the hot public queries (filter by is_active, order by sort_order).
     await client.query(`

@@ -22,11 +22,11 @@ const EMPTY = {
 // field. The board's 14px from a desktop up.
 const INPUT =
   'box-border w-full h-[51px] px-4 py-3.5 border border-[#e0d9cc] rounded-none bg-cream-soft ' +
-  'font-sans text-[16px] lg:text-[14px] font-light text-[#1a1a1a] placeholder:text-[#b3aca2] ' +
+  'font-sans text-[16px] lg:text-[14px] font-light text-[#1a1a1a] placeholder:text-[#776f65] ' +
   'outline-none focus:border-gold-600 transition-colors duration-250';
 const AREA =
   'box-border w-full px-4 py-3.5 border border-[#e0d9cc] rounded-none bg-cream-soft ' +
-  'font-sans text-[16px] lg:text-[14px] font-light text-[#1a1a1a] placeholder:text-[#b3aca2] resize-none ' +
+  'font-sans text-[16px] lg:text-[14px] font-light text-[#1a1a1a] placeholder:text-[#776f65] resize-none ' +
   'outline-none focus:border-gold-600 transition-colors duration-250';
 
 // The one-line reason a field is not accepted, under the field itself
@@ -341,7 +341,7 @@ const Contact = () => {
               <select id="c-coverage" name="coverage" required aria-required="true"
                 aria-invalid={Boolean(errors.coverage)}
                 aria-describedby={errors.coverage ? 'c-coverage-err' : undefined}
-                className={`${INPUT}${errRing(errors.coverage)} appearance-none cursor-pointer ${!formData.coverage ? 'text-[#b3aca2]' : ''}`}
+                className={`${INPUT}${errRing(errors.coverage)} appearance-none cursor-pointer ${!formData.coverage ? 'text-[#776f65]' : ''}`}
                 value={formData.coverage} onChange={e => { set('coverage')(e.target.value); clearErr('coverage'); }}>
                 <option value="">{t('contact.form.coverage.placeholder')}</option>
                 {coverageOptions.map(o => <option key={o} value={o}>{o}</option>)}
@@ -353,7 +353,7 @@ const Contact = () => {
           <div>
             <Label htmlFor="c-video" style={getContentStyle('contact.form.video')}>{t('contact.form.video')}</Label>
             <select id="c-video" name="video"
-              className={`${INPUT} appearance-none cursor-pointer ${!formData.video ? 'text-[#b3aca2]' : ''}`}
+              className={`${INPUT} appearance-none cursor-pointer ${!formData.video ? 'text-[#776f65]' : ''}`}
               value={formData.video} onChange={e => set('video')(e.target.value)}>
               <option value="">{t('contact.form.video.placeholder')}</option>
               {videoOptions.map(o => <option key={o} value={o}>{o}</option>)}

@@ -85,7 +85,7 @@ const Footer = () => {
                 style={getContentStyle(l.styleKey)}
                 className={cn(
                   'py-3 min-h-11 inline-flex items-center text-[12px] md:text-[11px] font-medium tracking-[0.26em] uppercase transition-opacity duration-250 hover:opacity-60',
-                  active ? 'text-[#8a8279] border-b border-gold-600' : 'text-ink-900',
+                  active ? 'text-[#776f65] border-b border-gold-600' : 'text-ink-900',
                 )}
               >
                 {l.label}

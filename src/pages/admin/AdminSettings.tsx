@@ -15,7 +15,7 @@ type Tab = 'contact' | 'general' | 'seo' | 'technical' | 'security';
 const SEO_PAGES = [
   // The Bosnian address of each page (the English one is under /en)
   { key: 'home',      label: 'Naslovna',   path: '/',            defaultTitle: 'Art in the Moments | 387 Weddings' },
-  { key: 'portfolio', label: 'Radovi',     path: '/radovi',      defaultTitle: 'Radovi | Vjenčane fotografije Sarajevo | 387 Cinematic Weddings' },
+  { key: 'portfolio', label: 'Radovi',     path: '/radovi',      defaultTitle: 'Radovi | Vjenčane fotografije Sarajevo | 387 Weddings' },
   { key: 'story',     label: 'Priča',      path: '/radovi/...',  defaultTitle: 'Ime para | 387 Weddings' },
   { key: 'about',     label: 'O nama',     path: '/o-nama',      defaultTitle: 'O nama | 387 Weddings' },
   { key: 'contact',   label: 'Kontakt',    path: '/kontakt',     defaultTitle: 'Kontakt | 387 Weddings' },
@@ -207,7 +207,7 @@ export default function AdminSettings() {
             <div className="flex items-center gap-2 text-white/40 text-[10px] font-bold tracking-widest uppercase">
               <Globe size={13} /> Globalno
             </div>
-            <Field label="Ime sajta" placeholder="387 Cinematic Weddings"
+            <Field label="Ime sajta" placeholder="387 Weddings"
               value={settings['seo.site_name'] ?? ''} onChange={v => set('seo.site_name', v)}
               hint="Dodaje se na kraj svakog meta naslova koji nije ručno postavljen." />
             <Field label="OG slika — podrazumijevana (URL)" placeholder="https://387weddings.ba/og-image.jpg"

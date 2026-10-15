@@ -43,7 +43,10 @@ const clearAnalyticsCookies = () => {
 const CookieBanner = () => {
   const { t, getContentStyle } = useLanguage();
   const paths = usePaths();
-  const [visible, setVisible] = useState(false);
+  // Up from the first render. It used to wait 1.2s so as not to compete with
+  // the intro, but the curtain covers it anyway; the wait only made it the
+  // page's last large paint (a late LCP) and shrank the hero in view.
+  const [visible, setVisible] = useState(() => readConsent() === null);
   const box = useRef<HTMLDivElement>(null);
 
   // The banner sits over the bottom of the screen, which on a phone is where the
@@ -62,11 +65,9 @@ const CookieBanner = () => {
   }, [visible]);
 
   useEffect(() => {
-    // Give the page a moment so the banner never competes with the intro
-    const id = window.setTimeout(() => setVisible(readConsent() === null), 1200);
     const reopen = () => setVisible(true);
     window.addEventListener('387:consent-reopen', reopen);
-    return () => { clearTimeout(id); window.removeEventListener('387:consent-reopen', reopen); };
+    return () => window.removeEventListener('387:consent-reopen', reopen);
   }, []);
 
   if (!visible) return null;
